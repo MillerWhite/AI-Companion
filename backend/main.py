@@ -42,7 +42,7 @@ AI_API_BASE_URL = os.getenv("AI_API_BASE_URL", _DEFAULT_BASE_URL).rstrip("/")
 AI_MODEL = os.getenv("AI_MODEL", "aliceai-llm-flash" if AI_PROVIDER == "yandex" else "gemini-3.6-flash").strip()
 AI_TIMEOUT_SECONDS = float(os.getenv("AI_TIMEOUT_SECONDS", "20"))
 SPEECHKIT_API_KEY = os.getenv("SPEECHKIT_API_KEY", AI_API_KEY).strip()
-SPEECHKIT_FOLDER_ID = os.getenv("SPEECHKIT_FOLDER_ID", AI_FOLDER_ID).strip()
+SPEECHKIT_FOLDER_ID = os.getenv("SPEECHKIT_FOLDER_ID", "").strip()
 SPEECHKIT_SAMPLE_RATE = int(os.getenv("SPEECHKIT_SAMPLE_RATE", "16000"))
 STORE_WEBHOOK_SECRET = os.getenv("STORE_WEBHOOK_SECRET", "").strip()
 MEMORY_RETENTION_DAYS = int(os.getenv("MEMORY_RETENTION_DAYS", "90"))
@@ -651,7 +651,6 @@ def validate_production_configuration() -> None:
         "AI_FOLDER_ID": bool(AI_FOLDER_ID),
         "AI_MODEL": bool(AI_MODEL),
         "SPEECHKIT_API_KEY": bool(SPEECHKIT_API_KEY),
-        "SPEECHKIT_FOLDER_ID": bool(SPEECHKIT_FOLDER_ID),
         "SPEECHKIT_SAMPLE_RATE=16000": SPEECHKIT_SAMPLE_RATE == 16000,
         "AI_ALLOWED_ORIGINS": bool(production_origins) and "*" not in production_origins and all(origin.startswith("https://") for origin in production_origins),
         "ALLOWED_HOSTS": bool(production_hosts) and "*" not in production_hosts,
