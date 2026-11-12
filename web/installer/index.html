@@ -137,7 +137,7 @@
     status.textContent = "Web Serial недоступен. Откройте страницу в Chrome или Edge на компьютере.";
   }
 
-  let port = null, reader = null, writer = null, buffer = "";
+  let port = null, reader = null, writer = null, buffer = "", configReceived = false;
   const encoder = new TextEncoder(), decoder = new TextDecoder();
 
   function setStatus(message) { status.textContent = message; }
@@ -148,6 +148,7 @@
     $("#temperament").value = String(config.temperament ?? 0);
     $("#initiative").value = String(config.initiative ?? 0);
     $("#quirk").value = String(config.quirk ?? 0);
+    configReceived = true;
     controls.hidden = false;
     setStatus("Компаньон подключён · прошивка " + (config.version || "неизвестна"));
   }
@@ -206,11 +207,16 @@
       setStatus("Выберите USB Serial/JTAG порт устройства…");
       port = await navigator.serial.requestPort({ filters: [{ usbVendorId: 0x303a }] });
       await port.open({ baudRate: 115200 });
+      try { await port.setSignals({ dataTerminalReady: false, requestToSend: false }); } catch (_) {}
       disconnect.disabled = false;
-      setStatus("USB подключён. Запрашиваю настройки…");
+      configReceived = false;
+      setStatus("USB подключён. Ожидаю запуск прошивки…");
       readLoop();
-      await new Promise(resolve => setTimeout(resolve, 250));
-      await send("config");
+      for (let attempt = 0; attempt < 15 && !configReceived; attempt++) {
+        await send("config");
+        await new Promise(resolve => setTimeout(resolve, 600));
+      }
+      if (!configReceived) throw new Error("Устройство не ответило. Проверьте прошивку и повторите подключение.");
       await send("status");
     } catch (error) {
       if (error.name !== "NotFoundError") setStatus("Не удалось подключиться: " + error.message);
