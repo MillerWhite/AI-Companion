@@ -207,6 +207,9 @@ static esp_err_t owner_profile_handler(httpd_req_t *req)
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid profile JSON");
         return ESP_FAIL;
     }
+    char updated_name[48] = {0};
+    const cJSON *name_item = cJSON_GetObjectItemCaseSensitive(json, "companion_name");
+    if (cJSON_IsString(name_item)) strlcpy(updated_name, name_item->valuestring, sizeof(updated_name));
     const cJSON *personality = cJSON_GetObjectItemCaseSensitive(json, "personality");
     if (cJSON_IsObject(personality)) {
         const cJSON *temper = cJSON_GetObjectItemCaseSensitive(personality, "temperament");
@@ -239,6 +242,14 @@ static esp_err_t owner_profile_handler(httpd_req_t *req)
     if (err != ESP_OK) {
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Profile update failed");
         return err;
+    }
+    if (updated_name[0]) {
+        nvs_handle_t handle;
+        if (nvs_open("companion", NVS_READWRITE, &handle) == ESP_OK) {
+            nvs_set_str(handle, "companion_name", updated_name);
+            nvs_commit(handle);
+            nvs_close(handle);
+        }
     }
     httpd_resp_set_type(req, "application/json");
     return httpd_resp_send(req, response, HTTPD_RESP_USE_STRLEN);
