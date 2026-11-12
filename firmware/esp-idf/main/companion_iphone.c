@@ -108,7 +108,13 @@ static int dsc_cb(uint16_t conn, const struct ble_gatt_error *error,
         }
         return 0;
     }
-    if (error->status) return error->status;
+    if (error->status) {
+        if ((uintptr_t)arg == 1 && s_ancs_desc_pending) {
+            s_ancs_desc_pending--;
+            if (s_ancs_desc_pending == 0) start_ams_discovery(conn);
+        }
+        return error->status;
+    }
     if (ble_uuid_cmp(&dsc->uuid.u, BLE_UUID16_DECLARE(BLE_GATT_DSC_CLT_CFG_UUID16)) == 0) {
         const uint8_t enable[2] = {1,0};
         int rc = ble_gattc_write_flat(conn, dsc->handle, enable, sizeof(enable),
