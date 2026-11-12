@@ -31,7 +31,7 @@ if errorlevel 1 (
     )
   )
   echo Запускаю облачный backend на http://127.0.0.1:8787 ...
-  start "AI Companion Backend" /min cmd /k "cd /d "%ROOT%" && py -m uvicorn backend.main:app --host 127.0.0.1 --port 8787"
+  start "AI Companion Backend" /min "%ROOT%backend\start_backend.bat"
   timeout /t 3 /nobreak >nul
 )
 
