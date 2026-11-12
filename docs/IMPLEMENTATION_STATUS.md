@@ -30,7 +30,7 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 ## Backend safeguards
 
 - SQLite development mode; PostgreSQL production mode.
-- Redis shared device rate limit, daily model request cap and per-device daily audio cap.
+- Redis shared device rate limit, daily model request cap, per-device audio cap and global daily audio cap.
 - Body size limits before buffering audio and payment events.
 - Server-only secrets and exact production CORS/host allowlists.
 - Device token hashes at rest; one-time activation grants hashed at rest.
