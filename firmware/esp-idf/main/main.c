@@ -32,6 +32,7 @@
 #include "esp_timer.h"
 #include "qrcodegen.h"
 #include "companion_ble.h"
+#include "companion_iphone.h"
 
 static const char *TAG = "ai_companion";
 static lv_obj_t *eyes[2], *mouth, *status_label, *brows[2], *tears[2], *setup_label, *screen_face;
@@ -55,6 +56,8 @@ static bool remote_mode;
 static uint8_t qr_index;
 static char qr_titles[4][40], qr_urls[4][180];
 static uint8_t qr_temp[qrcodegen_BUFFER_LEN_MAX], qr_code[qrcodegen_BUFFER_LEN_MAX];
+static char last_iphone_notification[240], last_iphone_track[96];
+static int64_t iphone_info_until_us;
 
 static const char *emotion_label(companion_emotion_t emotion)
 {
@@ -633,6 +636,46 @@ static void autonomous_timer(lv_timer_t *timer)
     (void)timer;
     refresh_personality();
     const int64_t now_us = esp_timer_get_time();
+
+    /* Surface iPhone ANCS notifications and AMS track metadata on the AMOLED. */
+    if (!qr_mode && !screen_asleep && status_label) {
+        char notification[240] = {0}, title[96] = {0}, artist[96] = {0}, player[48] = {0};
+        uint8_t playback = 0;
+        companion_iphone_get_notification(notification, sizeof(notification));
+        companion_iphone_get_media(title, sizeof(title), artist, sizeof(artist), player, sizeof(player), &playback);
+        if (notification[0] && strcmp(notification, last_iphone_notification) != 0) {
+            snprintf(last_iphone_notification, sizeof(last_iphone_notification), "%s", notification);
+            lv_label_set_text(status_label, notification);
+            lv_label_set_long_mode(status_label, LV_LABEL_LONG_DOT);
+            lv_obj_set_width(status_label, 420);
+            lv_obj_set_style_text_align(status_label, LV_TEXT_ALIGN_CENTER, 0);
+            iphone_info_until_us = now_us + 7000000LL;
+        } else if (!notification[0] && last_iphone_notification[0]) {
+            last_iphone_notification[0] = 0;
+            iphone_info_until_us = now_us;
+        }
+        if (!notification[0] && title[0]) {
+            char track[96];
+            snprintf(track, sizeof(track), "%s", title);
+            if (strcmp(track, last_iphone_track) != 0) {
+                snprintf(last_iphone_track, sizeof(last_iphone_track), "%s", track);
+                char line[220];
+                snprintf(line, sizeof(line), "%s%s%s", title, artist[0] ? " — " : "", artist);
+                lv_label_set_text(status_label, line);
+                lv_label_set_long_mode(status_label, LV_LABEL_LONG_DOT);
+                lv_obj_set_width(status_label, 420);
+                lv_obj_set_style_text_align(status_label, LV_TEXT_ALIGN_CENTER, 0);
+                iphone_info_until_us = now_us + 5000000LL;
+            }
+        } else if (!title[0]) {
+            last_iphone_track[0] = 0;
+        }
+        if (iphone_info_until_us && now_us >= iphone_info_until_us && !notification[0]) {
+            iphone_info_until_us = 0;
+            lv_label_set_text(status_label, emotion_label(current_emotion));
+            lv_obj_set_width(status_label, LV_SIZE_CONTENT);
+        }
+    }
     if (last_activity_us == 0) last_activity_us = now_us;
     if (!screen_asleep && display_sleep_timeout > 0 &&
         now_us - last_activity_us >= (int64_t)display_sleep_timeout * 1000000LL) {
