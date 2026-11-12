@@ -10,6 +10,7 @@
 #include "esp_log.h"
 #include "esp_random.h"
 #include "esp_heap_caps.h"
+#include "esp_netif.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "bsp/esp-bsp.h"
@@ -317,9 +318,15 @@ static void network_setup_task(void *arg)
     (void)arg;
     while (!companion_wifi_is_connected()) vTaskDelay(pdMS_TO_TICKS(500));
     if (companion_setup_server_start() == ESP_OK) {
-        ESP_LOGI(TAG, "Owner setup portal available at the device IP, port 80");
+        esp_netif_t *netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+        esp_netif_ip_info_t ip = {0};
+        char line[72] = "Owner portal online";
+        if (netif && esp_netif_get_ip_info(netif, &ip) == ESP_OK) {
+            snprintf(line, sizeof(line), "Setup: http://" IPSTR, IP2STR(&ip.ip));
+        }
+        ESP_LOGI(TAG, "%s", line);
         if (bsp_display_lock(pdMS_TO_TICKS(1000)) == ESP_OK) {
-            lv_label_set_text(setup_label, "Open device IP to activate");
+            lv_label_set_text(setup_label, line);
             bsp_display_unlock();
         }
     }
