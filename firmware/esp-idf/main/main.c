@@ -266,7 +266,7 @@ static void blink_timer(lv_timer_t *timer)
         lv_anim_set_var(&a, eyes[i]);
         lv_anim_set_values(&a, lv_obj_get_height(eyes[i]), 5);
         lv_anim_set_duration(&a, 85);
-        lv_anim_set_playback_duration(&a, 115);
+        lv_anim_set_reverse_duration(&a, 115);
         lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
         lv_anim_set_exec_cb(&a, animate_eye_height);
         lv_anim_start(&a);
