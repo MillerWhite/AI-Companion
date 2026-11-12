@@ -193,7 +193,7 @@ def make_system_prompt(name: str, personality: dict[str, Any], memory_facts: lis
         "and do not invent unrelated names. Use the whole utterance and recent context to distinguish "
         "direct address from merely mentioning the name while talking about someone else. "
         "If the utterance is not addressed to the companion, set addressed_to_companion=false, "
-        "understood=false, action=idle, emotion=neutral, and do not ask a clarification. "
+        "understood=false, action=idle, emotion=neutral, memory_updates=[], and do not ask a clarification. "
         "If it is addressed to the companion, set addressed_to_companion=true and interpret the request. "
         "Allowed action values: " + ", ".join(item.value for item in Action) + ". "
         "Allowed emotion values: " + ", ".join(item.value for item in Emotion) + ". "
@@ -392,6 +392,10 @@ def _get_device(token: str) -> dict[str, Any] | None:
         item for item in memory.get("recent_context", [])
         if int(item.get("timestamp", int(time.time()))) >= cutoff
     ][-8:]
+    memory["facts"] = [
+        item for item in memory.get("facts", [])
+        if int(item.get("timestamp", int(time.time()))) >= cutoff
+    ][-20:]
     return {
         "device_id": row[0],
         "companion_name": row[1],
