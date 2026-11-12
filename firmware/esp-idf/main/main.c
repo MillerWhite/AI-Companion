@@ -660,6 +660,7 @@ static void autonomous_timer(lv_timer_t *timer)
 {
     (void)timer;
     refresh_personality();
+    companion_iphone_poll();
     const int64_t now_us = esp_timer_get_time();
 
     /* Surface iPhone ANCS notifications and AMS track metadata on the AMOLED. */
