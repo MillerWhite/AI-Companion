@@ -2,6 +2,7 @@ import json
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from fastapi import HTTPException
@@ -71,6 +72,28 @@ class DeviceLifecycleTests(unittest.TestCase):
         self.assertEqual(main.get_device_memory(authorization=auth)["memory"], {"recent_context": [], "facts": []})
 
 
+
+
+    def test_unaddressed_ambient_speech_is_not_saved(self):
+        grant = main._create_enrollment_grant("paid-order-ambient", 1)
+        result = self.claim(grant)
+        auth = "Bearer " + result["device_token"]
+        model_result = main.InterpretResult(
+            addressed_to_companion=False,
+            understood=False,
+            intent="not_addressed",
+            action=main.Action.idle,
+            emotion=main.Emotion.neutral,
+            confidence=0.99,
+            nonverbal_cue="Остаться спокойным",
+            memory_updates=[],
+        )
+        with patch.object(main, "call_language_model", return_value=model_result):
+            main.interpret_for_device(
+                main.DeviceInterpretRequest(utterance="A private conversation not meant for the pet"),
+                authorization=auth,
+            )
+        self.assertEqual(main.get_device_memory(authorization=auth)["memory"], {"recent_context": [], "facts": []})
 
     def test_expired_memory_is_removed_from_persistent_storage(self):
         grant = main._create_enrollment_grant("paid-order-retention", 1)
