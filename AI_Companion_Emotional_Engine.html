@@ -54,7 +54,7 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 <div class="controls">
 <button onclick="trigger('happy')">Погладить</button><button onclick="trigger('curious')">Позвать</button><button onclick="trigger('surprised')">Удивить</button><button onclick="trigger('play')">Игра</button><button onclick="trigger('sleep')">Сон</button><button onclick="trigger('neutral')">Пробудить</button>
 <button class="main" onclick="randomEmotion()">Случайная эмоция</button>
-</div><div class="voicebar"><button id="voiceButton" onclick="toggleVoice()">Включить голос</button><span class="voice-state" id="voiceState">Назовите имя компаньона, чтобы он откликнулся</span></div><div class="cloud-settings"><div class="cloud-title"><span>Облачный интеллект</span><span id="cloudStatus" style="color:#9b9ba4;font-weight:500">выключен</span></div><label class="cloud-toggle"><input id="cloudEnabled" type="checkbox"> Использовать Yandex AI, если локально не понял фразу</label><input id="cloudApiUrl" type="url" value="http://127.0.0.1:8787" aria-label="Адрес AI Companion backend"><button type="button" id="cloudTest" style="width:100%;margin-top:9px">Проверить соединение</button><div class="cloud-help" id="cloudHelp">API-ключ хранится только на backend. HTML запускается напрямую в браузере. Для облачного ИИ отдельно запустите backend в PowerShell из папки проекта: py -m pip install -r backend\\requirements.txt, затем py -m uvicorn backend.main:app --host 127.0.0.1 --port 8787. Без backend локальные реакции продолжат работать.</div></div><div class="daypart" id="daypart">Режим дня: определяется по местному времени устройства</div></div>
+</div><div class="voicebar"><button id="voiceButton" onclick="toggleVoice()">Включить голос</button><span class="voice-state" id="voiceState">Назовите имя компаньона, чтобы он откликнулся</span></div><div class="cloud-settings"><div class="cloud-title"><span>Облачный интеллект</span><span id="cloudStatus" style="color:#9b9ba4;font-weight:500">автоподключение</span></div><div class="cloud-help" id="cloudHelp">Облачный ИИ подключается автоматически через сервер AI Companion. После публикации сайта и backend вручную указывать адрес или API-ключ не потребуется. Локальный HTML без опубликованного сервера работает в автономном режиме.</div></div><div class="daypart" id="daypart">Режим дня: определяется по местному времени устройства</div></div>
 <div class="stats">
 <div class="stat"><b id="emotionCount">35</b><span>базовых состояний</span></div>
 <div class="stat"><b id="comboCount">1 134 000</b><span>комбинаций параметров*</span></div>
@@ -122,13 +122,8 @@ function getDayPeriod(){const h=new Date().getHours();return h>=5&&h<11?'утр�
 function updateDayPeriod(){const p=getDayPeriod(),el=$('daypart');if(el)el.textContent='Режим дня: '+p+' · локальное время устройства';}
 let recognition=null,voiceEnabled=false,awaitingFollowupUntil=0,pendingVoiceAction=null,lastVoiceIntent='';
 let cloudTurns=[],cloudRequestInFlight=false,cloudHealthCache=null,cloudHealthCheckedAt=0;
-let cloudEnabled=false;
-try{cloudEnabled=localStorage.getItem('ai-companion-cloud-enabled-v1')==='true';}catch(e){}
-$('cloudEnabled').checked=cloudEnabled;$('cloudStatus').textContent=cloudEnabled?'активен':'выключен';
-try{$('cloudApiUrl').value=localStorage.getItem('ai-companion-cloud-url-v1')||'http://127.0.0.1:8787';}catch(e){}
-$('cloudEnabled').addEventListener('change',()=>{cloudEnabled=$('cloudEnabled').checked;try{localStorage.setItem('ai-companion-cloud-enabled-v1',String(cloudEnabled));}catch(e){}$('cloudStatus').textContent=cloudEnabled?'проверяется…':'выключен';setVoiceState(cloudEnabled?'Облачный ИИ включён: проверяю backend…':'Облачный ИИ выключен: используются локальные команды',true);log(cloudEnabled?'Облачный интеллект включён':'Облачный интеллект выключен');if(cloudEnabled)checkCloudBackend(true);});
-$('cloudTest').addEventListener('click',()=>checkCloudBackend(true));
-$('cloudApiUrl').addEventListener('change',()=>{let value=$('cloudApiUrl').value.trim();while(value.endsWith('/'))value=value.slice(0,-1);$('cloudApiUrl').value=value;try{localStorage.setItem('ai-companion-cloud-url-v1',value);}catch(e){}});
+const cloudEnabled=true;
+$('cloudStatus').textContent='автоподключение';
 function setVoiceState(message,active=false){const el=$('voiceState');if(el){el.textContent=message;el.classList.toggle('active',active)}}
 function normalizeSpeech(s){return String(s||'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/gi,' ').trim()}
 function editDistance(a,b){const row=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let prev=row[0];row[0]=i;for(let j=1;j<=b.length;j++){const old=row[j];row[j]=Math.min(row[j]+1,row[j-1]+1,prev+(a[i-1]===b[j-1]?0:1));prev=old;}}return row[b.length]}
@@ -196,14 +191,14 @@ function applyCloudIntent(result){
  return true;
 }
 let lastCloudUtterance='';
-function cloudBaseUrl(){let base=$('cloudApiUrl').value.trim();while(base.endsWith('/'))base=base.slice(0,-1);return base;}
+function cloudBaseUrl(){if(location.protocol==='file:')return '';return location.origin;}
 // On a hosted page, localhost means the visitor's own computer, not our cloud server.
 // If the site and backend share one origin, use that origin automatically.
 if(location.protocol!=='file:'&&!['localhost','127.0.0.1'].includes(location.hostname)){
  const cloudInput=$('cloudApiUrl');if(cloudInput.value==='http://127.0.0.1:8787')cloudInput.value=location.origin;
 }
 async function checkCloudBackend(force=false){
- const base=cloudBaseUrl();if(!(base.startsWith('http://')||base.startsWith('https://'))){const msg='Неверный адрес backend: укажите полный http:// или https:// адрес.';$('cloudStatus').textContent='неверный адрес';$('cloudHelp').textContent=msg;setVoiceState(msg,true);return false;}
+ const base=cloudBaseUrl();if(!base){const msg='Облачный ИИ пока не опубликован. Когда сайт AI Companion и backend будут размещены на сервере, подключение появится автоматически. Сейчас доступны автономные реакции.';$('cloudStatus').textContent='ожидает публикации';$('cloudHelp').textContent=msg;if(force)setVoiceState(msg,true);return false;}
  if(!force&&cloudHealthCache&&Date.now()-cloudHealthCheckedAt<8000)return cloudHealthCache;
  $('cloudStatus').textContent='проверяется…';$('cloudHelp').textContent='Проверяю '+base+'/health';
  try{
@@ -212,13 +207,13 @@ async function checkCloudBackend(force=false){
   const health=await response.json();
   if(health.status!=='ok')throw new Error('Backend вернул неожиданный ответ');
   cloudHealthCache=health;cloudHealthCheckedAt=Date.now();
-  if(!health.ai_configured){$('cloudStatus').textContent='сервер найден · ИИ не настроен';$('cloudHelp').textContent='Backend доступен, но на сервере отсутствует AI_API_KEY или AI_FOLDER_ID. Добавьте настройки в backend/.env и перезапустите сервер.';if(force)setVoiceState('Backend доступен, но Yandex AI не настроен. Проверьте backend/.env.',true);return false;}
+  if(!health.ai_configured){$('cloudStatus').textContent='сервер найден · ИИ не настроен';$('cloudHelp').textContent='Backend доступен, но в настройках хостинга не заданы AI_API_KEY или AI_FOLDER_ID. Эти секреты добавляются один раз на сервере, покупателю они не показываются.';if(force)setVoiceState('Backend доступен, но Yandex AI не настроен в переменных окружения сервера.',true);return false;}
   $('cloudStatus').textContent='подключён · '+(health.provider||'AI');$('cloudHelp').textContent='Backend доступен. Провайдер: '+(health.provider||'AI')+' · модель: '+(health.model||'не указана')+'.';if(force)setVoiceState('Связь с backend есть. Облачный ИИ настроен.',true);return true;
  }catch(error){
   cloudHealthCache=null;cloudHealthCheckedAt=0;$('cloudStatus').textContent='нет соединения';
   const raw=String(error.message||error);let hint='Не удалось связаться с backend.';
   if(error.name==='TimeoutError'||error.name==='AbortError')hint='Backend не ответил за 5 секунд. Проверьте, запущен ли сервер.';
-  else if(error instanceof TypeError||/Failed to fetch|Load failed|NetworkError/i.test(raw)){hint='Браузер не может установить соединение с backend. HTML можно открывать напрямую, но сам файл не запускает Python-сервер. Для облачного ИИ откройте PowerShell в папке проекта и выполните: py -m pip install -r backend\\requirements.txt, затем py -m uvicorn backend.main:app --host 127.0.0.1 --port 8787. Если сайт опубликован, вместо localhost нужен публичный HTTPS-адрес backend.';}
+  else if(error instanceof TypeError||/Failed to fetch|Load failed|NetworkError/i.test(raw)){hint='Облачный сервер AI Companion пока недоступен по адресу сайта. Для конечной версии сайт и backend должны быть опубликованы вместе за HTTPS-адресом; после этого браузер подключится автоматически. На этом этапе локальные реакции продолжают работать.';}
   else hint=raw;
   $('cloudHelp').textContent=hint+' Адрес: '+base;
   if(force)setVoiceState(hint+' Локальные реакции работают.',true);
