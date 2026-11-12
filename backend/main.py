@@ -413,16 +413,23 @@ def _get_device(token: str) -> dict[str, Any] | None:
         ).fetchone()
     if not row:
         return None
-    memory = json.loads(row[3] or "{}")
+    try:
+        memory = json.loads(row[3] or "{}")
+    except (TypeError, json.JSONDecodeError):
+        memory = {}
+    if not isinstance(memory, dict):
+        memory = {}
     original_memory = json.loads(json.dumps(memory))
     cutoff = int(time.time()) - MEMORY_RETENTION_DAYS * 86400
+    recent = memory.get("recent_context", [])
+    facts = memory.get("facts", [])
+    if not isinstance(recent, list): recent = []
+    if not isinstance(facts, list): facts = []
     memory["recent_context"] = [
-        item for item in memory.get("recent_context", [])
-        if int(item.get("timestamp", 0)) >= cutoff
+        item for item in recent if isinstance(item, dict) and int(item.get("timestamp", 0)) >= cutoff
     ][-8:]
     memory["facts"] = [
-        item for item in memory.get("facts", [])
-        if int(item.get("timestamp", 0)) >= cutoff
+        item for item in facts if isinstance(item, dict) and int(item.get("timestamp", 0)) >= cutoff
     ][-20:]
     if memory != original_memory:
         with _device_db() as connection:
@@ -595,15 +602,19 @@ def _purge_expired_memories() -> int:
             try:
                 memory = json.loads(row[1] or "{}")
             except (TypeError, json.JSONDecodeError):
-                memory = {"recent_context": [], "facts": []}
+                memory = {}
+            if not isinstance(memory, dict):
+                memory = {}
             original = json.dumps(memory, ensure_ascii=False, sort_keys=True)
+            recent = memory.get("recent_context", [])
+            facts = memory.get("facts", [])
+            if not isinstance(recent, list): recent = []
+            if not isinstance(facts, list): facts = []
             memory["recent_context"] = [
-                item for item in memory.get("recent_context", [])
-                if int(item.get("timestamp", 0)) >= cutoff
+                item for item in recent if isinstance(item, dict) and int(item.get("timestamp", 0)) >= cutoff
             ][-8:]
             memory["facts"] = [
-                item for item in memory.get("facts", [])
-                if int(item.get("timestamp", 0)) >= cutoff
+                item for item in facts if isinstance(item, dict) and int(item.get("timestamp", 0)) >= cutoff
             ][-20:]
             if json.dumps(memory, ensure_ascii=False, sort_keys=True) != original:
                 connection.execute(
