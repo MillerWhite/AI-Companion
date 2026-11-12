@@ -20,6 +20,12 @@ if errorlevel 1 (
     pause
     exit /b 1
   )
+  py -c "import sys; raise SystemExit(0 if sys.version_info >= (3,10) else 1)" >nul 2>nul
+  if errorlevel 1 (
+    echo Требуется Python 3.10 или новее.
+    pause
+    exit /b 1
+  )
   py -c "import fastapi,uvicorn,dotenv" >nul 2>nul
   if errorlevel 1 (
     echo Устанавливаю зависимости backend...
