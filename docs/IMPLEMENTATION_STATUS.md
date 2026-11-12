@@ -9,7 +9,7 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 ## Product invariants
 
 - Nonverbal companion only: no TTS and no spoken assistant responses.
-- Local firmware owns animation, needs, touch, sensor reactions and offline behavior.
+- Local firmware owns animation, emotion state, touch, sensor reactions and offline behavior.
 - Cloud model returns constrained intent data; firmware validates before applying it.
 - API keys stay on the backend.
 - Audio is uploaded only for transcription, is not persisted by this application, and is subject to daily quotas.
@@ -19,13 +19,13 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 
 | Task | Code status | Remaining acceptance gate |
 |---|---|---|
-| Full emotional transitions and facial expressions | Implemented in firmware/browser code: twelve moods, animated eye/mouth geometry, sadness brows/tears, blink and need-driven transitions | ESP-IDF build; physical display smoothness and emotional clarity test |
-| Unique personality and long-term development | Implemented foundation: temperament, initiative, selectable quirks, needs, trust/curiosity/responsiveness, persistent local state and safe durable preference facts | Broader traits/quirks, multi-month progression tuning and owner data export review |
+| Full emotional transitions and facial expressions | Implemented in firmware/browser code: thirteen mood states, animated eye/mouth geometry, sadness brows/tears, blink and event-driven transitions | ESP-IDF build; physical display smoothness and emotional clarity test |
+| Unique personality and long-term development | Implemented foundation: temperament, initiative, selectable quirks, trust/curiosity/playfulness, persistent local state and safe durable preference facts | Broader traits/quirks, multi-month progression tuning and owner data export review |
 | Physical speaker sound system | Implemented driver path: ES8311 BSP handle, soft procedural motifs, low gain and cooldown | Board test, audio calibration, echo/feedback and listening-quality review |
 | Microphone speech recognition | Implemented pipeline: ES7210 BSP capture, VAD, mono 16 kHz PCM, backend OpenAI audio transcription route | Board microphone slot mapping, Russian/noise tests, live OpenAI audio transcription credentials and quota test |
 | Wi-Fi and automatic reconnect | Implemented: SoftAP Security 1 provisioning, NVS credential persistence, exponential reconnect | First-boot test with actual router and recovery/reset test |
 | Cloud intent → firmware behavior | Implemented: voice → OpenAI audio transcription → intent → allowlist validation → emotion/action application | Live OpenAI model smoke test and real device integration test |
-| Sensor-driven pet reactions | Added QMI8658 shake/dizzy and face-down blank/wake; ES7210 mic blow/clap classifiers; AXP2101 VBUS/charge/battery telemetry with feeding/energy response | Threshold calibration, AMOLED blank-state power measurement, AXP2101 read validation and physical acceptance test |
+| Sensor-driven pet reactions | Added QMI8658 shake/dizzy and face-down blank/wake; ES7210 mic blow/clap classifiers; AXP2101 VBUS/charge/battery telemetry with contextual charging response | Threshold calibration, AMOLED blank-state power measurement, AXP2101 read validation and physical acceptance test |
 | ES8311, ES7210, QMI8658, AXP2101 drivers | BSP codec handles, QMI8658 managed driver and AXP2101 register reads are wired into service modules | Verify actual BSP component resolution, build and physical register/data test |
 | Owner server-memory controls | Implemented: bounded context, safe fact categories, 90-day expiry, export/delete/profile APIs and PIN-protected local portal | Privacy review, retention job/backup review and owner usability test |
 | Automatic website firmware flashing | Implemented: ESP Web Tools page, manifest and tagged release workflow | Successful firmware CI build and published release asset; browser/USB test |
@@ -81,3 +81,14 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 - Запись USB сериализована mutex-защитой, чтобы события из задач датчиков не смешивались с ответами конфигурации и диагностики.
 - Команда `play` удалена из USB allowlist; стандартный Bluetooth HID play/pause для управления компьютером/медиа не затрагивается.
 - Проверка исходников не заменяет сборку ESP-IDF и тест на физической плате.
+
+
+## Обновление 12.11.2026 — упрощение панели и консолидация эмоциональной системы
+
+- Удалено из главного описания панели упоминание механик голода, кормления и обязательного ухода.
+- Основные настройки оставлены на виду; инструкции по компьютеру, iPhone и диагностике свернуты в компактные раскрывающиеся блоки.
+- Удалены повторяющиеся пояснения и пустой раздел обновлений, который пока не выполнял действий.
+- AI_Companion_Emotional_Engine.html пока сохраняется как изолированный прототип: его интерфейс и симуляция не подключены к основной панели. Удалять его до переноса проверенной логики нельзя.
+- Основной источник аппаратного состояния и эмоций — firmware/esp-idf/main/companion_emotion.c; веб-панель отображает события прошивки. Следующая задача консолидации — выделить общий контракт состояний/событий и перенести нужные алгоритмы прототипа без его отдельного интерфейса.
+- Исправлен повторный прирост curiosity при одном событии pet: теперь одно касание даёт один прирост.
+- Эти правки не подтверждают ESP-IDF build или работу на физической плате.
