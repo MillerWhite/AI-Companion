@@ -22,7 +22,7 @@ load_dotenv()
 APP_VERSION = "1.1.0"
 AI_API_KEY = os.getenv("AI_API_KEY", "").strip()
 AI_API_BASE_URL = os.getenv("AI_API_BASE_URL", "https://api.openai.com/v1").rstrip("/")
-AI_MODEL = os.getenv("AI_MODEL", "").strip()
+AI_MODEL = os.getenv("AI_MODEL", "gpt-6-luna").strip()
 AI_TIMEOUT_SECONDS = float(os.getenv("AI_TIMEOUT_SECONDS", "20"))
 
 
