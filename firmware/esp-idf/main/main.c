@@ -30,6 +30,7 @@ static lv_obj_t *eyes[2], *mouth, *status_label, *brows[2], *tears[2], *setup_la
 static companion_state_t state;
 static companion_emotion_t current_emotion = COMPANION_CALM;
 static bool sleeping;
+static bool manual_sleep;
 static bool audio_available;
 static bool imu_available;
 static char setup_info[128];
@@ -217,9 +218,11 @@ static void apply_cloud_intent(const char *json_text)
     }
     if (!strcmp(action->valuestring, "sleep")) {
         sleeping = true;
+        manual_sleep = true;
         set_emotion(COMPANION_SLEEPY, true);
     } else if (!strcmp(action->valuestring, "wake")) {
         sleeping = false;
+        manual_sleep = false;
         set_emotion(COMPANION_HAPPY, true);
     } else {
         if (!strcmp(action->valuestring, "pet")) companion_emotion_interaction(&state, "pet");
@@ -242,6 +245,7 @@ static void on_face_tap(lv_event_t *event)
 {
     (void)event;
     if (sleeping) sleeping = false;
+    manual_sleep = false;
     companion_emotion_interaction(&state, "pet");
     render_emotion(COMPANION_HAPPY);
     if (audio_available) companion_audio_play(COMPANION_HAPPY, false);
@@ -275,7 +279,7 @@ static void autonomous_timer(lv_timer_t *timer)
         const uint32_t chance = state.initiative == 1 ? 42U : (state.initiative == 2 ? 12U : 25U);
         if ((esp_random() % 100U) >= chance) { save_state(); return; }
     }
-    if (sleeping && state.energy >= 68.0f) {
+    if (sleeping && !manual_sleep && state.energy >= 68.0f) {
         sleeping = false;
         render_emotion(COMPANION_HAPPY);
     } else if (!sleeping) {
@@ -284,7 +288,7 @@ static void autonomous_timer(lv_timer_t *timer)
         localtime_r(&now, &local);
         const uint8_t hour = now > 1700000000 ? (uint8_t)local.tm_hour : 12;
         companion_emotion_t next = companion_emotion_choose(&state, hour, esp_random(), current_emotion);
-        if (next == COMPANION_SLEEPY) sleeping = true;
+        if (next == COMPANION_SLEEPY) { sleeping = true; manual_sleep = false; }
         if (next != current_emotion) render_emotion(next);
     }
     save_state();
