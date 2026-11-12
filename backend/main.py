@@ -414,6 +414,7 @@ def _get_device(token: str) -> dict[str, Any] | None:
     if not row:
         return None
     memory = json.loads(row[3] or "{}")
+    original_memory = json.loads(json.dumps(memory))
     cutoff = int(time.time()) - MEMORY_RETENTION_DAYS * 86400
     memory["recent_context"] = [
         item for item in memory.get("recent_context", [])
@@ -421,8 +422,14 @@ def _get_device(token: str) -> dict[str, Any] | None:
     ][-8:]
     memory["facts"] = [
         item for item in memory.get("facts", [])
-        if int(item.get("timestamp", int(time.time()))) >= cutoff
+        if int(item.get("timestamp", 0)) >= cutoff
     ][-20:]
+    if memory != original_memory:
+        with _device_db() as connection:
+            connection.execute(
+                "UPDATE devices SET memory_json = ? WHERE device_id = ? AND revoked_at IS NULL",
+                (json.dumps(memory, ensure_ascii=False), row[0]),
+            )
     return {
         "device_id": row[0],
         "companion_name": row[1],
