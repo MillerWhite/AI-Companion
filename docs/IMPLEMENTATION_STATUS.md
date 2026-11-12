@@ -56,7 +56,7 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 
 ## Explicitly not claimed
 
-- No successful firmware build or physical board test has been observed yet. Sensor reaction thresholds are code-level prototypes until calibrated on the exact board and enclosure.
+- No successful firmware build or physical board test has been observed yet. Sensor reaction thresholds and BLE pairing remain code-level implementations until calibrated and accepted on the exact board and enclosure.
 - No public production backend has been deployed.
 - No actual payment provider has been connected.
 - No OpenAI or OpenAI audio transcription live request has been verified with a rotated secret.
@@ -69,7 +69,7 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 - Quick QR: USB-конфигурация продолжает сохранять до четырёх ссылок в NVS. Это подтверждает хранение, но не рендер QR на AMOLED и не навигацию между QR-экранами.
 - Модель состояния прошивки заменяется на событийную: в новой структуре нет hunger/comfort/social/energy; течение времени само по себе не ухудшает настроение. Взаимодействия влияют на доверие, любопытство и игривость. Удалены USB-команды feed/clean и связанные ветки обработки в main.
 - Совместимость старого NVS blob: при несовпадении размера структуры существующее состояние эмоций инициализируется заново; пользовательские настройки профиля и QR хранятся отдельно и не должны затрагиваться.
-- Не завершено и не заявляется как готовое: QR-код на AMOLED и свайп-навигация; BLE ANCS/AMS для iPhone; BLE HID-пульт; локальные приложения и игры на брелоке.
+- Не завершено и не заявляется как готовое: QR-код на AMOLED и свайп-навигация; физическая приёмка BLE ANCS/AMS для iPhone и BLE HID-пульта; подтверждение поведения на нескольких моделях iOS и компьютерах.
 - Проверка физического устройства невозможна до получения платы. Сборка ESP-IDF и GitHub Actions после этих изменений ещё должны завершиться успешно; до этого новая прошивка не считается проверенной.
 
 
@@ -92,3 +92,17 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 - Основной источник аппаратного состояния и эмоций — firmware/esp-idf/main/companion_emotion.c; веб-панель отображает события прошивки. Следующая задача консолидации — выделить общий контракт состояний/событий и перенести нужные алгоритмы прототипа без его отдельного интерфейса.
 - Исправлен повторный прирост curiosity при одном событии pet: теперь одно касание даёт один прирост.
 - Эти правки не подтверждают ESP-IDF build или работу на физической плате.
+
+
+## Обновление 12.11.2026 — перенос эмоционального ядра и CI
+
+- Логика характера и отношений перенесена в основное ядро `companion_emotion.c`: доверие, любопытство, игривость, спокойствие, отзывчивость и счётчики событий.
+- Инициативность теперь рассчитывается общим алгоритмом с учётом выбранного темперамента и накопленной отзывчивости. Время само по себе не ухудшает отношения и не создаёт потребности в уходе.
+- Касание, длинное касание, зов, встряхивание, отдых, пробуждение, удивление и подключение зарядки учитываются как события отношений. Состояние хранится в NVS.
+- Backend получил серверный фильтр чувствительных значений памяти и авторизованный JSON-экспорт по `GET /api/device/memory/export`.
+- Добавлены native C tests для эмоционального ядра и Python contract tests для backend.
+- Добавлен quality workflow: backend tests, host-side C tests и проверка синтаксиса JavaScript основной панели. Firmware workflow запускается только для `main` и тегов релиза; pull request и feature-ветки из его триггеров удалены.
+- Основная панель получила ESP Web Tools installer, использующий `web/installer/manifest.json` и последний опубликованный firmware release.
+- Отдельный `AI_Companion_Emotional_Engine.html` пока не удалён: окончательное удаление разрешено только после успешного CI и проверки, что все нужные реакции/анимации и настройки действительно доступны в основной прошивке. Прототип пока оставлен как резерв для сверки.
+- Новая структура `companion_state_t` меняет размер NVS blob. При первом запуске новой прошивки старый blob будет инициализирован заново; профиль, имя, QR и настройки экрана хранятся отдельно.
+- CI ещё должен фактически завершиться успешно. Ни один результат host-side тестов не заменяет ESP-IDF build, прошивку устройства или физическую приёмку.
