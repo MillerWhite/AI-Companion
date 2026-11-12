@@ -199,7 +199,7 @@ static void process_command(char *line)
 
     if (!strcmp(line, "sleep") || !strcmp(line, "wake") ||
         !strcmp(line, "pet") || !strcmp(line, "play") ||
-        !strcmp(line, "feed") || !strcmp(line, "call") || !strcmp(line, "clean") ||
+        !strcmp(line, "call") ||
         !strcmp(line, "wifi-reset") || !strncmp(line, "emotion ", 8) ||
         !strncmp(line, "sound ", 6)) {
         if (command_handler) command_handler(line);
