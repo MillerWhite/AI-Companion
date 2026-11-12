@@ -1,56 +1,64 @@
 # AI Companion firmware — Waveshare ESP32-S3-Touch-AMOLED-1.75C
 
-Начальный ESP-IDF каркас под точную плату Waveshare ESP32-S3-Touch-AMOLED-1.75C. Это не готовый firmware release.
+Firmware target: Waveshare ESP32-S3-Touch-AMOLED-1.75C (ESP32-S3, 32 MB flash, 8 MB PSRAM, 466×466 AMOLED). The source tree now contains the integrated service path; it is not yet a hardware-verified release.
 
-## Реализовано в исходниках
+## Firmware modules
 
-- ESP-IDF project с managed Waveshare BSP `waveshare/esp32_s3_touch_amoled_1_75c` версии `^3.0.0`.
-- LVGL 9.5 и запуск дисплея через `bsp_display_start()`.
-- AMOLED UI с глазами, ртом и пятью локальными состояниями.
-- Автономная смена настроения и реакция на касание.
-- HTTPS-клиент `POST /api/device/interpret`, который читает `api_base` и `device_token` из NVS namespace `companion`.
-- TLS certificate bundle.
-- Проверка JSON-ответа backend: обязательные boolean-поля, action/emotion allowlists и confidence 0..1. Неизвестный/неполный ответ отклоняется.
+| Module | Responsibility |
+|---|---|
+| `main.c` | LVGL face, touch reactions, autonomous timer, speech and IMU tasks, cloud intent application |
+| `companion_emotion.c` | Needs, trust/playfulness progression, temperament-dependent emotional decisions |
+| `companion_audio.c` | Waveshare BSP ES8311/ES7210 codec handles, soft procedural nonverbal cues, VAD and 16 kHz PCM capture |
+| `companion_imu.c` | QMI8658 accelerometer, smoothing, motion/tilt gesture cooldowns |
+| `companion_wifi.c` | Secure SoftAP provisioning and reconnect with exponential backoff |
+| `companion_setup.c` | Local owner portal, activation claim, personality controls, memory export/reset |
+| `cloud_client.c` | HTTPS SpeechKit upload, intent request, schema/allowlist validation, one-time claim and owner API proxy |
 
-## Сборка
+## First boot
 
-В проекте пока не зафиксирована фактическая проверенная версия toolchain. Используйте ESP-IDF и BSP-совместимую версию, сверяясь с release notes официального Waveshare managed component.
+1. Flash the firmware with the installer page.
+2. On first boot the screen shows SoftAP SSID, password and security PIN. Use Espressif's ESP SoftAP Provisioning app to send the home Wi-Fi credentials.
+3. After Wi-Fi connects, the screen shows the device's local IP and a rotating eight-digit owner-portal PIN.
+4. Open `http://<device-ip>` from a browser on the same Wi-Fi. Enter the local PIN, backend HTTPS URL, companion name and one-time activation grant.
+5. The device redeems the grant at `POST /api/devices/claim`; the device token is stored in NVS and is never returned to the browser.
 
-В каталоге `firmware/esp-idf`:
+The local portal uses HTTP on the private LAN and requires the PIN displayed on the physical device. Do not expose port 80 to the public internet. The activation grant is single-use and short-lived.
+
+## Voice and cloud path
+
+- ES7210 mic input is captured as stereo 16-bit PCM at 16 kHz; the firmware downmixes to mono.
+- A basic RMS voice-activity detector collects up to six seconds and stops after silence.
+- Mono LPCM is sent to `POST /api/device/transcribe` with the device Bearer token.
+- Returned text is sent to `POST /api/device/interpret`.
+- The firmware rejects unknown actions/emotions, invalid confidence and missing address-detection booleans. Only addressed, understood requests change the pet's behavior.
+- If Wi-Fi/cloud services fail, the local face, needs, touch, autonomous behavior and sensor reactions continue. Cloud speech understanding is unavailable offline.
+- No TTS or spoken audio is generated.
+
+The VAD threshold, microphone channel selection, echo handling and audio levels need calibration on the physical board. Playback is deliberately low amplitude and throttled, but it is not a professionally mastered sound library.
+
+## Wi-Fi
+
+The provisioning manager uses SoftAP + Security 1 proof-of-possession. Wi-Fi credentials are stored by the ESP-IDF provisioning manager in NVS. Reconnect attempts use bounded exponential backoff and continue after repeated failures.
+
+## Audio and sensors
+
+Audio uses the Waveshare BSP codec factory handles and the reference close/reopen codec configuration sequence at 16 kHz, stereo, 16-bit. The QMI8658 managed component is configured for ±8 g and 500 Hz; filtered motion and tilt events have cooldowns.
+
+Exact codec and sensor behavior, gain staging, microphone slot mapping, amplifier control and power draw still require a real-board test.
+
+## Build
+
+Requires ESP-IDF 5.5.x, the ESP-IDF component manager and network access to resolve the pinned Waveshare BSP, QMI8658 and LVGL components.
 
 ```bash
+cd firmware/esp-idf
 idf.py set-target esp32s3
 idf.py build
 idf.py -p COMx flash monitor
 ```
 
-Сборка в текущей рабочей среде не выполнялась. Не считайте команды подтверждением совместимости до успешного CI build или локальной сборки с установленным ESP-IDF.
+GitHub Actions workflow `.github/workflows/firmware-build.yml` attempts this build and packages a merged binary for ESP Web Tools. A tagged release `firmware-vX.Y.Z` publishes the binary used by `web/installer/manifest.json`.
 
-## Протокол устройства
+## Not yet verified
 
-```
-POST /api/device/interpret
-Authorization: Bearer <device_token>
-Content-Type: application/json
-
-{"utterance":"Мило, давай поиграем"}
-```
-
-Backend возвращает ограниченный `InterpretResult`. Протокол описан в [DEVICE_PROTOCOL.md](../../docs/DEVICE_PROTOCOL.md).
-
-**Важно:** cloud client пока не подключён к распознаванию речи и циклу поведения в `main.c`. Сейчас наличие HTTP-клиента и валидатора не означает, что физическое устройство уже слушает владельца или применяет ответ ИИ.
-
-## Пока не реализовано
-
-- Wi-Fi provisioning, сохранение сети и автоматическое переподключение.
-- Enrollment flow, который безопасно записывает device token в NVS.
-- ASR с микрофонов ES7210 или другого подтверждённого решения.
-- Вывод звука через ES8311 и готовая звуковая библиотека.
-- Подключение cloud intent к поведению и синхронизация профиля.
-- Драйвер/калибровка QMI8658 IMU.
-- Управление памятью владельца, factory reset и перенос устройства.
-- Web flasher, магазин, проверка оплаченного заказа и one-time enrollment grant.
-
-## Статус проверки
-
-Физическая плата пока не приобретена. Сборка ESP-IDF, прошивка, экран, touch, Wi-Fi, аудио, микрофоны, IMU, энергопотребление и тепловые характеристики на реальном устройстве не проверялись. Код требует аппаратной интеграции и тестирования.
+The Waveshare board has not been physically tested in this development session. No successful ESP-IDF build, firmware flash, mic capture, speaker playback, Wi-Fi provisioning, IMU read, current draw, thermal or long-run test is claimed. The first successful CI build and a physical smoke test are release gates.
