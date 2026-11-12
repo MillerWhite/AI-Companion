@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include "esp_log.h"
+#include "esp_check.h"
 #include "bsp/esp-bsp.h"
 #include "qmi8658.h"
 
