@@ -168,9 +168,10 @@ static void refresh_personality(void)
 {
     nvs_handle_t handle;
     if (nvs_open("companion", NVS_READONLY, &handle) != ESP_OK) return;
-    uint8_t temperament = 0, initiative = 0;
+    uint8_t temperament = 0, initiative = 0, quirk = 0;
     if (nvs_get_u8(handle, "temperament", &temperament) == ESP_OK) state.temperament = temperament <= 4 ? temperament : 0;
     if (nvs_get_u8(handle, "initiative", &initiative) == ESP_OK) state.initiative = initiative <= 2 ? initiative : 0;
+    if (nvs_get_u8(handle, "quirk", &quirk) == ESP_OK) state.quirk = quirk <= 4 ? quirk : 0;
     nvs_close(handle);
     if (audio_available) companion_audio_set_temperament(state.temperament);
 }
