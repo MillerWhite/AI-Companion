@@ -7,6 +7,7 @@ from backend.main import (
     MemoryUpdate,
     allowed_personality,
     make_system_prompt,
+    safe_memory_update,
     validate_model_result,
 )
 
@@ -44,6 +45,23 @@ class CompanionBackendContractTests(unittest.TestCase):
         }
         with self.assertRaises(ValueError):
             validate_model_result(payload)
+
+    def test_sensitive_memory_values_are_rejected_server_side(self):
+        self.assertFalse(safe_memory_update(MemoryUpdate(
+            kind=MemoryKind.interaction_preference,
+            value="У меня диабет",
+            confidence=0.99,
+        )))
+        self.assertFalse(safe_memory_update(MemoryUpdate(
+            kind=MemoryKind.nickname,
+            value="мой телефон +7 999 123-45-67",
+            confidence=0.99,
+        )))
+        self.assertTrue(safe_memory_update(MemoryUpdate(
+            kind=MemoryKind.favorite_activity,
+            value="любит короткие прогулки",
+            confidence=0.99,
+        )))
 
     def test_model_contract_accepts_known_nonverbal_action(self):
         result = validate_model_result({
