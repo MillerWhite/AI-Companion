@@ -172,6 +172,7 @@ static void refresh_personality(void)
     if (nvs_get_u8(handle, "temperament", &temperament) == ESP_OK) state.temperament = temperament <= 4 ? temperament : 0;
     if (nvs_get_u8(handle, "initiative", &initiative) == ESP_OK) state.initiative = initiative <= 2 ? initiative : 0;
     nvs_close(handle);
+    if (audio_available) companion_audio_set_temperament(state.temperament);
 }
 
 static void load_state(void)
@@ -467,6 +468,7 @@ void app_main(void)
 
     if (companion_audio_init() == ESP_OK) {
         audio_available = true;
+        companion_audio_set_temperament(state.temperament);
         xTaskCreate(voice_task, "companion_voice", 8192, NULL, 4, NULL);
     } else {
         ESP_LOGW(TAG, "Audio codec unavailable; touch and local emotions still work");
