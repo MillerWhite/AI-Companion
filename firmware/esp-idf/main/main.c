@@ -350,8 +350,6 @@ static void apply_cloud_intent(const char *json_text)
     } else if (!strcmp(verb, "pet") || !strcmp(verb, "comfort")) {
         kind = "pet";
         if (!strcmp(verb, "comfort") && next == COMPANION_CALM) next = COMPANION_AFFECTIONATE;
-    } else if (!strcmp(verb, "play")) {
-        kind = "play";
     } else if (!strcmp(verb, "greet") || !strcmp(verb, "acknowledge") ||
                !strcmp(verb, "attend") || !strcmp(verb, "thank")) {
         kind = "call";
@@ -400,13 +398,6 @@ static void on_usb_command(const char *command)
         companion_emotion_interaction(&state, "pet");
         set_emotion(COMPANION_HAPPY, false);
         if (audio_available) companion_audio_play_sound(VOICE_PURR, false);
-        save_state();
-    } else if (!strcmp(command, "play")) {
-        sleeping = false;
-        manual_sleep = false;
-        companion_emotion_interaction(&state, "play");
-        set_emotion(COMPANION_EXCITED, false);
-        if (audio_available) companion_audio_play_sound(VOICE_NOM, false);
         save_state();
     } else if (!strcmp(command, "call")) {
         sleeping = false;

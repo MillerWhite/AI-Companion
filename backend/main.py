@@ -57,7 +57,6 @@ class Action(str, Enum):
     idle = "idle"
     greet = "greet"
     acknowledge = "acknowledge"
-    play = "play"
     pet = "pet"
     sleep = "sleep"
     wake = "wake"
