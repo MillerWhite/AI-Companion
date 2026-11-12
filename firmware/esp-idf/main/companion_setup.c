@@ -129,7 +129,7 @@ static esp_err_t owner_memory_handler(httpd_req_t *req)
     char response[8192] = {0};
     esp_err_t err = companion_cloud_owner_request(HTTP_METHOD_GET, "/api/device/memory", NULL, response, sizeof(response));
     if (err != ESP_OK) {
-        httpd_resp_send_err(req, HTTPD_503_SERVICE_UNAVAILABLE, "Owner memory service unavailable");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Owner memory service unavailable");
         return err;
     }
     httpd_resp_set_type(req, "application/json");
