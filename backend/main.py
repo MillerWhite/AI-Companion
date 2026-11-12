@@ -197,7 +197,7 @@ def safe_memory_update(update: MemoryUpdate) -> bool:
         return False
     if any(marker in value for marker in _SENSITIVE_MEMORY_MARKERS):
         return False
-    if re.search(r"(?:\\+?\\d[\\d ()-]{7,}\\d)|[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}", update.value, re.I):
+    if re.search(r"(?:\+?\d[\d ()-]{7,}\d)|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", update.value, re.I):
         return False
     return True
 
