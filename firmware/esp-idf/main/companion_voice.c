@@ -1,4 +1,4 @@
-#include "voice.h"
+#include "companion_voice.h"
 #include <math.h>
 #include <string.h>
 
