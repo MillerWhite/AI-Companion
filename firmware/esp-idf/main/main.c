@@ -185,9 +185,10 @@ static void load_state(void)
     if (nvs_get_blob(handle, "emotion_state", &state, &size) != ESP_OK || size != sizeof(state)) {
         companion_emotion_init(&state);
     }
-    uint8_t temperament = 0, initiative = 0;
+    uint8_t temperament = 0, initiative = 0, quirk = 0;
     if (nvs_get_u8(handle, "temperament", &temperament) == ESP_OK) state.temperament = temperament <= 4 ? temperament : 0;
     if (nvs_get_u8(handle, "initiative", &initiative) == ESP_OK) state.initiative = initiative <= 2 ? initiative : 0;
+    if (nvs_get_u8(handle, "quirk", &quirk) == ESP_OK) state.quirk = quirk <= 4 ? quirk : 0;
     nvs_close(handle);
 }
 
