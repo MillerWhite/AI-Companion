@@ -1,7 +1,7 @@
 {
   "name": "AI Companion — Waveshare ESP32-S3-Touch-AMOLED-1.75C",
   "version": "2.3.0",
-  "new_install_prompt_erase": true,
+  "new_install_prompt_erase": false,
   "builds": [
     {
       "chipFamily": "ESP32-S3",
