@@ -65,7 +65,7 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 </section>
 <section class="panel">
 <h2>Личность компаньона</h2>
-<div class="field"><label>Имя</label><input id="name" value="Milo" maxlength="20"></div><div class="field"><label>Другие варианты произношения имени (через запятую)</label><input id="nameAliases" placeholder="например: Майло, Мило" maxlength="100"></div>
+<div class="field"><label>Имя</label><input id="name" value="Milo" maxlength="20"></div>
 <div class="two">
 <div class="field"><label>Темперамент</label><select id="temper"><option value="calm">Спокойный</option><option value="playful" selected>Игривый</option><option value="shy">Стеснительный</option><option value="energetic">Энергичный</option><option value="dreamy">Мечтательный</option></select></div>
 <div class="field"><label>Инициативность</label><select id="initiative"><option value="low">Низкая</option><option value="medium" selected>Средняя</option><option value="high">Высокая</option></select></div>
@@ -133,7 +133,7 @@ function setVoiceState(message,active=false){const el=$('voiceState');if(el){el.
 function normalizeSpeech(s){return String(s||'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/gi,' ').trim()}
 function editDistance(a,b){const row=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let prev=row[0];row[0]=i;for(let j=1;j<=b.length;j++){const old=row[j];row[j]=Math.min(row[j]+1,row[j-1]+1,prev+(a[i-1]===b[j-1]?0:1));prev=old;}}return row[b.length]}
 function transliterateName(raw){return raw.replace(/shch/g,'щ').replace(/yo/g,'ё').replace(/zh/g,'ж').replace(/kh/g,'х').replace(/ts/g,'ц').replace(/ch/g,'ч').replace(/sh/g,'ш').replace(/yu/g,'ю').replace(/ya/g,'я').replace(/a/g,'а').replace(/b/g,'б').replace(/v/g,'в').replace(/g/g,'г').replace(/d/g,'д').replace(/e/g,'е').replace(/z/g,'з').replace(/i/g,'и').replace(/j/g,'й').replace(/k/g,'к').replace(/l/g,'л').replace(/m/g,'м').replace(/n/g,'н').replace(/o/g,'о').replace(/p/g,'п').replace(/r/g,'р').replace(/s/g,'с').replace(/t/g,'т').replace(/u/g,'у').replace(/f/g,'ф').replace(/h/g,'х').replace(/c/g,'к').replace(/w/g,'в').replace(/x/g,'кс').replace(/y/g,'й')}
-function nameVariants(){const raw=[$('name').value||'Milo',...String($('nameAliases')?.value||'').split(',')].map(normalizeSpeech).filter(Boolean);return [...new Set(raw.flatMap(v=>[v,transliterateName(v)]))]}
+function nameVariants(){const raw=normalizeSpeech($('name').value||'Milo');return [...new Set([raw,transliterateName(raw)].filter(Boolean))]}
 function nameWasCalled(text){const words=normalizeSpeech(text).split(' ');return nameVariants().some(name=>{if(normalizeSpeech(text).includes(name))return true;return name.split(' ').some(part=>words.some(w=>w===part||(part.length>=4&&editDistance(w,part)<=1)))})}
 function removeSpokenName(text){const parts=normalizeSpeech(text).split(' ');const variants=nameVariants().flatMap(v=>v.split(' '));return parts.filter(w=>!variants.some(v=>w===v||(v.length>=4&&editDistance(w,v)<=1))).join(' ')}
 function voiceAcknowledge(){needs.social=Math.max(0,needs.social-2);needs.comfort=Math.min(100,needs.comfort+2);setMood('curious','услышал своё имя и повернулся к владельцу',true,'acknowledge',2600);orb.classList.remove('gaze-left','gaze-right','gaze-up','gaze-down');orb.classList.add('gaze-center');}
@@ -176,6 +176,8 @@ function understandVoiceCommand(raw){
 }
 function applyCloudIntent(result){
  if(!result||typeof result!=='object')throw new Error('Некорректный ответ backend');
+ if(result.addressed_to_companion!==true){setVoiceState('Слушаю дальше. Если ты обращаешься ко мне, я постараюсь это распознать.',true);log('Облачный ИИ решил, что фраза не адресована компаньону');return false;}
+ if(Date.now()>awaitingFollowupUntil){voiceAcknowledge();awaitingFollowupUntil=Date.now()+12000;}
  const confidence=Number(result.confidence||0);
  if(result.understood!==true||confidence<0.48||result.action==='clarify'){
   const clarification=String(result.clarification||'Я пока не совсем понял. Можешь сказать иначе?').slice(0,220);
@@ -235,14 +237,29 @@ async function interpretWithCloud(utterance){
  }catch(error){const msg=String(error.message||error);setVoiceState('Ошибка облачного ИИ: '+msg.slice(0,180)+'. Локальные реакции работают.',true);log('Ошибка облачного ИИ: '+msg.slice(0,100));if(/provider|Yandex|HTTP 5/i.test(msg)){cloudHealthCache=null;cloudHealthCheckedAt=0;}return false;}
  finally{cloudRequestInFlight=false;}
 }
-async function handleSpeech(text){const cleaned=normalizeSpeech(text);if(!cleaned)return;const called=nameWasCalled(cleaned);let command=cleaned;if(called){command=removeSpokenName(cleaned);if(!command){awaitingFollowupUntil=Date.now()+12000;voiceAcknowledge();setVoiceState('Узнал своё имя. Слушаю тебя…',true);log('Откликнулся на имя владельца');return;}awaitingFollowupUntil=Date.now()+12000;voiceAcknowledge();}else if(Date.now()>awaitingFollowupUntil){setVoiceState('Ожидаю имя «'+($('name').value||'Milo')+'»',true);return;}
- const ok=understandVoiceCommand(command);log('Речь распознана: «'+text+'»'+(ok?' · локально обработано':' · требуется понимание'));if(ok){awaitingFollowupUntil=Date.now()+12000;cloudTurns.push({role:'owner',text:command},{role:'companion',text:'Выполнил локальное действие: '+lastVoiceIntent});cloudTurns=cloudTurns.slice(-8);return;}
+async function handleSpeech(text){
+ const cleaned=normalizeSpeech(text);if(!cleaned)return;
+ const called=nameWasCalled(cleaned);const alreadyAddressed=called||Date.now()<=awaitingFollowupUntil;
+ let command=cleaned;
+ if(called){
+  command=removeSpokenName(cleaned);awaitingFollowupUntil=Date.now()+12000;voiceAcknowledge();
+  if(!command){setVoiceState('Узнал своё имя. Слушаю тебя…',true);log('Откликнулся на имя владельца');return;}
+ }else if(!alreadyAddressed&&!cloudEnabled){
+  setVoiceState('Ожидаю имя «'+($('name').value||'Milo')+'»',true);return;
+ }
+ if(alreadyAddressed){
+  const ok=understandVoiceCommand(command);
+  log('Речь распознана: «'+text+'»'+(ok?' · локально обработано':' · требуется понимание'));
+  if(ok){awaitingFollowupUntil=Date.now()+12000;cloudTurns.push({role:'owner',text:command},{role:'companion',text:'Выполнил локальное действие: '+lastVoiceIntent});cloudTurns=cloudTurns.slice(-8);return;}
+ }else{
+  log('Передаю фразу облачному ИИ для определения обращения по имени и смыслу');
+ }
  if(cloudEnabled){const handled=await interpretWithCloud(command);if(handled)awaitingFollowupUntil=Date.now()+12000;}
  else{setMood('curious','услышал речь, но не понял просьбу',true,'confusion',1900);setVoiceState('Я пока не понял. Включи облачный интеллект для свободного понимания речи или попробуй короткую команду.',true);}
 }
 function startVoice(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){setVoiceState('В этом браузере нет Web Speech API. Попробуйте актуальный Chrome или Edge.');return}
  if(!recognition){recognition=new SR();recognition.lang='ru-RU';recognition.continuous=true;recognition.interimResults=false;recognition.maxAlternatives=3;recognition.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal){const variants=Array.from(e.results[i]).map(v=>v.transcript);handleSpeech(variants[0]||'');}}};recognition.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){voiceEnabled=false;$('voiceButton').textContent='Включить голос';setVoiceState('Нет доступа к микрофону. Разрешите его в браузере и нажмите кнопку снова.');}else setVoiceState('Ошибка распознавания: '+e.error)};recognition.onend=()=>{if(voiceEnabled){try{recognition.start()}catch(e){}}else setVoiceState('Голосовое управление выключено');}}
- voiceEnabled=true;$('voiceButton').textContent='Выключить голос';setVoiceState('Слушаю. Сначала назовите имя компаньона.',true);try{recognition.start()}catch(e){setVoiceState('Не удалось запустить микрофон. Попробуйте ещё раз.');}
+ voiceEnabled=true;$('voiceButton').textContent='Выключить голос';setVoiceState('Слушаю. Имя и его ласкательные варианты распознаются автоматически.',true);try{recognition.start()}catch(e){setVoiceState('Не удалось запустить микрофон. Попробуйте ещё раз.');}
 }
 function toggleVoice(){if(voiceEnabled){voiceEnabled=false;try{recognition?.stop()}catch(e){}$('voiceButton').textContent='Включить голос';setVoiceState('Голосовое управление выключено');return}startVoice();}
 
