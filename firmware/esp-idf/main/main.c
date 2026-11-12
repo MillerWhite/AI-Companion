@@ -32,6 +32,7 @@
 #include "esp_timer.h"
 #include "qrcodegen.h"
 #include "companion_ble.h"
+#include "companion_iphone.h"
 
 static const char *TAG = "ai_companion";
 static lv_obj_t *eyes[2], *mouth, *status_label, *brows[2], *tears[2], *setup_label, *screen_face;
@@ -49,11 +50,15 @@ static bool audio_available;
 static bool imu_available;
 static char setup_info[128];
 static char owner_setup_pin[16];
-static lv_obj_t *qr_view, *qr_title_label, *qr_count_label, *qr_button;
+static lv_obj_t *qr_view, *qr_title_label, *qr_count_label, *qr_button, *remote_button;
 static bool qr_mode;
+static bool remote_mode;
+static bool iphone_media_mode;
 static uint8_t qr_index;
 static char qr_titles[4][40], qr_urls[4][180];
 static uint8_t qr_temp[qrcodegen_BUFFER_LEN_MAX], qr_code[qrcodegen_BUFFER_LEN_MAX];
+static char last_iphone_notification[240], last_iphone_track[96];
+static int64_t iphone_info_until_us;
 
 static const char *emotion_label(companion_emotion_t emotion)
 {
@@ -549,19 +554,62 @@ static void on_remote_gesture(lv_event_t *event)
 {
     if (lv_event_get_code(event) != LV_EVENT_GESTURE || qr_mode) return;
     const lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_active());
-    companion_ble_key_t key;
-    if (dir == LV_DIR_LEFT) key = COMPANION_BLE_NEXT;
-    else if (dir == LV_DIR_RIGHT) key = COMPANION_BLE_PREVIOUS;
-    else if (dir == LV_DIR_TOP) key = COMPANION_BLE_PLAY_PAUSE;
-    else if (dir == LV_DIR_BOTTOM) key = COMPANION_BLE_MUTE;
-    else return;
-    esp_err_t err = companion_ble_send_key(key);
+    esp_err_t err = ESP_OK;
+    if (iphone_media_mode) {
+        /* iPhone AMS mode: swipe left/right for tracks, up for play/pause, down for volume up. */
+        if (dir == LV_DIR_LEFT) err = companion_iphone_media_command(COMPANION_IPHONE_PREVIOUS_TRACK);
+        else if (dir == LV_DIR_RIGHT) err = companion_iphone_media_command(COMPANION_IPHONE_NEXT_TRACK);
+        else if (dir == LV_DIR_TOP) err = companion_iphone_media_command(COMPANION_IPHONE_TOGGLE_PLAY_PAUSE);
+        else if (dir == LV_DIR_BOTTOM) err = companion_iphone_media_command(COMPANION_IPHONE_VOLUME_UP);
+        else return;
+    } else if (remote_mode) {
+        /* In mouse mode, swipe moves the host cursor and vertical swipe scrolls. */
+        if (dir == LV_DIR_LEFT) err = companion_ble_send_mouse(-36, 0, 0, 0);
+        else if (dir == LV_DIR_RIGHT) err = companion_ble_send_mouse(36, 0, 0, 0);
+        else if (dir == LV_DIR_TOP) err = companion_ble_send_mouse(0, 0, 2, 0);
+        else if (dir == LV_DIR_BOTTOM) err = companion_ble_send_mouse(0, 0, -2, 0);
+        else return;
+    } else {
+        companion_ble_key_t key;
+        if (dir == LV_DIR_LEFT) key = COMPANION_BLE_PRESENTATION_NEXT;
+        else if (dir == LV_DIR_RIGHT) key = COMPANION_BLE_PRESENTATION_PREVIOUS;
+        else if (dir == LV_DIR_TOP) key = COMPANION_BLE_PLAY_PAUSE;
+        else if (dir == LV_DIR_BOTTOM) key = COMPANION_BLE_MUTE;
+        else return;
+        err = companion_ble_send_key(key);
+    }
     if (err != ESP_OK) ESP_LOGW(TAG, "BLE remote unavailable: %s", esp_err_to_name(err));
+}
+
+static void remote_button_event(lv_event_t *event)
+{
+    if (lv_event_get_code(event) != LV_EVENT_CLICKED) return;
+    if (!remote_mode && !iphone_media_mode) {
+        remote_mode = true;
+        lv_label_set_text(remote_button, "MOUSE");
+        lv_label_set_text(status_label, "Mouse mode · swipe to move · tap to click");
+    } else if (remote_mode) {
+        remote_mode = false;
+        iphone_media_mode = true;
+        lv_label_set_text(remote_button, "IPHONE");
+        lv_label_set_text(status_label, "iPhone mode · swipe for music controls");
+    } else {
+        iphone_media_mode = false;
+        lv_label_set_text(remote_button, "REMOTE");
+        lv_label_set_text(status_label, "Presentation mode · swipe to control");
+    }
 }
 
 static void on_face_long_press(lv_event_t *event)
 {
     (void)event;
+    if (remote_mode || iphone_media_mode) {
+        remote_mode = false;
+        iphone_media_mode = false;
+        lv_label_set_text(remote_button, "REMOTE");
+        lv_label_set_text(status_label, "Remote mode disabled");
+        return;
+    }
     lv_label_set_text(status_label, "Resetting Wi-Fi…");
     companion_wifi_reset();
 }
@@ -570,6 +618,16 @@ static void on_face_tap(lv_event_t *event)
 {
     (void)event;
     if (qr_mode) return;
+    if (iphone_media_mode) {
+        esp_err_t err = companion_iphone_media_command(COMPANION_IPHONE_VOLUME_DOWN);
+        if (err != ESP_OK) ESP_LOGW(TAG, "iPhone volume command unavailable: %s", esp_err_to_name(err));
+        return;
+    }
+    if (remote_mode) {
+        esp_err_t err = companion_ble_mouse_click(false);
+        if (err != ESP_OK) ESP_LOGW(TAG, "BLE mouse click unavailable: %s", esp_err_to_name(err));
+        return;
+    }
     if (sleeping) sleeping = false;
     manual_sleep = false;
     last_activity_us = esp_timer_get_time();
@@ -602,7 +660,48 @@ static void autonomous_timer(lv_timer_t *timer)
 {
     (void)timer;
     refresh_personality();
+    companion_iphone_poll();
     const int64_t now_us = esp_timer_get_time();
+
+    /* Surface iPhone ANCS notifications and AMS track metadata on the AMOLED. */
+    if (!qr_mode && !screen_asleep && status_label) {
+        char notification[240] = {0}, title[96] = {0}, artist[96] = {0}, player[48] = {0};
+        uint8_t playback = 0;
+        companion_iphone_get_notification(notification, sizeof(notification));
+        companion_iphone_get_media(title, sizeof(title), artist, sizeof(artist), player, sizeof(player), &playback);
+        if (notification[0] && strcmp(notification, last_iphone_notification) != 0) {
+            snprintf(last_iphone_notification, sizeof(last_iphone_notification), "%s", notification);
+            lv_label_set_text(status_label, notification);
+            lv_label_set_long_mode(status_label, LV_LABEL_LONG_DOT);
+            lv_obj_set_width(status_label, 420);
+            lv_obj_set_style_text_align(status_label, LV_TEXT_ALIGN_CENTER, 0);
+            iphone_info_until_us = now_us + 7000000LL;
+        } else if (!notification[0] && last_iphone_notification[0]) {
+            last_iphone_notification[0] = 0;
+            iphone_info_until_us = now_us;
+        }
+        if (!notification[0] && title[0]) {
+            char track[96];
+            snprintf(track, sizeof(track), "%s", title);
+            if (strcmp(track, last_iphone_track) != 0) {
+                snprintf(last_iphone_track, sizeof(last_iphone_track), "%s", track);
+                char line[220];
+                snprintf(line, sizeof(line), "%s%s%s", title, artist[0] ? " — " : "", artist);
+                lv_label_set_text(status_label, line);
+                lv_label_set_long_mode(status_label, LV_LABEL_LONG_DOT);
+                lv_obj_set_width(status_label, 420);
+                lv_obj_set_style_text_align(status_label, LV_TEXT_ALIGN_CENTER, 0);
+                iphone_info_until_us = now_us + 5000000LL;
+            }
+        } else if (!title[0]) {
+            last_iphone_track[0] = 0;
+        }
+        if (iphone_info_until_us && now_us >= iphone_info_until_us && !notification[0]) {
+            iphone_info_until_us = 0;
+            lv_label_set_text(status_label, emotion_label(current_emotion));
+            lv_obj_set_width(status_label, LV_SIZE_CONTENT);
+        }
+    }
     if (last_activity_us == 0) last_activity_us = now_us;
     if (!screen_asleep && display_sleep_timeout > 0 &&
         now_us - last_activity_us >= (int64_t)display_sleep_timeout * 1000000LL) {
@@ -859,6 +958,13 @@ void app_main(void)
     lv_obj_set_style_text_color(qr_count_label, lv_color_hex(0x91A6BB), 0);
     lv_obj_align(qr_count_label, LV_ALIGN_BOTTOM_MID, 0, -48);
     lv_obj_add_flag(qr_count_label, LV_OBJ_FLAG_HIDDEN);
+    remote_button = lv_label_create(screen);
+    lv_label_set_text(remote_button, "REMOTE");
+    lv_obj_set_style_text_color(remote_button, lv_color_hex(0xA8D9FF), 0);
+    lv_obj_align(remote_button, LV_ALIGN_BOTTOM_LEFT, 18, -18);
+    lv_obj_add_flag(remote_button, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(remote_button, remote_button_event, LV_EVENT_CLICKED, NULL);
+
     qr_button = lv_label_create(screen);
     lv_label_set_text(qr_button, "QR");
     lv_obj_set_style_text_color(qr_button, lv_color_hex(0xA8D9FF), 0);
