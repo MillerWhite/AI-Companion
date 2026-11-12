@@ -15,6 +15,7 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "bsp/esp-bsp.h"
+#include "bsp/display.h"
 #include "lvgl.h"
 #include "cJSON.h"
 
@@ -34,6 +35,10 @@ static const char *TAG = "ai_companion";
 static lv_obj_t *eyes[2], *mouth, *status_label, *brows[2], *tears[2], *setup_label, *screen_face;
 static bool screen_asleep;
 static int64_t dizzy_until_us;
+static int64_t last_activity_us;
+static uint8_t display_brightness = 85;
+static uint8_t display_theme;
+static uint16_t display_sleep_timeout = 30;
 static companion_state_t state;
 static companion_emotion_t current_emotion = COMPANION_CALM;
 static bool sleeping;
@@ -88,6 +93,52 @@ static void animate_size(lv_obj_t *object, int32_t from, int32_t to,
     lv_anim_start(&animation);
 }
 
+static uint32_t theme_background(void)
+{
+    switch (display_theme) {
+        case 1: return 0xE8EDF2;
+        case 2: return 0x000000;
+        case 3: return 0x120D06;
+        default: return 0x05070B;
+    }
+}
+
+static uint32_t theme_face_color(void)
+{
+    switch (display_theme) {
+        case 1: return 0x17212B;
+        case 3: return 0xF1C27D;
+        default: return 0xF8FBFF;
+    }
+}
+
+static void load_display_settings(void)
+{
+    nvs_handle_t handle;
+    if (nvs_open("companion", NVS_READONLY, &handle) != ESP_OK) return;
+    uint8_t brightness = 85, theme = 0, timeout = 30;
+    if (nvs_get_u8(handle, "brightness", &brightness) == ESP_OK && brightness <= 100) display_brightness = brightness;
+    if (nvs_get_u8(handle, "theme", &theme) == ESP_OK && theme <= 4) display_theme = theme;
+    if (nvs_get_u8(handle, "sleep_timeout", &timeout) == ESP_OK && timeout <= 300) display_sleep_timeout = timeout;
+    nvs_close(handle);
+}
+
+static void apply_display_settings(void)
+{
+    if (bsp_display_lock(pdMS_TO_TICKS(1000)) != ESP_OK) return;
+    lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(theme_background()), 0);
+    lv_obj_set_style_bg_opa(lv_screen_active(), LV_OPA_COVER, 0);
+    if (eyes[0] && eyes[1]) {
+        for (int i = 0; i < 2; ++i) {
+            lv_obj_set_style_bg_color(eyes[i], lv_color_hex(theme_face_color()), 0);
+            lv_obj_set_style_shadow_color(eyes[i], lv_color_hex(display_theme == 3 ? 0x9B6D32 : 0xA8D9FF), 0);
+        }
+    }
+    if (mouth) lv_obj_set_style_border_color(mouth, lv_color_hex(theme_face_color()), 0);
+    bsp_display_unlock();
+    if (!screen_asleep) (void)bsp_display_brightness_set(display_brightness);
+}
+
 static void render_emotion(companion_emotion_t emotion)
 {
     if (emotion >= COMPANION_EMOTION_COUNT) emotion = COMPANION_CALM;
@@ -122,7 +173,7 @@ static void render_emotion(companion_emotion_t emotion)
         animate_size(eyes[i], old_height > 0 ? old_height : 78, eye_height, 260, animate_eye_height);
         lv_obj_set_x(eyes[i], i == 0 ? 150 - eye_width / 2 : 316 - eye_width / 2);
         lv_obj_set_y(eyes[i], sad ? 156 : 164);
-        lv_obj_set_style_bg_color(eyes[i], sad ? lv_color_hex(0xDCEEFF) : lv_color_hex(0xFFFFFF), 0);
+        lv_obj_set_style_bg_color(eyes[i], sad ? lv_color_hex(0xDCEEFF) : lv_color_hex(theme_face_color()), 0);
         lv_obj_set_style_shadow_color(eyes[i], sad ? lv_color_hex(0x6BB7E8) : lv_color_hex(0xA8D9FF), 0);
         lv_obj_set_style_shadow_width(eyes[i], sad ? 20 : 12, 0);
         lv_obj_set_style_bg_opa(eyes[i], (sleepy || flinch) ? LV_OPA_80 : LV_OPA_COVER, 0);
@@ -146,7 +197,7 @@ static void render_emotion(companion_emotion_t emotion)
     lv_obj_set_y(mouth, 280 + mouth_top);
     lv_obj_set_style_bg_opa(mouth, excited || curious ? LV_OPA_20 : LV_OPA_TRANSP, 0);
     lv_obj_set_style_bg_color(mouth, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_border_color(mouth, sad ? lv_color_hex(0xC6E6FF) : lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_border_color(mouth, sad ? lv_color_hex(0xC6E6FF) : lv_color_hex(theme_face_color()), 0);
     lv_obj_set_style_border_width(mouth, sleepy ? 0 : 3, 0);
     lv_obj_set_style_border_side(mouth, sad || emotion == COMPANION_CONCERNED ? LV_BORDER_SIDE_TOP : LV_BORDER_SIDE_BOTTOM, 0);
     lv_obj_set_style_radius(mouth, LV_RADIUS_CIRCLE, 0);
@@ -171,7 +222,7 @@ static void set_screen_sleep(bool asleep)
     if (screen_asleep == asleep || !screen_face) return;
     if (bsp_display_lock(pdMS_TO_TICKS(1000)) != ESP_OK) return;
     screen_asleep = asleep;
-    lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(asleep ? 0x000000 : 0x05070B), 0);
+    lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(asleep ? 0x000000 : theme_background()), 0);
     if (asleep) {
         /* The CO5300 AMOLED has no LED backlight: a fully black frame blanks its pixels. */
         lv_obj_add_flag(screen_face, LV_OBJ_FLAG_HIDDEN);
@@ -183,6 +234,7 @@ static void set_screen_sleep(bool asleep)
         if (setup_label) lv_obj_clear_flag(setup_label, LV_OBJ_FLAG_HIDDEN);
     }
     bsp_display_unlock();
+    (void)bsp_display_brightness_set(asleep ? 0 : display_brightness);
 }
 
 static void save_state(void)
@@ -309,8 +361,12 @@ static void apply_cloud_intent(const char *json_text)
 static void on_usb_command(const char *command)
 {
     if (!command) return;
+    last_activity_us = esp_timer_get_time();
+    if (screen_asleep) set_screen_sleep(false);
     if (!strcmp(command, "profile")) {
         refresh_personality();
+        load_display_settings();
+        apply_display_settings();
         save_state();
     } else if (!strcmp(command, "sleep")) {
         sleeping = true;
@@ -386,6 +442,8 @@ static void on_face_tap(lv_event_t *event)
     (void)event;
     if (sleeping) sleeping = false;
     manual_sleep = false;
+    last_activity_us = esp_timer_get_time();
+    set_screen_sleep(false);
     companion_emotion_interaction(&state, "pet");
     render_emotion(COMPANION_HAPPY);
     if (audio_available) companion_audio_play(COMPANION_HAPPY, false);
@@ -395,7 +453,7 @@ static void on_face_tap(lv_event_t *event)
 static void blink_timer(lv_timer_t *timer)
 {
     (void)timer;
-    if (sleeping || !eyes[0]) return;
+    if (sleeping || screen_asleep || !eyes[0]) return;
     if ((esp_random() % 100U) > 72U) return;
     for (int i = 0; i < 2; ++i) {
         lv_anim_t a;
@@ -414,6 +472,12 @@ static void autonomous_timer(lv_timer_t *timer)
 {
     (void)timer;
     refresh_personality();
+    const int64_t now_us = esp_timer_get_time();
+    if (last_activity_us == 0) last_activity_us = now_us;
+    if (!screen_asleep && display_sleep_timeout > 0 &&
+        now_us - last_activity_us >= (int64_t)display_sleep_timeout * 1000000LL) {
+        set_screen_sleep(true);
+    }
     companion_emotion_tick(&state, 8, sleeping);
     if (!sleeping) {
         const uint32_t chance = state.initiative == 1 ? 42U : (state.initiative == 2 ? 12U : 25U);
@@ -583,15 +647,20 @@ void app_main(void)
     }
     ESP_ERROR_CHECK(err);
     load_state();
+    load_display_settings();
 
     if (!bsp_display_start()) {
         ESP_LOGE(TAG, "Display initialization failed");
         return;
     }
     bsp_display_backlight_on();
+    (void)bsp_display_brightness_set(display_brightness);
+    last_activity_us = esp_timer_get_time();
     ESP_ERROR_CHECK(bsp_display_lock(-1));
     lv_obj_t *screen = lv_screen_active();
-    lv_obj_set_style_bg_color(screen, lv_color_hex(0x05070B), 0);
+    lv_obj_add_flag(screen, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(screen, on_face_tap, LV_EVENT_CLICKED, NULL);
+    lv_obj_set_style_bg_color(screen, lv_color_hex(theme_background()), 0);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, 0);
 
     lv_obj_t *face = lv_obj_create(screen);
