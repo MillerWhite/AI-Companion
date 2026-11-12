@@ -748,7 +748,7 @@ def admin_create_enrollment_grant(
 
 
 @app.post("/api/store/webhook")
-async async def store_payment_webhook(
+async def store_payment_webhook(
     request: Request,
     x_store_signature: str | None = Header(default=None, alias="X-Store-Signature"),
 ) -> dict[str, Any]:
