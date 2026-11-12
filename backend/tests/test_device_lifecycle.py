@@ -118,9 +118,11 @@ class DeviceLifecycleTests(unittest.TestCase):
         old_device_limit = main.AUDIO_DAILY_SECONDS_LIMIT
         old_global_limit = main.AUDIO_DAILY_TOTAL_SECONDS_LIMIT
         old_redis_url = main.REDIS_URL
+        old_redis_factory = main._redis
         try:
             main.APP_ENV = "development"
             main.REDIS_URL = ""
+            main._redis = lambda: None
             main.AUDIO_DAILY_SECONDS_LIMIT = 10
             main.AUDIO_DAILY_TOTAL_SECONDS_LIMIT = 2
             main._local_audio_daily.clear()
@@ -131,9 +133,10 @@ class DeviceLifecycleTests(unittest.TestCase):
             self.assertEqual(error.exception.status_code, 429)
         finally:
             main.APP_ENV = old_app_env
-            main.SPEECHKIT_DAILY_SECONDS_LIMIT = old_device_limit
-            main.SPEECHKIT_DAILY_TOTAL_SECONDS_LIMIT = old_global_limit
+            main.AUDIO_DAILY_SECONDS_LIMIT = old_device_limit
+            main.AUDIO_DAILY_TOTAL_SECONDS_LIMIT = old_global_limit
             main.REDIS_URL = old_redis_url
+            main._redis = old_redis_factory
             main._local_audio_daily.clear()
 
     def test_revoked_device_token_cannot_access_owner_memory(self):
