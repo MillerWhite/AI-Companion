@@ -24,6 +24,7 @@ static uint16_t s_ams_end, s_ams_remote, s_ams_entity_update, s_ams_entity_attr;
 static bool s_ancs_ready, s_ams_ready, s_pairing;
 static uint8_t s_data[512];
 static size_t s_data_len;
+static uint8_t s_data_attr_mask;
 static char s_notification[240], s_track_title[96], s_track_artist[96], s_player[48];
 static uint8_t s_playback_state;
 static portMUX_TYPE s_lock = portMUX_INITIALIZER_UNLOCKED;
@@ -43,9 +44,9 @@ static const ble_uuid128_t UUID_AMS = BLE_UUID128_INIT(
 static const ble_uuid128_t UUID_AMS_REMOTE = BLE_UUID128_INIT(
     0xC2,0x51,0xCA,0xF7,0x56,0x0E,0xDF,0xB8,0x8A,0x4A,0xB1,0x57,0xD8,0x81,0x3C,0x9B);
 static const ble_uuid128_t UUID_AMS_UPDATE = BLE_UUID128_INIT(
-    0x02,0x96,0x7C,0xAB,0xBB,0x0C,0xA0,0x9A,0x1F,0x41,0xD8,0x80,0xCE,0xAB,0x7C,0x2F);
+    0x02,0xC1,0x96,0xBA,0x92,0xBB,0x0C,0x9A,0x1F,0x41,0x8D,0x80,0xCE,0xAB,0x7C,0x2F);
 static const ble_uuid128_t UUID_AMS_ATTRIBUTE = BLE_UUID128_INIT(
-    0xD7,0xD5,0xB8,0x70,0xA8,0xA3,0xD6,0xA6,0xD8,0x46,0xAB,0x23,0x8C,0xF3,0xB2,0xC6);
+    0xD7,0xD5,0xBB,0x70,0xA8,0xA3,0xAB,0xA6,0xD8,0x46,0xAB,0x23,0x8C,0xF3,0xB2,0xC6);
 
 static void reset_handles(void)
 {
@@ -53,6 +54,18 @@ static void reset_handles(void)
     s_ams_end = s_ams_remote = s_ams_entity_update = s_ams_entity_attr = 0;
     s_ancs_ready = s_ams_ready = false;
     s_data_len = 0;
+    s_data_attr_mask = 0;
+}
+
+static int ams_track_subscribe_cb(uint16_t conn, const struct ble_gatt_error *error,
+                                  struct ble_gatt_attr *attr, void *arg)
+{
+    (void)attr; (void)arg;
+    if (error->status) { ESP_LOGW(TAG, "AMS track subscription failed: %d", error->status); return 0; }
+    const uint8_t req[] = {0, 0, 1, 2};
+    int rc = ble_gattc_write_flat(conn, s_ams_entity_update, req, sizeof(req), NULL, NULL);
+    if (rc) ESP_LOGW(TAG, "AMS player subscription write failed: %d", rc);
+    return 0;
 }
 
 static int cccd_write_cb(uint16_t conn, const struct ble_gatt_error *error,
@@ -67,18 +80,11 @@ static int cccd_write_cb(uint16_t conn, const struct ble_gatt_error *error,
     ESP_LOGI(TAG, "Notifications enabled handle=%u", value_handle);
     if (value_handle == s_ams_entity_update && s_ams_entity_update) {
         /* EntityUpdate: subscribe to track title/artist/album/duration and player state/name/volume. */
-        const uint8_t req[] = {2, 0, 1, 2, 3, 0, 0, 1, 2};
-        int rc = ble_gattc_write_flat(conn, s_ams_entity_update, req, sizeof(req), NULL, NULL);
-        if (rc) ESP_LOGW(TAG, "AMS entity subscription write failed: %d", rc);
+        const uint8_t req[] = {2, 0, 1, 2, 3};
+        int rc = ble_gattc_write_flat(conn, s_ams_entity_update, req, sizeof(req), ams_track_subscribe_cb, NULL);
+        if (rc) ESP_LOGW(TAG, "AMS track subscription write failed: %d", rc);
     }
     return 0;
-}
-
-static int subscribe_characteristic(uint16_t conn, uint16_t value_handle, uint16_t end_handle)
-{
-    if (!value_handle) return BLE_HS_EINVAL;
-    return ble_gattc_disc_all_dscs(conn, value_handle, end_handle, 
-        /* descriptor callback */ NULL, NULL);
 }
 
 /* A descriptor discovery callback is shared by ANCS and AMS notification characteristics. */
@@ -185,9 +191,9 @@ static void parse_ancs_data(void)
         if (pos + len > s_data_len) break;
         size_t n = len;
         char *dst = NULL; size_t cap = 0;
-        if (id == 0) { dst = app; cap = sizeof(app); }
-        else if (id == 1) { dst = title; cap = sizeof(title); }
-        else if (id == 3) { dst = message; cap = sizeof(message); }
+        if (id == 0) { dst = app; cap = sizeof(app); s_data_attr_mask |= 1U; }
+        else if (id == 1) { dst = title; cap = sizeof(title); s_data_attr_mask |= 2U; }
+        else if (id == 3) { dst = message; cap = sizeof(message); s_data_attr_mask |= 8U; }
         if (dst && cap) { if (n >= cap) n = cap - 1; memcpy(dst, &s_data[pos], n); dst[n] = 0; }
         pos += len;
         parsed = true;
@@ -201,7 +207,7 @@ static void parse_ancs_data(void)
         portEXIT_CRITICAL(&s_lock);
         ESP_LOGI(TAG, "iPhone notification: %s", out);
     }
-    if (pos == s_data_len) s_data_len = 0;
+    if (pos == s_data_len && (s_data_attr_mask & 0x0B) == 0x0B) { s_data_len = 0; s_data_attr_mask = 0; }
 }
 
 static void parse_ams_update(const uint8_t *data, size_t len)
@@ -245,7 +251,7 @@ static int iphone_gap_event(struct ble_gap_event *event, void *arg)
         if (event->notify_rx.conn_handle != s_conn || !event->notify_rx.om) return 0;
         if (event->notify_rx.attr_handle == s_ancs_ns && event->notify_rx.om->om_len >= 8) {
             const uint8_t *p = event->notify_rx.om->om_data;
-            if (p[0] == 0) {
+            if (p[0] == 0 || p[0] == 1) {
                 uint32_t uid = (uint32_t)p[4] | ((uint32_t)p[5]<<8) | ((uint32_t)p[6]<<16) | ((uint32_t)p[7]<<24);
                 ancs_request_attributes(s_conn, uid);
             } else if (p[0] == 2) {
