@@ -14,6 +14,19 @@ Firmware target: Waveshare ESP32-S3-Touch-AMOLED-1.75C (ESP32-S3, 32 MB flash, 8
 | `companion_setup.c` | Local owner portal, activation claim, personality controls, memory export/reset |
 | `cloud_client.c` | HTTPS SpeechKit upload, intent request, schema/allowlist validation, one-time claim and owner API proxy |
 
+## Browser USB console
+
+The firmware exposes a small line-oriented USB Serial/JTAG protocol compatible with the browser console in `web/installer/index.html`. The transport uses the ESP32-S3 native USB Serial/JTAG interface (VID `0x303A`); it is separate from the UART log console.
+
+Commands are newline-terminated UTF-8:
+- `config` — returns `@C {json}` with firmware version, companion name and personality settings.
+- `status` / `ping` — returns `@S {json}`.
+- `name <text>`, `temperament <0..4>`, `initiative <0..2>`, `quirk <0..4>` — validate and persist owner settings in NVS.
+- `pet`, `play`, `sleep`, `wake` — trigger local pet reactions.
+- `wifi-reset` — clear Wi-Fi provisioning and restart setup.
+
+Responses use `@C`, `@S`, and `@E` prefixes so browser code can ignore boot logs. Device tokens, enrollment grants, setup PINs and Wi-Fi passwords are never sent over this USB settings protocol.
+
 ## First boot
 
 1. Flash the firmware with the installer page.
