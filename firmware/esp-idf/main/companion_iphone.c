@@ -21,7 +21,7 @@ static const char *TAG = "companion_iphone";
 static uint16_t s_conn = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t s_ancs_end, s_ancs_ns, s_ancs_cp, s_ancs_ds;
 static uint16_t s_ams_end, s_ams_remote, s_ams_entity_update, s_ams_entity_attr;
-static bool s_ancs_ready, s_ams_ready, s_pairing, s_ams_started;
+static bool s_ancs_ready, s_ams_ready, s_ams_started;
 static uint8_t s_ancs_desc_pending;
 static uint8_t s_pending_entity, s_pending_attribute;
 static uint8_t s_data[512];
@@ -31,6 +31,7 @@ static char s_notification[240], s_track_title[96], s_track_artist[96], s_player
 static uint8_t s_playback_state;
 static portMUX_TYPE s_lock = portMUX_INITIALIZER_UNLOCKED;
 static struct ble_gap_event_listener s_listener;
+static void start_ams_discovery(uint16_t conn);
 static bool s_listener_registered;
 
 static const ble_uuid128_t UUID_ANCS = BLE_UUID128_INIT(
@@ -192,6 +193,8 @@ static void start_ams_discovery(uint16_t conn)
 static void ancs_request_attributes(uint16_t conn, uint32_t uid)
 {
     if (!s_ancs_cp) return;
+    s_data_len = 0;
+    s_data_attr_mask = 0;
     uint8_t req[] = {
         0, (uint8_t)uid, (uint8_t)(uid >> 8), (uint8_t)(uid >> 16), (uint8_t)(uid >> 24),
         0, 1, 0, 64, 0, 3, 0, 160, 0
@@ -295,7 +298,6 @@ static int iphone_gap_event(struct ble_gap_event *event, void *arg)
     case BLE_GAP_EVENT_CONNECT:
         if (event->connect.status == 0) {
             s_conn = event->connect.conn_handle;
-            s_pairing = true;
             reset_handles();
             ESP_LOGI(TAG, "iPhone/accessory BLE link connected; starting secure pairing");
             int rc = ble_gap_security_initiate(s_conn);
@@ -304,7 +306,6 @@ static int iphone_gap_event(struct ble_gap_event *event, void *arg)
         return 0;
     case BLE_GAP_EVENT_ENC_CHANGE:
         if (event->enc_change.conn_handle == s_conn && event->enc_change.status == 0) {
-            s_pairing = false;
             ESP_LOGI(TAG, "Encrypted link ready; discovering ANCS and AMS");
             (void)ble_gattc_disc_svc_by_uuid(s_conn, &UUID_ANCS.u, discover_ancs, NULL);
         }
@@ -330,7 +331,6 @@ static int iphone_gap_event(struct ble_gap_event *event, void *arg)
     case BLE_GAP_EVENT_DISCONNECT:
         if (event->disconnect.conn.conn_handle == s_conn) {
             s_conn = BLE_HS_CONN_HANDLE_NONE;
-            s_pairing = false;
             reset_handles();
             ESP_LOGI(TAG, "iPhone BLE link disconnected");
         }
@@ -356,13 +356,13 @@ void companion_iphone_init(void)
     }
 }
 
-bool companion_iphone_connected(void) { return s_conn != BLE_HS_CONN_HANDLE_NONE; }
+bool companion_iphone_connected(void) { return s_conn != BLE_HS_CONN_HANDLE_NONE && (s_ancs_ready || s_ams_ready); }
 bool companion_iphone_ancs_ready(void) { return s_ancs_ready; }
 bool companion_iphone_ams_ready(void) { return s_ams_ready; }
 
 esp_err_t companion_iphone_media_command(companion_iphone_command_t command)
 {
-    if (!companion_iphone_connected() || !s_ams_remote) return ESP_ERR_INVALID_STATE;
+    if (!companion_iphone_connected() || !s_ams_ready || !s_ams_remote) return ESP_ERR_INVALID_STATE;
     uint8_t value = (uint8_t)command;
     int rc = ble_gattc_write_flat(s_conn, s_ams_remote, &value, sizeof(value), NULL, NULL);
     return rc == 0 ? ESP_OK : ESP_FAIL;
