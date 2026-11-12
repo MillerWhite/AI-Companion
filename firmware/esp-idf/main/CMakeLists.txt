@@ -1,5 +1,22 @@
 idf_component_register(
-    SRCS "main.c" "cloud_client.c"
+    SRCS
+        "main.c"
+        "cloud_client.c"
+        "companion_emotion.c"
+        "companion_audio.c"
+        "companion_imu.c"
+        "companion_wifi.c"
+        "companion_setup.c"
     INCLUDE_DIRS "."
-    REQUIRES lvgl esp_http_client nvs_flash json
+    REQUIRES
+        lvgl
+        esp_http_client
+        esp_http_server
+        esp_wifi
+        esp_event
+        esp_netif
+        wifi_provisioning
+        nvs_flash
+        json
+        qmi8658
 )
