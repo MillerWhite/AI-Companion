@@ -34,7 +34,7 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 - Body size limits before buffering audio and payment events.
 - Server-only secrets and exact production CORS/host allowlists.
 - Device token hashes at rest; one-time activation grants hashed at rest.
-- Memory context limited to eight turns; up to twenty non-sensitive facts from four allowlisted categories; default retention 90 days.
+- Memory context limited to eight turns; up to twenty non-sensitive facts from four allowlisted categories; default retention 90 days with scheduled database cleanup.
 - Memory export/reset and profile update require device authentication.
 - Production startup refuses to run without PostgreSQL, Redis, server secrets, provider keys, CORS and host configuration.
 
