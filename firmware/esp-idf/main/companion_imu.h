@@ -5,3 +5,5 @@
 
 esp_err_t companion_imu_init(void);
 uint32_t companion_imu_poll(void);
+
+void companion_imu_get_tilt(float *x, float *y);
