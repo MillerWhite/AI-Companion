@@ -50,6 +50,14 @@ jobs:
             firmware/esp-idf/tests/companion_voice_test.c \
             -lm -o /tmp/companion_voice_test
           /tmp/companion_voice_test
+      - name: Compile and test MIT procedural eye renderer
+        run: |
+          gcc -std=c11 -Wall -Wextra -Werror -Ifirmware/esp-idf/main \
+            firmware/esp-idf/main/companion_face_renderer.c \
+            firmware/tests/test_companion_face_renderer.c \
+            -lm -o /tmp/companion_face_renderer_test
+          /tmp/companion_face_renderer_test
+
       - name: Compile and test motion classifier
         run: |
           gcc -std=c11 -Wall -Wextra -Werror -Ifirmware/esp-idf/main \
