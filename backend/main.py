@@ -28,7 +28,7 @@ from pydantic import BaseModel, Field, field_validator
 
 load_dotenv(dotenv_path=Path(__file__).resolve().with_name(".env"), override=False)
 
-APP_VERSION = "2.0.0"
+APP_VERSION = "2.1.0
 APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
 DEVICE_ENROLLMENT_SECRET = os.getenv("DEVICE_ENROLLMENT_SECRET", "").strip()
 DEVICE_DB_PATH = os.getenv("DEVICE_DB_PATH", "backend/devices.sqlite3")
