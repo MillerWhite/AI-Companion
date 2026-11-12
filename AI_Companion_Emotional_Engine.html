@@ -38,12 +38,12 @@ button,select,input{font:inherit}button{background:#1b293b;color:#edf7ff;border:
 h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display:block;font-size:11px;color:#b8c8db;margin-bottom:5px}.field select,.field input{width:100%;background:#0a111c;border:1px solid #304158;border-radius:10px;padding:10px;color:#eff7ff;outline:none}.field input[type=range]{padding:0;accent-color:#9ceaff}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.stat{background:#0a111c;border:1px solid #293a50;border-radius:12px;padding:10px}.stat b{display:block;font-size:19px;color:#c4efff}.stat span{font-size:10px;color:var(--muted)}
 .profile{background:#0a0a0b;border:1px solid #29292d;border-radius:13px;padding:12px;margin-top:12px}.profile strong{font-size:13px}.profile p{font-size:12px;color:#afafb6;margin:6px 0 0}.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.chip{font-size:10px;padding:4px 7px;border-radius:20px;border:1px solid #3b3b42;color:#eee;background:#171719}.meter{height:7px;background:#1a1a1d;border-radius:9px;overflow:hidden}.meter i{display:block;height:100%;background:#f2f2f2;border-radius:9px;transition:width .5s}.field label b{float:right;color:#fff}
-.soundgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.soundgrid button{font-size:12px;padding:10px 6px}.soundnote{font-size:11px;color:var(--muted);margin:9px 0 0}.log{border-top:1px solid #2a394e;margin-top:14px;padding-top:10px}.logtop{display:flex;justify-content:space-between;font-size:11px;color:#aebed2}.logbody{height:85px;overflow:auto;font-size:11px;color:#8799b1}.logbody div{padding:4px 0;border-bottom:1px solid #ffffff08}
+.soundgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.soundgrid button{font-size:12px;padding:10px 6px}.cloud-settings{margin:12px auto 0;width:min(100%,420px);padding:12px;border:1px solid #29292d;border-radius:13px;background:#08090c;text-align:left}.cloud-title{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;font-weight:700}.cloud-toggle{display:flex;align-items:center;gap:8px;color:#d7d7dc;font-size:12px;margin:9px 0}.cloud-toggle input{accent-color:#fff}.cloud-settings input[type=url]{width:100%;padding:10px;border-radius:8px;border:1px solid #333;background:#111;color:#fff;font:12px system-ui}.cloud-help{font-size:10px;color:#8b8b94;margin-top:7px;line-height:1.4}.soundnote{font-size:11px;color:var(--muted);margin:9px 0 0}.log{border-top:1px solid #2a394e;margin-top:14px;padding-top:10px}.logtop{display:flex;justify-content:space-between;font-size:11px;color:#aebed2}.logbody{height:85px;overflow:auto;font-size:11px;color:#8799b1}.logbody div{padding:4px 0;border-bottom:1px solid #ffffff08}
 @media(max-width:780px){.grid{grid-template-columns:1fr}.panel{padding:15px}.stage{min-height:350px}}
 </style>
 </head>
 <body><main>
-<div class="head"><div class="brand">NIFORTT LABS · COMPANION SYSTEMS</div><div class="version">EXPRESSIVE CORE · CLOUD AI v1.3</div></div>
+<div class="head"><div class="brand">NIFORTT LABS · COMPANION SYSTEMS</div><div class="version">EXPRESSIVE CORE · CLOUD AI v1.5</div></div>
 <h1>Живой компаньон</h1>
 <p class="intro">Компаньон с собственным настроением, потребностями, памятью отношений и самостоятельным поведением. Он реагирует на взаимодействия, постепенно привыкает к владельцу и иногда проявляет инициативу сам.</p>
 <div class="grid">
@@ -54,7 +54,7 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 <div class="controls">
 <button onclick="trigger('happy')">Погладить</button><button onclick="trigger('curious')">Позвать</button><button onclick="trigger('surprised')">Удивить</button><button onclick="trigger('play')">Игра</button><button onclick="trigger('sleep')">Сон</button><button onclick="trigger('neutral')">Пробудить</button>
 <button class="main" onclick="randomEmotion()">Случайная эмоция</button>
-</div><div class="voicebar"><button id="voiceButton" onclick="toggleVoice()">Включить голос</button><span class="voice-state" id="voiceState">Назовите имя компаньона, чтобы он откликнулся</span></div><div class="daypart" id="daypart">Режим дня: определяется по местному времени устройства</div></div>
+</div><div class="voicebar"><button id="voiceButton" onclick="toggleVoice()">Включить голос</button><span class="voice-state" id="voiceState">Назовите имя компаньона, чтобы он откликнулся</span></div><div class="cloud-settings"><div class="cloud-title"><span>Облачный интеллект</span><span id="cloudStatus" style="color:#9b9ba4;font-weight:500">выключен</span></div><label class="cloud-toggle"><input id="cloudEnabled" type="checkbox"> Использовать Yandex AI, если локально не понял фразу</label><input id="cloudApiUrl" type="url" value="http://127.0.0.1:8787" aria-label="Адрес AI Companion backend"><div class="cloud-help">API-ключ хранится только на backend. Здесь указывается только адрес сервера. При ошибке соединения локальные реакции продолжают работать.</div></div><div class="daypart" id="daypart">Режим дня: определяется по местному времени устройства</div></div>
 <div class="stats">
 <div class="stat"><b id="emotionCount">35</b><span>базовых состояний</span></div>
 <div class="stat"><b id="comboCount">1 134 000</b><span>комбинаций параметров*</span></div>
@@ -121,6 +121,13 @@ $('soundEmotion')?.addEventListener('change',updateSoundInfo);
 function getDayPeriod(){const h=new Date().getHours();return h>=5&&h<11?'утро':h>=11&&h<17?'день':h>=17&&h<22?'вечер':'ночь'}
 function updateDayPeriod(){const p=getDayPeriod(),el=$('daypart');if(el)el.textContent='Режим дня: '+p+' · локальное время устройства';}
 let recognition=null,voiceEnabled=false,awaitingFollowupUntil=0,pendingVoiceAction=null,lastVoiceIntent='';
+let cloudTurns=[],cloudRequestInFlight=false;
+let cloudEnabled=false;
+try{cloudEnabled=localStorage.getItem('ai-companion-cloud-enabled-v1')==='true';}catch(e){}
+$('cloudEnabled').checked=cloudEnabled;$('cloudStatus').textContent=cloudEnabled?'активен':'выключен';
+try{$('cloudApiUrl').value=localStorage.getItem('ai-companion-cloud-url-v1')||'http://127.0.0.1:8787';}catch(e){}
+$('cloudEnabled').addEventListener('change',()=>{cloudEnabled=$('cloudEnabled').checked;try{localStorage.setItem('ai-companion-cloud-enabled-v1',String(cloudEnabled));}catch(e){}$('cloudStatus').textContent=cloudEnabled?'активен':'выключен';setVoiceState(cloudEnabled?'Облачный ИИ включён: незнакомые фразы будут отправляться на backend':'Облачный ИИ выключен: используются локальные команды',true);log(cloudEnabled?'Облачный интеллект включён':'Облачный интеллект выключен');});
+$('cloudApiUrl').addEventListener('change',()=>{const value=$('cloudApiUrl').value.trim().replace(/\\/+$/,'');$('cloudApiUrl').value=value;try{localStorage.setItem('ai-companion-cloud-url-v1',value);}catch(e){}});
 function setVoiceState(message,active=false){const el=$('voiceState');if(el){el.textContent=message;el.classList.toggle('active',active)}}
 function normalizeSpeech(s){return String(s||'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/gi,' ').trim()}
 function editDistance(a,b){const row=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let prev=row[0];row[0]=i;for(let j=1;j<=b.length;j++){const old=row[j];row[j]=Math.min(row[j]+1,row[j-1]+1,prev+(a[i-1]===b[j-1]?0:1));prev=old;}}return row[b.length]}
@@ -164,10 +171,43 @@ function understandVoiceCommand(raw){
  if(has('я рад','я рада','хорошие новости','у меня получилось','я счастлив','я счастлива','я доволен','я довольна'))return runVoiceIntent('joy');
  if(has('интересно','смотри что','послушай','представляешь'))return runVoiceIntent('curiosity');
  if(has('давай','сделай что нибудь','чем займемся','чем займёмся','погнали')){askVoiceClarification('Хочешь поиграть, отдохнуть или просто пообщаться? Назови один вариант.');return false;}
- setMood('curious','услышал речь, но не уверен в её смысле',true,'confusion',2100);setVoiceState('Я услышал тебя, но пока не понял просьбу. Попробуй сказать короче или использовать «что ты умеешь».',true);return false;
+ return false;
 }
-function handleSpeech(text){const cleaned=normalizeSpeech(text);if(!cleaned)return;const called=nameWasCalled(cleaned);let command=cleaned;if(called){command=removeSpokenName(cleaned);if(!command){awaitingFollowupUntil=Date.now()+12000;voiceAcknowledge();setVoiceState('Узнал своё имя. Слушаю тебя…',true);log('Откликнулся на имя владельца');return;}awaitingFollowupUntil=Date.now()+12000;voiceAcknowledge();}else if(Date.now()>awaitingFollowupUntil){setVoiceState('Ожидаю имя «'+($('name').value||'Milo')+'»',true);return;}
- const ok=understandVoiceCommand(command);log('Речь распознана: «'+text+'»'+(ok?' · обработано':' · не удалось однозначно понять'));if(ok)awaitingFollowupUntil=Date.now()+12000;
+function applyCloudIntent(result){
+ if(!result||typeof result!=='object')throw new Error('Некорректный ответ backend');
+ const confidence=Number(result.confidence||0);
+ if(result.understood!==true||confidence<0.48||result.action==='clarify'){
+  const clarification=String(result.clarification||'Я пока не совсем понял. Можешь сказать иначе?').slice(0,220);
+  setMood('curious','пытается понять владельца',true,'confusion',2100);setVoiceState(clarification,true);log('Облачный ИИ запросил уточнение');return false;
+ }
+ const map={idle:null,greet:'greeting',acknowledge:'call',play:'play',pet:'pet',sleep:'sleep',wake:'wake',surprise:'surprise',comfort:'comfort',attend:'attention',express_joy:'joy',express_curiosity:'curiosity',thank:'thank'};
+ const action=map[result.action];
+ if(action==='thank'){setMood('love','почувствовал благодарность владельца',true,'gratitude',2300);}
+ else if(action){runVoiceIntent(action);}
+ else if(result.action==='idle'){setMood('neutral','спокойно остаётся рядом',false,'calm',1800);}
+ else throw new Error('Действие ИИ не поддерживается локальным движком');
+ const cue=String(result.nonverbal_cue||'').slice(0,120);
+ if(cue)$('substatus').textContent=cue+' · облачный ИИ';
+ log('Yandex AI: '+String(result.intent||result.action).slice(0,90)+' · уверенность '+Math.round(confidence*100)+'%');
+ cloudTurns.push({role:'owner',text:lastCloudUtterance},{role:'companion',text:'Реакция: '+String(result.action)+'; эмоция: '+String(result.emotion)});cloudTurns=cloudTurns.slice(-8);
+ return true;
+}
+let lastCloudUtterance='';
+async function interpretWithCloud(utterance){
+ if(!cloudEnabled||cloudRequestInFlight)return false;
+ const base=$('cloudApiUrl').value.trim().replace(/\\/+$/,'');if(!/^https?:\\/\\//i.test(base)){setVoiceState('Проверь адрес backend: нужен http:// или https://');return false;}
+ cloudRequestInFlight=true;setVoiceState('Думает… обращаюсь к облачному интеллекту',true);
+ const personality={temperament:profile.temper,initiative:profile.initiative,playfulness:profile.bond,calmness:profile.temper==='calm'?'high':'medium',quirks:profile.quirk};
+ try{
+  const response=await fetch(base+'/api/interpret',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({utterance,companion_name:$('name').value.trim()||'Milo',personality,recent_context:cloudTurns.slice(-8)}) ,signal:AbortSignal.timeout(25000)});
+  if(!response.ok){let message='Backend вернул ошибку '+response.status;try{const data=await response.json();if(data.detail?.code==='ai_not_configured')message='На backend ещё не настроен API Yandex AI';else if(data.detail?.code==='provider_rate_limited')message='Достигнут лимит запросов Yandex AI';}catch(e){}throw new Error(message);}
+  const data=await response.json();lastCloudUtterance=utterance;return applyCloudIntent(data);
+ }catch(error){setVoiceState('Облачный ИИ недоступен: '+String(error.message||error).slice(0,150)+'. Локальные реакции работают.',true);log('Ошибка облачного ИИ; локальный режим сохранён');return false;}
+ finally{cloudRequestInFlight=false;}
+}
+async function handleSpeech(text){const cleaned=normalizeSpeech(text);if(!cleaned)return;const called=nameWasCalled(cleaned);let command=cleaned;if(called){command=removeSpokenName(cleaned);if(!command){awaitingFollowupUntil=Date.now()+12000;voiceAcknowledge();setVoiceState('Узнал своё имя. Слушаю тебя…',true);log('Откликнулся на имя владельца');return;}awaitingFollowupUntil=Date.now()+12000;voiceAcknowledge();}else if(Date.now()>awaitingFollowupUntil){setVoiceState('Ожидаю имя «'+($('name').value||'Milo')+'»',true);return;}
+ const ok=understandVoiceCommand(command);log('Речь распознана: «'+text+'»'+(ok?' · локально обработано':' · требуется понимание'));if(ok){awaitingFollowupUntil=Date.now()+12000;cloudTurns.push({role:'owner',text:command},{role:'companion',text:'Выполнил локальное действие: '+lastVoiceIntent});cloudTurns=cloudTurns.slice(-8);return;}
+ if(cloudEnabled){const handled=await interpretWithCloud(command);if(handled)awaitingFollowupUntil=Date.now()+12000;}
 }
 function startVoice(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){setVoiceState('В этом браузере нет Web Speech API. Попробуйте актуальный Chrome или Edge.');return}
  if(!recognition){recognition=new SR();recognition.lang='ru-RU';recognition.continuous=true;recognition.interimResults=false;recognition.maxAlternatives=3;recognition.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal){const variants=Array.from(e.results[i]).map(v=>v.transcript);handleSpeech(variants[0]||'');}}};recognition.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){voiceEnabled=false;$('voiceButton').textContent='Включить голос';setVoiceState('Нет доступа к микрофону. Разрешите его в браузере и нажмите кнопку снова.');}else setVoiceState('Ошибка распознавания: '+e.error)};recognition.onend=()=>{if(voiceEnabled){try{recognition.start()}catch(e){}}else setVoiceState('Голосовое управление выключено');}}
