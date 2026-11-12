@@ -18,7 +18,7 @@ def valid_result(**overrides):
         "addressed_to_companion": True,
         "understood": True,
         "intent": "owner_invites_play",
-        "action": "play",
+        "action": "express_joy",
         "emotion": "happy",
         "confidence": 0.93,
         "nonverbal_cue": "Поднять глаза и слегка наклониться вперёд",
