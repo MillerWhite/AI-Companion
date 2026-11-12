@@ -1,5 +1,5 @@
 /* Renderer checks that pictures can't catch reliably: nothing is ever shaved off an eye. Run by sim/check.py. */
-#include "face.h"
+#include "companion_face_renderer.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
