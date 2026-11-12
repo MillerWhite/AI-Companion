@@ -7,6 +7,8 @@ Firmware target: Waveshare ESP32-S3-Touch-AMOLED-1.75C (ESP32-S3, 32 MB flash, 8
 | Module | Responsibility |
 |---|---|
 | `main.c` | LVGL face, touch reactions, autonomous timer, speech and IMU tasks, cloud intent application |
+| `companion_ble.c` | Composite BLE HID peripheral for mouse, keyboard, presentation and media controls |
+| `companion_iphone.c` | Apple ANCS notifications and AMS media metadata/remote-command GATT client |
 | `companion_emotion.c` | Needs, trust/playfulness progression, temperament-dependent emotional decisions |
 | `companion_audio.c` | Waveshare BSP ES8311/ES7210 codec handles, low-volume procedural nonverbal playback, VAD and 16 kHz PCM capture |
 | `companion_voice.c` | MIT-derived procedural vocalization engine adapted from Pip-KeyPet; no TTS or spoken words |
