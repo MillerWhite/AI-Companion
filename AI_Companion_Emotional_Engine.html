@@ -130,7 +130,7 @@ function askVoiceClarification(question){pendingVoiceAction=null;awaitingFollowu
 function understandVoiceCommand(raw){
  const t=normalizeSpeech(raw);if(!t)return false;
  const has=(...phrases)=>phrases.some(p=>t.includes(normalizeSpeech(p)));
- if(/(?:^|\\s)(?:не хочу|не надо|не нужно|не стоит|не делай|не грустно|не плохо)(?:\\s|$)/.test(t)){setVoiceState('Хорошо, я понял. Не буду делать это.',true);setMood('neutral','уважает отказ владельца',true,'calm',1800);return true;}
+ if(/(?:^|\s)(?:не хочу|не надо|не нужно|не стоит|не делай|не грустно|не плохо)(?:\s|$)/.test(t)){setVoiceState('Хорошо, я понял. Не буду делать это.',true);setMood('neutral','уважает отказ владельца',true,'calm',1800);return true;}
  if(has('что ты умеешь','что можешь','какие команды','что ты понимаешь','помоги мне')){setVoiceState('Я могу играть, отдыхать, просыпаться, откликаться на имя, смотреть на тебя и реагировать на настроение. Скажи, например: «поиграй со мной» или «мне грустно».',true);setMood('curious','слушает вопрос владельца',true,'curiosity',2600);return true;}
  if(has('повтори','что ты услышал','повтори просьбу')){setVoiceState(lastVoiceIntent?'Последняя распознанная реакция: '+lastVoiceIntent:'Пока ещё не было распознанных просьб',true);return true;}
  if(has('спасибо','благодарю')){setMood('love','почувствовал благодарность',true,'gratitude',2200);return true;}
