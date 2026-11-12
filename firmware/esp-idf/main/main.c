@@ -170,6 +170,9 @@ static void load_state(void)
     if (nvs_get_blob(handle, "emotion_state", &state, &size) != ESP_OK || size != sizeof(state)) {
         companion_emotion_init(&state);
     }
+    uint8_t temperament = 0, initiative = 0;
+    if (nvs_get_u8(handle, "temperament", &temperament) == ESP_OK) state.temperament = temperament <= 4 ? temperament : 0;
+    if (nvs_get_u8(handle, "initiative", &initiative) == ESP_OK) state.initiative = initiative <= 2 ? initiative : 0;
     nvs_close(handle);
 }
 
@@ -248,6 +251,10 @@ static void autonomous_timer(lv_timer_t *timer)
 {
     (void)timer;
     companion_emotion_tick(&state, 8, sleeping);
+    if (!sleeping) {
+        const uint32_t chance = state.initiative == 1 ? 42U : (state.initiative == 2 ? 12U : 25U);
+        if ((esp_random() % 100U) >= chance) { save_state(); return; }
+    }
     if (sleeping && state.energy >= 68.0f) {
         sleeping = false;
         set_emotion(COMPANION_HAPPY, true);
