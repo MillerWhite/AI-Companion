@@ -230,7 +230,7 @@ static companion_emotion_t parse_emotion(const char *value)
     if (!strcmp(value, "excited")) return COMPANION_EXCITED;
     if (!strcmp(value, "surprised")) return COMPANION_SURPRISED;
     if (!strcmp(value, "concerned")) return COMPANION_CONCERNED;
-    if (!strcmp(value, "shy")) return COMPANION_SHY;
+    if (!strcmp(value, "shy")) return COMPANION_SHY;\n    if (!strcmp(value, "dizzy")) return COMPANION_DIZZY;
     return COMPANION_CALM;
 }
 
@@ -314,19 +314,35 @@ static void on_usb_command(const char *command)
     } else if (!strcmp(command, "wake")) {
         sleeping = false;
         manual_sleep = false;
+        set_screen_sleep(false);
         set_emotion(COMPANION_HAPPY, true);
     } else if (!strcmp(command, "pet")) {
         sleeping = false;
         manual_sleep = false;
         companion_emotion_interaction(&state, "pet");
-        set_emotion(COMPANION_HAPPY, true);
+        set_emotion(COMPANION_HAPPY, false);
+        if (audio_available) companion_audio_play_sound(VOICE_PURR, false);
         save_state();
     } else if (!strcmp(command, "play")) {
         sleeping = false;
         manual_sleep = false;
         companion_emotion_interaction(&state, "play");
-        set_emotion(COMPANION_EXCITED, true);
+        set_emotion(COMPANION_EXCITED, false);
+        if (audio_available) companion_audio_play_sound(VOICE_NOM, false);
         save_state();
+    } else if (!strncmp(command, "emotion ", 8)) {
+        const companion_emotion_t emotion = parse_emotion(command + 8);
+        set_emotion(emotion, true);
+    } else if (!strncmp(command, "sound ", 6)) {
+        const char *sound = command + 6;
+        int cue = VOICE_HM;
+        if (!strcmp(sound, "purr")) cue = VOICE_PURR;
+        else if (!strcmp(sound, "growl")) cue = VOICE_GROWL;
+        else if (!strcmp(sound, "nom")) cue = VOICE_NOM;
+        else if (!strcmp(sound, "dizzy")) cue = VOICE_DIZZY;
+        else if (!strcmp(sound, "surprise")) cue = VOICE_OH;
+        else if (!strcmp(sound, "hmph")) cue = VOICE_HMPH;
+        if (audio_available) companion_audio_play_sound(cue, true);
     } else if (!strcmp(command, "wifi-reset")) {
         (void)companion_wifi_reset();
     }
