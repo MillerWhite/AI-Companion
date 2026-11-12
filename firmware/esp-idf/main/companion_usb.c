@@ -171,23 +171,23 @@ static void process_command(char *line)
         if (!save_u8("quirk", line + 6, 4)) { usb_write_line("@E invalid_quirk\n"); return; }
         profile_changed = true;
         } else if (!strncmp(line, "brightness ", 11)) {
-        if (!save_u8("brightness", line + 11, 100)) { usb_write_line("@E invalid_brightness\\n"); return; }
+        if (!save_u8("brightness", line + 11, 100)) { usb_write_line("@E invalid_brightness\n"); return; }
         profile_changed = true;
     } else if (!strncmp(line, "theme ", 6)) {
-        if (!save_u8("theme", line + 6, 4)) { usb_write_line("@E invalid_theme\\n"); return; }
+        if (!save_u8("theme", line + 6, 4)) { usb_write_line("@E invalid_theme\n"); return; }
         profile_changed = true;
     } else if (!strncmp(line, "sleep-timeout ", 14)) {
-        if (!save_u8("sleep_timeout", line + 14, 300)) { usb_write_line("@E invalid_sleep_timeout\\n"); return; }
+        if (!save_u8("sleep_timeout", line + 14, 300)) { usb_write_line("@E invalid_sleep_timeout\n"); return; }
         profile_changed = true;
     } else if (!strncmp(line, "owner ", 6)) {
-        if (!save_profile_string("owner_name", line + 6, 40)) { usb_write_line("@E invalid_owner\\n"); return; }
+        if (!save_profile_string("owner_name", line + 6, 40)) { usb_write_line("@E invalid_owner\n"); return; }
         profile_changed = true;
     } else if (!strncmp(line, "badge ", 6)) {
-        if (!save_profile_string("owner_badge", line + 6, 56)) { usb_write_line("@E invalid_badge\\n"); return; }
+        if (!save_profile_string("owner_badge", line + 6, 56)) { usb_write_line("@E invalid_badge\n"); return; }
         profile_changed = true;
     } else if (!strncmp(line, "qr", 2) && line[2] >= '0' && line[2] <= '3' && line[3] == ' ') {
         char key[4] = {'q', 'r', line[2], 0};
-        if (!save_profile_string(key, line + 4, 170)) { usb_write_line("@E invalid_qr\\n"); return; }
+        if (!save_profile_string(key, line + 4, 170)) { usb_write_line("@E invalid_qr\n"); return; }
         profile_changed = true;
     }
 
