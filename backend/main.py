@@ -372,6 +372,24 @@ def _device_db():
     return connection
 
 
+async def _read_limited_body(request: Request, maximum: int) -> bytes:
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > maximum:
+                raise HTTPException(status_code=413, detail={"code": "body_too_large", "message": "Request body is too large"})
+        except ValueError:
+            raise HTTPException(status_code=400, detail={"code": "invalid_content_length", "message": "Invalid Content-Length"})
+    chunks: list[bytes] = []
+    total = 0
+    async for chunk in request.stream():
+        total += len(chunk)
+        if total > maximum:
+            raise HTTPException(status_code=413, detail={"code": "body_too_large", "message": "Request body is too large"})
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
 def _token_hash(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
@@ -593,7 +611,7 @@ app.add_middleware(
     # Keep this convenience strictly out of production; production uses exact configured origins.
     allow_origin_regex=None if APP_ENV == "production" else r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=False,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Enrollment-Secret"],
 )
 
@@ -635,7 +653,7 @@ async def store_payment_webhook(
     """Generic HMAC-signed adapter. A real payment provider must be verified before forwarding."""
     if not STORE_WEBHOOK_SECRET:
         raise HTTPException(status_code=503, detail={"code": "store_webhook_not_configured", "message": "Store webhook is not configured"})
-    body = await request.body()
+    body = await _read_limited_body(request, 8192)
     expected = hmac.new(STORE_WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
     if not x_store_signature or not hmac.compare_digest(x_store_signature, expected):
         raise HTTPException(status_code=401, detail={"code": "invalid_store_signature", "message": "Payment webhook signature is invalid"})
@@ -782,9 +800,10 @@ async def transcribe_device_audio(request: Request, authorization: str | None = 
     _check_device_rate_limit(device["device_id"])
     if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/octet-stream":
         raise HTTPException(status_code=415, detail={"code": "invalid_audio_content_type", "message": "Expected application/octet-stream PCM audio"})
-    pcm = await request.body()
-    # SpeechKit synchronous LPCM API: mono 16-bit PCM, up to 1 MB and 30 seconds.
-    if len(pcm) < 3200 or len(pcm) > 1_000_000 or len(pcm) % 2:
+    max_audio_bytes = min(1_000_000, SPEECHKIT_SAMPLE_RATE * 2 * 30)
+    pcm = await _read_limited_body(request, max_audio_bytes)
+    # SpeechKit synchronous LPCM API: mono 16-bit PCM, up to 30 seconds.
+    if len(pcm) < 3200 or len(pcm) > max_audio_bytes or len(pcm) % 2:
         raise HTTPException(status_code=413, detail={"code": "invalid_audio_size", "message": "Audio must be 0.1–30 seconds of 16-bit mono PCM and no larger than 1 MB"})
     duration_seconds = len(pcm) // (2 * SPEECHKIT_SAMPLE_RATE)
     _check_audio_daily_budget(device["device_id"], duration_seconds)
