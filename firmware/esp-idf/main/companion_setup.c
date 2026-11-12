@@ -9,6 +9,7 @@
 #include "esp_check.h"
 #include "esp_mac.h"
 #include "esp_netif.h"
+#include "esp_netif_ip_addr.h"
 #include "nvs.h"
 #include "cloud_client.h"
 
