@@ -17,15 +17,16 @@ import urllib.error
 import urllib.request
 from enum import Enum
 from typing import Any
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).resolve().with_name(".env"), override=False)
 
-APP_VERSION = "1.7.0"
+APP_VERSION = "1.8.0"
 APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
 DEVICE_ENROLLMENT_SECRET = os.getenv("DEVICE_ENROLLMENT_SECRET", "").strip()
 DEVICE_DB_PATH = os.getenv("DEVICE_DB_PATH", "backend/devices.sqlite3")
@@ -279,6 +280,9 @@ origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    # Local development servers commonly choose a random port (VS Code Live Server, etc.).
+    # Keep this convenience strictly out of production; production uses exact configured origins.
+    allow_origin_regex=None if APP_ENV == "production" else r"^https?://(localhost|127\\.0\\.0\\.1)(:\\d+)?$",
     allow_credentials=False,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
