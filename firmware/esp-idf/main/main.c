@@ -31,6 +31,7 @@
 #include "companion_voice.h"
 #include "esp_timer.h"
 #include "qrcodegen.h"
+#include "companion_ble.h"
 
 static const char *TAG = "ai_companion";
 static lv_obj_t *eyes[2], *mouth, *status_label, *brows[2], *tears[2], *setup_label, *screen_face;
@@ -544,6 +545,20 @@ static void qr_gesture_event(lv_event_t *event)
     qr_refresh();
 }
 
+static void on_remote_gesture(lv_event_t *event)
+{
+    if (lv_event_get_code(event) != LV_EVENT_GESTURE || qr_mode) return;
+    const lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_active());
+    companion_ble_key_t key;
+    if (dir == LV_DIR_LEFT) key = COMPANION_BLE_NEXT;
+    else if (dir == LV_DIR_RIGHT) key = COMPANION_BLE_PREVIOUS;
+    else if (dir == LV_DIR_TOP) key = COMPANION_BLE_PLAY_PAUSE;
+    else if (dir == LV_DIR_BOTTOM) key = COMPANION_BLE_MUTE;
+    else return;
+    esp_err_t err = companion_ble_send_key(key);
+    if (err != ESP_OK) ESP_LOGW(TAG, "BLE remote unavailable: %s", esp_err_to_name(err));
+}
+
 static void on_face_long_press(lv_event_t *event)
 {
     (void)event;
@@ -767,6 +782,7 @@ void app_main(void)
     lv_obj_t *screen = lv_screen_active();
     lv_obj_add_flag(screen, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(screen, on_face_tap, LV_EVENT_CLICKED, NULL);
+    lv_obj_add_event_cb(screen, on_remote_gesture, LV_EVENT_GESTURE, NULL);
     lv_obj_set_style_bg_color(screen, lv_color_hex(theme_background()), 0);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, 0);
 
@@ -854,6 +870,9 @@ void app_main(void)
     lv_timer_create(autonomous_timer, 8000, NULL);
     lv_timer_create(blink_timer, 2600, NULL);
     bsp_display_unlock();
+
+    err = companion_ble_init();
+    if (err != ESP_OK) ESP_LOGW(TAG, "BLE HID init failed: %s", esp_err_to_name(err));
 
     err = companion_wifi_start(setup_info, sizeof(setup_info));
     if (err == ESP_OK && setup_info[0]) {
