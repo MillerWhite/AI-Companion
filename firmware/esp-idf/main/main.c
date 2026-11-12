@@ -71,7 +71,7 @@ static const char *emotion_label(companion_emotion_t emotion)
 {
     static const char *labels[COMPANION_EMOTION_COUNT] = {
         "Calm", "Happy", "Curious", "Sleepy", "Sad",
-        "Affection", "Excited", "Surprised", "Scared", "Concerned", "Shy", "Dizzy", "Flinch"
+        "Affection", "Excited", "Surprised", "Scared", "Concerned", "Shy", "Dizzy", "Flinch", "Angry"
     };
     return labels[emotion < COMPANION_EMOTION_COUNT ? emotion : COMPANION_CALM];
 }
@@ -128,6 +128,7 @@ static void face_apply_emotion(companion_emotion_t emotion)
         case COMPANION_SHY: w=115; h=116; lid=.12f; tilt=-.12f; pw=.39f; ph=.43f; blush=.70f; gaze_x=-.38f; break;
         case COMPANION_DIZZY: w=118; h=130; pw=.33f; ph=.33f; spiral=.90f; break;
         case COMPANION_FLINCH: w=116; h=18; lid=.98f; pw=.12f; ph=.12f; break;
+        case COMPANION_ANGRY: w=114; h=114; lid=.30f; tilt=.45f; pw=.20f; ph=.40f; break;
         default: break;
     }
     face_model.color = white;
@@ -146,8 +147,8 @@ static void face_apply_emotion(companion_emotion_t emotion)
         e->w = w * (i ? .98f : 1.0f);
         e->h = h * (i ? 1.0f : .98f);
         e->depth = 78.0f;
-        e->yaw = 0; e->pitch = 0; e->roll = (i ? -1.0f : 1.0f) * (emotion==COMPANION_SAD ? -.12f : .015f);
-        e->taper = emotion==COMPANION_CONCERNED ? .12f : 0;
+        e->yaw = 0; e->pitch = 0; e->roll = (i ? -1.0f : 1.0f) * (emotion==COMPANION_SAD ? -.12f : (emotion==COMPANION_ANGRY ? .16f : .015f));
+        e->taper = emotion==COMPANION_ANGRY ? .30f : (emotion==COMPANION_CONCERNED ? .12f : 0);
         e->lid = lid + (i ? .035f : 0);
         e->tilt = i ? -tilt : tilt;
         e->smile = smile;
@@ -299,6 +300,7 @@ static companion_emotion_t parse_emotion(const char *value)
     if (!strcmp(value, "shy")) return COMPANION_SHY;
     if (!strcmp(value, "dizzy")) return COMPANION_DIZZY;
     if (!strcmp(value, "flinch")) return COMPANION_FLINCH;
+    if (!strcmp(value, "angry")) return COMPANION_ANGRY;
     return COMPANION_CALM;
 }
 
