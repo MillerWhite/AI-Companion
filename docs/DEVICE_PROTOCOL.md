@@ -32,7 +32,7 @@ Body: mono signed 16-bit little-endian LPCM at 16 kHz, no WAV header, maximum 30
 {"text":"Мило, давай поиграем"}
 ```
 
-Raw audio is not persisted by the application.
+Raw audio is not persisted by the application. Text classified as not addressed to the companion is not added to device memory.
 
 ## Intent request
 
