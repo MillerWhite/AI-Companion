@@ -7,19 +7,29 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
+import hashlib
+import hmac
+import sqlite3
+import time
+import uuid
 import urllib.error
 import urllib.request
 from enum import Enum
 from typing import Any
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 
 load_dotenv()
 
-APP_VERSION = "1.5.0"
+APP_VERSION = "1.6.0"
+APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
+DEVICE_ENROLLMENT_SECRET = os.getenv("DEVICE_ENROLLMENT_SECRET", "").strip()
+DEVICE_DB_PATH = os.getenv("DEVICE_DB_PATH", "backend/devices.sqlite3")
+DEVICE_REQUESTS_PER_MINUTE = int(os.getenv("DEVICE_REQUESTS_PER_MINUTE", "20"))
 AI_PROVIDER = os.getenv("AI_PROVIDER", "yandex").strip().lower()
 AI_API_KEY = os.getenv("AI_API_KEY", "").strip()
 AI_FOLDER_ID = os.getenv("AI_FOLDER_ID", "").strip()
@@ -82,6 +92,16 @@ class InterpretRequest(BaseModel):
     @classmethod
     def normalize_name(cls, value: str) -> str:
         return " ".join(value.split()) or "Companion"
+
+
+class DeviceEnrollRequest(BaseModel):
+    serial: str = Field(min_length=4, max_length=80, pattern=r"^[A-Za-z0-9._:-]+$")
+    companion_name: str = Field(default="Companion", min_length=1, max_length=40)
+    personality: dict[str, Any] = Field(default_factory=dict)
+
+
+class DeviceInterpretRequest(BaseModel):
+    utterance: str = Field(min_length=1, max_length=1200)
 
 
 class InterpretResult(BaseModel):
@@ -198,6 +218,57 @@ def call_language_model(payload: InterpretRequest) -> InterpretResult:
         raise HTTPException(status_code=502, detail={"code": "provider_error", "message": "AI interpretation failed"})
 
 
+def _device_db() -> sqlite3.Connection:
+    connection = sqlite3.connect(DEVICE_DB_PATH, timeout=10)
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS devices (
+            device_id TEXT PRIMARY KEY,
+            serial TEXT NOT NULL UNIQUE,
+            token_hash TEXT NOT NULL,
+            companion_name TEXT NOT NULL,
+            personality_json TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            revoked_at INTEGER
+        )
+    """)
+    connection.commit()
+    return connection
+
+
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _get_device(token: str) -> dict[str, Any] | None:
+    digest = _token_hash(token)
+    with _device_db() as connection:
+        row = connection.execute(
+            "SELECT device_id, companion_name, personality_json FROM devices "
+            "WHERE token_hash = ? AND revoked_at IS NULL", (digest,)
+        ).fetchone()
+    if not row:
+        return None
+    return {
+        "device_id": row[0],
+        "companion_name": row[1],
+        "personality": json.loads(row[2]),
+    }
+
+
+# Per-process protection for a single backend instance. Production multi-instance
+# deployments should move this counter to Redis or a shared rate-limit service.
+_device_request_times: dict[str, list[float]] = {}
+
+
+def _check_device_rate_limit(device_id: str) -> None:
+    now = time.time()
+    recent = [stamp for stamp in _device_request_times.get(device_id, []) if now - stamp < 60]
+    if len(recent) >= DEVICE_REQUESTS_PER_MINUTE:
+        raise HTTPException(status_code=429, detail={"code": "device_rate_limited", "message": "Device request limit reached"})
+    recent.append(now)
+    _device_request_times[device_id] = recent
+
+
 app = FastAPI(title="AI Companion Language Backend", version=APP_VERSION)
 
 origins = [
@@ -226,7 +297,62 @@ def health() -> dict[str, str | bool]:
     }
 
 
+@app.post("/api/devices/enroll")
+def enroll_device(
+    payload: DeviceEnrollRequest,
+    request: Request,
+    x_enrollment_secret: str | None = Header(default=None, alias="X-Enrollment-Secret"),
+) -> dict[str, str]:
+    """Provision one device using a server-only enrollment secret.
+
+    In a public store flow, the website backend must validate a paid order and
+    issue a one-time enrollment grant; never expose this secret to browser code.
+    """
+    if not DEVICE_ENROLLMENT_SECRET:
+        raise HTTPException(status_code=503, detail={"code": "enrollment_not_configured", "message": "Device enrollment is not configured"})
+    if not x_enrollment_secret or not hmac.compare_digest(x_enrollment_secret, DEVICE_ENROLLMENT_SECRET):
+        raise HTTPException(status_code=401, detail={"code": "invalid_enrollment_grant", "message": "Enrollment authorization failed"})
+    serial = payload.serial.strip()
+    name = " ".join(payload.companion_name.split()) or "Companion"
+    personality = allowed_personality(payload.personality)
+    device_id = uuid.uuid4().hex
+    device_token = secrets.token_urlsafe(32)
+    try:
+        with _device_db() as connection:
+            connection.execute(
+                "INSERT INTO devices (device_id, serial, token_hash, companion_name, personality_json, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (device_id, serial, _token_hash(device_token), name, json.dumps(personality, ensure_ascii=False), int(time.time())),
+            )
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail={"code": "device_already_enrolled", "message": "This device serial is already enrolled"})
+    return {"device_id": device_id, "device_token": device_token, "message": "Save the token securely; it is returned only once."}
+
+
+@app.post("/api/device/interpret", response_model=InterpretResult)
+def interpret_for_device(
+    payload: DeviceInterpretRequest,
+    authorization: str | None = Header(default=None),
+) -> InterpretResult:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail={"code": "device_auth_required", "message": "Device token required"})
+    token = authorization[7:].strip()
+    device = _get_device(token)
+    if not device:
+        raise HTTPException(status_code=401, detail={"code": "invalid_device_token", "message": "Device token is invalid or revoked"})
+    _check_device_rate_limit(device["device_id"])
+    request_payload = InterpretRequest(
+        utterance=payload.utterance,
+        companion_name=device["companion_name"],
+        personality=device["personality"],
+        recent_context=[],
+    )
+    return call_language_model(request_payload)
+
+
 @app.post("/api/interpret", response_model=InterpretResult)
 def interpret(payload: InterpretRequest) -> InterpretResult:
-    """Return a constrained intent; the client must validate/apply it locally."""
+    """Development-only endpoint; production clients must use device tokens."""
+    if APP_ENV == "production":
+        raise HTTPException(status_code=404, detail={"code": "not_found", "message": "Not found"})
     return call_language_model(payload)
