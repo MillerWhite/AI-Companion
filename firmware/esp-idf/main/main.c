@@ -233,10 +233,7 @@ static void apply_cloud_intent(const char *json_text)
 static void on_face_long_press(lv_event_t *event)
 {
     (void)event;
-    if (bsp_display_lock(pdMS_TO_TICKS(1000)) == ESP_OK) {
-        lv_label_set_text(status_label, "Resetting Wi-Fi…");
-        bsp_display_unlock();
-    }
+    lv_label_set_text(status_label, "Resetting Wi-Fi…");
     companion_wifi_reset();
 }
 
