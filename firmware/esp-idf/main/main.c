@@ -265,7 +265,7 @@ static void autonomous_timer(lv_timer_t *timer)
 static void voice_task(void *arg)
 {
     (void)arg;
-    const size_t max_samples = 24000U * 6U;
+    const size_t max_samples = 16000U * 6U;
     int16_t *pcm = heap_caps_malloc(max_samples * sizeof(int16_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (!pcm) pcm = heap_caps_malloc(max_samples * sizeof(int16_t), MALLOC_CAP_8BIT);
     if (!pcm) {
