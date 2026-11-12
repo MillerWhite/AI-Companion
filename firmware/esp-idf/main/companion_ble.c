@@ -1,6 +1,8 @@
 #include "companion_ble.h"
 #include <string.h>
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_bt.h"
 #include "esp_hidd.h"
 #include "esp_hid_common.h"
@@ -31,6 +33,8 @@ static esp_hid_device_config_t s_hid_config = {
     .serial_number = "AICOMPANION01",
     .report_maps = s_report_maps, .report_maps_len = 1
 };
+
+static int gap_event(struct ble_gap_event *event, void *arg);
 
 static void adv_start(void)
 {
