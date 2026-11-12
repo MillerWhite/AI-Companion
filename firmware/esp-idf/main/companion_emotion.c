@@ -13,7 +13,7 @@ void companion_emotion_init(companion_state_t *state)
 {
     if (!state) return;
     *state = (companion_state_t) {
-        .energy = 82.0f, .comfort = 72.0f, .social = 42.0f,
+        .energy = 82.0f, .hunger = 78.0f, .comfort = 72.0f, .social = 42.0f,
         .curiosity = 38.0f, .trust = 25.0f, .playfulness = 35.0f, .temperament = 0, .initiative = 0, .quirk = 0
     };
 }
@@ -24,11 +24,13 @@ void companion_emotion_tick(companion_state_t *state, uint32_t elapsed_seconds, 
     const float dt = (float)elapsed_seconds;
     if (is_sleeping) {
         state->energy = clamp01(state->energy + dt * 0.55f);
+        state->hunger = clamp01(state->hunger - dt * 0.003f);
         state->social = clamp01(state->social + dt * 0.008f);
         state->comfort = clamp01(state->comfort + dt * 0.08f);
         return;
     }
     state->energy = clamp01(state->energy - dt * 0.018f);
+    state->hunger = clamp01(state->hunger - dt * 0.012f);
     state->curiosity = clamp01(state->curiosity + dt * 0.025f);
     state->social = clamp01(state->social + dt * 0.018f);
     state->comfort = clamp01(state->comfort - dt * 0.006f);
@@ -53,6 +55,7 @@ void companion_emotion_interaction(companion_state_t *state, const char *kind)
         state->trust = clamp01(state->trust + 0.8f);
     } else if (strcmp(kind, "feed") == 0) {
         state->energy = clamp01(state->energy + 28.0f);
+        state->hunger = clamp01(state->hunger + 36.0f);
         state->comfort = clamp01(state->comfort + 12.0f);
         state->playfulness = clamp01(state->playfulness + 4.0f);
         state->social = clamp01(state->social + 1.5f);
@@ -73,6 +76,7 @@ companion_emotion_t companion_emotion_choose(const companion_state_t *s,
     if (!s) return COMPANION_CALM;
     companion_emotion_t chosen;
     if (s->energy < 13.0f || ((hour >= 23 || hour < 6) && s->energy < 48.0f)) chosen = COMPANION_SLEEPY;
+    else if (s->hunger < 12.0f) chosen = COMPANION_CONCERNED;
     else if (s->comfort < 18.0f) chosen = COMPANION_SAD;
     else if (s->social > 88.0f && s->trust > 35.0f) chosen = COMPANION_AFFECTIONATE;
     else if (s->quirk == 1 && s->energy < 58.0f) chosen = COMPANION_SLEEPY;
@@ -119,7 +123,7 @@ const char *companion_emotion_name(companion_emotion_t emotion)
 {
     static const char *names[COMPANION_EMOTION_COUNT] = {
         "спокойствие", "радость", "любопытство", "сонливость", "грусть",
-        "нежность", "восторг", "удивление", "беспокойство", "смущение", "головокружение", "зажмуривание"
+        "нежность", "восторг", "удивление", "испуг", "беспокойство", "смущение", "головокружение", "зажмуривание"
     };
     return emotion < COMPANION_EMOTION_COUNT ? names[emotion] : names[COMPANION_CALM];
 }
