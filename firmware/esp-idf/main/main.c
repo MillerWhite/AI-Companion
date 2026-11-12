@@ -53,6 +53,7 @@ static char owner_setup_pin[16];
 static lv_obj_t *qr_view, *qr_title_label, *qr_count_label, *qr_button, *remote_button;
 static bool qr_mode;
 static bool remote_mode;
+static bool iphone_media_mode;
 static uint8_t qr_index;
 static char qr_titles[4][40], qr_urls[4][180];
 static uint8_t qr_temp[qrcodegen_BUFFER_LEN_MAX], qr_code[qrcodegen_BUFFER_LEN_MAX];
@@ -554,7 +555,14 @@ static void on_remote_gesture(lv_event_t *event)
     if (lv_event_get_code(event) != LV_EVENT_GESTURE || qr_mode) return;
     const lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_active());
     esp_err_t err = ESP_OK;
-    if (remote_mode) {
+    if (iphone_media_mode) {
+        /* iPhone AMS mode: swipe left/right for tracks, up for play/pause, down for volume up. */
+        if (dir == LV_DIR_LEFT) err = companion_iphone_media_command(COMPANION_IPHONE_PREVIOUS_TRACK);
+        else if (dir == LV_DIR_RIGHT) err = companion_iphone_media_command(COMPANION_IPHONE_NEXT_TRACK);
+        else if (dir == LV_DIR_TOP) err = companion_iphone_media_command(COMPANION_IPHONE_TOGGLE_PLAY_PAUSE);
+        else if (dir == LV_DIR_BOTTOM) err = companion_iphone_media_command(COMPANION_IPHONE_VOLUME_UP);
+        else return;
+    } else if (remote_mode) {
         /* In mouse mode, swipe moves the host cursor and vertical swipe scrolls. */
         if (dir == LV_DIR_LEFT) err = companion_ble_send_mouse(-36, 0, 0, 0);
         else if (dir == LV_DIR_RIGHT) err = companion_ble_send_mouse(36, 0, 0, 0);
@@ -576,16 +584,28 @@ static void on_remote_gesture(lv_event_t *event)
 static void remote_button_event(lv_event_t *event)
 {
     if (lv_event_get_code(event) != LV_EVENT_CLICKED) return;
-    remote_mode = !remote_mode;
-    lv_label_set_text(remote_button, remote_mode ? "MOUSE ON" : "REMOTE");
-    lv_label_set_text(status_label, remote_mode ? "Mouse mode · swipe to move · tap to click" : "Remote mode · swipe to control");
+    if (!remote_mode && !iphone_media_mode) {
+        remote_mode = true;
+        lv_label_set_text(remote_button, "MOUSE");
+        lv_label_set_text(status_label, "Mouse mode · swipe to move · tap to click");
+    } else if (remote_mode) {
+        remote_mode = false;
+        iphone_media_mode = true;
+        lv_label_set_text(remote_button, "IPHONE");
+        lv_label_set_text(status_label, "iPhone mode · swipe for music controls");
+    } else {
+        iphone_media_mode = false;
+        lv_label_set_text(remote_button, "REMOTE");
+        lv_label_set_text(status_label, "Presentation mode · swipe to control");
+    }
 }
 
 static void on_face_long_press(lv_event_t *event)
 {
     (void)event;
-    if (remote_mode) {
+    if (remote_mode || iphone_media_mode) {
         remote_mode = false;
+        iphone_media_mode = false;
         lv_label_set_text(remote_button, "REMOTE");
         lv_label_set_text(status_label, "Remote mode disabled");
         return;
