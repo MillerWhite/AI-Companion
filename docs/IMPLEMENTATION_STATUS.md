@@ -22,9 +22,9 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 | Full emotional transitions and facial expressions | Implemented in firmware/browser code: twelve moods, animated eye/mouth geometry, sadness brows/tears, blink and need-driven transitions | ESP-IDF build; physical display smoothness and emotional clarity test |
 | Unique personality and long-term development | Implemented foundation: temperament, initiative, selectable quirks, needs, trust/curiosity/responsiveness, persistent local state and safe durable preference facts | Broader traits/quirks, multi-month progression tuning and owner data export review |
 | Physical speaker sound system | Implemented driver path: ES8311 BSP handle, soft procedural motifs, low gain and cooldown | Board test, audio calibration, echo/feedback and listening-quality review |
-| Microphone speech recognition | Implemented pipeline: ES7210 BSP capture, VAD, mono 16 kHz PCM, backend SpeechKit route | Board microphone slot mapping, Russian/noise tests, live SpeechKit credentials and quota test |
+| Microphone speech recognition | Implemented pipeline: ES7210 BSP capture, VAD, mono 16 kHz PCM, backend OpenAI audio transcription route | Board microphone slot mapping, Russian/noise tests, live OpenAI audio transcription credentials and quota test |
 | Wi-Fi and automatic reconnect | Implemented: SoftAP Security 1 provisioning, NVS credential persistence, exponential reconnect | First-boot test with actual router and recovery/reset test |
-| Cloud intent → firmware behavior | Implemented: voice → SpeechKit → intent → allowlist validation → emotion/action application | Live Yandex model smoke test and real device integration test |
+| Cloud intent → firmware behavior | Implemented: voice → OpenAI audio transcription → intent → allowlist validation → emotion/action application | Live OpenAI model smoke test and real device integration test |
 | Sensor-driven pet reactions | Added QMI8658 shake/dizzy and face-down blank/wake; ES7210 mic blow/clap classifiers; AXP2101 VBUS/charge/battery telemetry with feeding/energy response | Threshold calibration, AMOLED blank-state power measurement, AXP2101 read validation and physical acceptance test |
 | ES8311, ES7210, QMI8658, AXP2101 drivers | BSP codec handles, QMI8658 managed driver and AXP2101 register reads are wired into service modules | Verify actual BSP component resolution, build and physical register/data test |
 | Owner server-memory controls | Implemented: bounded context, safe fact categories, 90-day expiry, export/delete/profile APIs and PIN-protected local portal | Privacy review, retention job/backup review and owner usability test |
@@ -46,8 +46,8 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 ## Release blockers
 
 1. Run GitHub Actions backend tests and ESP-IDF build; fix all failures.
-2. Validate Yandex AI Studio endpoint/model/auth against current account docs using a new key. Revoke any key previously disclosed in project chat.
-3. Validate SpeechKit account permissions, folder scope, Russian recognition quality and actual quotas.
+2. Validate OpenAI API endpoint/model/auth against current account docs using a new key. Revoke any key previously disclosed in project chat.
+3. Validate OpenAI audio transcription account permissions, folder scope, Russian recognition quality and actual quotas.
 4. Purchase and test the exact Waveshare ESP32-S3-Touch-AMOLED-1.75C board.
 5. Verify display, touch, codec sample rate/channel routing, VAD threshold, sound level, QMI sensor and Wi-Fi provisioning on hardware.
 6. Connect a real payment provider adapter; the generic HMAC event is not a checkout integration.
@@ -59,7 +59,7 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 - No successful firmware build or physical board test has been observed yet. Sensor reaction thresholds are code-level prototypes until calibrated on the exact board and enclosure.
 - No public production backend has been deployed.
 - No actual payment provider has been connected.
-- No Yandex AI or SpeechKit live request has been verified with a rotated secret.
+- No OpenAI or OpenAI audio transcription live request has been verified with a rotated secret.
 - No production monitoring, backups or restore test is configured by this repository alone.
 
 

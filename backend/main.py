@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import secrets
+import struct
 import asyncio
 import hashlib
 import hmac
@@ -29,28 +30,24 @@ from pydantic import BaseModel, Field, field_validator
 
 load_dotenv(dotenv_path=Path(__file__).resolve().with_name(".env"), override=False)
 
-APP_VERSION = "2.1.0"
+APP_VERSION = "2.2.0"
 APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
 DEVICE_ENROLLMENT_SECRET = os.getenv("DEVICE_ENROLLMENT_SECRET", "").strip()
 DEVICE_DB_PATH = os.getenv("DEVICE_DB_PATH", "backend/devices.sqlite3")
 DEVICE_REQUESTS_PER_MINUTE = int(os.getenv("DEVICE_REQUESTS_PER_MINUTE", "20"))
-AI_PROVIDER = os.getenv("AI_PROVIDER", "yandex").strip().lower()
-AI_API_KEY = os.getenv("AI_API_KEY", "").strip()
-AI_FOLDER_ID = os.getenv("AI_FOLDER_ID", "").strip()
-_DEFAULT_BASE_URL = "https://ai.api.cloud.yandex.net/v1" if AI_PROVIDER == "yandex" else "https://generativelanguage.googleapis.com/v1beta/openai"
-AI_API_BASE_URL = os.getenv("AI_API_BASE_URL", _DEFAULT_BASE_URL).rstrip("/")
-AI_MODEL = os.getenv("AI_MODEL", "aliceai-llm-flash" if AI_PROVIDER == "yandex" else "gemini-3.6-flash").strip()
-AI_TIMEOUT_SECONDS = float(os.getenv("AI_TIMEOUT_SECONDS", "20"))
-SPEECHKIT_API_KEY = os.getenv("SPEECHKIT_API_KEY", AI_API_KEY).strip()
-SPEECHKIT_FOLDER_ID = os.getenv("SPEECHKIT_FOLDER_ID", "").strip()
-SPEECHKIT_SAMPLE_RATE = int(os.getenv("SPEECHKIT_SAMPLE_RATE", "16000"))
+AI_API_KEY = os.getenv("OPENAI_API_KEY", os.getenv("AI_API_KEY", "")).strip()
+AI_API_BASE_URL = os.getenv("AI_API_BASE_URL", "https://api.openai.com/v1").rstrip("/")
+AI_MODEL = os.getenv("AI_MODEL", "gpt-4.1-mini").strip()
+AI_TRANSCRIPTION_MODEL = os.getenv("AI_TRANSCRIPTION_MODEL", "whisper-1").strip()
+AI_TIMEOUT_SECONDS = float(os.getenv("AI_TIMEOUT_SECONDS", "30"))
+AUDIO_DAILY_SECONDS_LIMIT = int(os.getenv("AUDIO_DAILY_SECONDS_LIMIT", "120"))
+AUDIO_DAILY_TOTAL_SECONDS_LIMIT = int(os.getenv("AUDIO_DAILY_TOTAL_SECONDS_LIMIT", "3600"))
+AUDIO_SAMPLE_RATE = 16000
 STORE_WEBHOOK_SECRET = os.getenv("STORE_WEBHOOK_SECRET", "").strip()
 MEMORY_RETENTION_DAYS = int(os.getenv("MEMORY_RETENTION_DAYS", "90"))
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 REDIS_URL = os.getenv("REDIS_URL", "").strip()
 AI_DAILY_REQUEST_LIMIT = int(os.getenv("AI_DAILY_REQUEST_LIMIT", "250"))
-SPEECHKIT_DAILY_SECONDS_LIMIT = int(os.getenv("SPEECHKIT_DAILY_SECONDS_LIMIT", "120"))
-SPEECHKIT_DAILY_TOTAL_SECONDS_LIMIT = int(os.getenv("SPEECHKIT_DAILY_TOTAL_SECONDS_LIMIT", "3600"))
 
 
 class Action(str, Enum):
@@ -219,7 +216,7 @@ def make_system_prompt(name: str, personality: dict[str, Any], memory_facts: lis
 
 
 def call_language_model(payload: InterpretRequest) -> InterpretResult:
-    if not AI_MODEL or not AI_API_KEY or (AI_PROVIDER == "yandex" and not AI_FOLDER_ID):
+    if not AI_MODEL or not AI_API_KEY:
         raise HTTPException(
             status_code=503,
             detail={
@@ -237,20 +234,10 @@ def call_language_model(payload: InterpretRequest) -> InterpretResult:
         messages.append({"role": role, "content": turn.text[:500]})
     messages.append({"role": "user", "content": payload.utterance})
 
-    model_id = AI_MODEL
-    headers = {"Content-Type": "application/json"}
-    # Provider credentials stay on the backend; never send them to firmware or browser.
-    if AI_PROVIDER == "yandex":
-        model_id = AI_MODEL if AI_MODEL.startswith("gpt://") else f"gpt://{AI_FOLDER_ID}/{AI_MODEL}"
-        headers["Authorization"] = "Api-Key " + AI_API_KEY
-        headers["OpenAI-Project"] = AI_FOLDER_ID
-    elif AI_PROVIDER == "gemini":
-        headers["Authorization"] = "Bearer " + AI_API_KEY
-    else:
-        raise HTTPException(status_code=503, detail={"code": "unsupported_ai_provider", "message": "Unsupported AI provider"})
+    headers = {"Content-Type": "application/json", "Authorization": "Bearer " + AI_API_KEY}
 
     request_body = json.dumps({
-        "model": model_id,
+        "model": AI_MODEL,
         "messages": messages,
         "temperature": 0.2,
         "response_format": {"type": "json_object"},
@@ -465,34 +452,36 @@ def _create_enrollment_grant(order_id: str, ttl_hours: int = 24) -> str:
     return grant
 
 
-def _speechkit_transcribe(pcm: bytes) -> str:
-    if not SPEECHKIT_API_KEY:
-        raise HTTPException(status_code=503, detail={"code": "speechkit_not_configured", "message": "Speech recognition is not configured"})
-    params = ["topic=general", "lang=ru-RU", "format=lpcm", f"sampleRateHertz={SPEECHKIT_SAMPLE_RATE}"]
-    if SPEECHKIT_FOLDER_ID:
-        params.append("folderId=" + SPEECHKIT_FOLDER_ID)
-    request = urllib.request.Request(
-        "https://stt.api.cloud.yandex.net/speech/v1/stt:recognize?" + "&".join(params),
-        data=pcm,
-        headers={"Authorization": "Api-Key " + SPEECHKIT_API_KEY, "Content-Type": "application/octet-stream"},
-        method="POST",
-    )
+def _openai_transcribe(pcm: bytes) -> str:
+    """Transcribe mono 16 kHz PCM through OpenAI audio/transcriptions."""
+    if not AI_API_KEY or not AI_TRANSCRIPTION_MODEL:
+        raise HTTPException(status_code=503, detail={"code": "transcription_not_configured", "message": "Speech recognition is not configured"})
+    wav_header = struct.pack("<4sI4s4sIHHIIHH4sI", b"RIFF", 36 + len(pcm), b"WAVE", b"fmt ", 16, 1, 1, AUDIO_SAMPLE_RATE, AUDIO_SAMPLE_RATE * 2, 2, 16, b"data", len(pcm))
+    boundary = "----AICompanion" + uuid.uuid4().hex
+    chunks = [
+        f"--{boundary}\r\nContent-Disposition: form-data; name=\"model\"\r\n\r\n{AI_TRANSCRIPTION_MODEL}\r\n".encode(),
+        f"--{boundary}\r\nContent-Disposition: form-data; name=\"language\"\r\n\r\nru\r\n".encode(),
+        f"--{boundary}\r\nContent-Disposition: form-data; name=\"response_format\"\r\n\r\njson\r\n".encode(),
+        f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"companion.wav\"\r\nContent-Type: audio/wav\r\n\r\n".encode(),
+        wav_header, pcm, f"\r\n--{boundary}--\r\n".encode(),
+    ]
+    request = urllib.request.Request("https://api.openai.com/v1/audio/transcriptions", data=b"".join(chunks), headers={"Authorization": "Bearer " + AI_API_KEY, "Content-Type": "multipart/form-data; boundary=" + boundary}, method="POST")
     try:
-        with urllib.request.urlopen(request, timeout=25) as response:
-            result = json.loads(response.read().decode("utf-8")).get("result", "")
+        with urllib.request.urlopen(request, timeout=30) as response:
+            result = json.loads(response.read().decode("utf-8")).get("text", "")
         if not isinstance(result, str):
-            raise ValueError("Invalid SpeechKit result")
+            raise ValueError("Invalid transcription response")
         return " ".join(result.split())[:1200]
     except urllib.error.HTTPError as error:
         if error.code == 429:
-            raise HTTPException(status_code=503, detail={"code": "speechkit_rate_limited", "message": "SpeechKit rate limit reached"})
+            raise HTTPException(status_code=503, detail={"code": "transcription_rate_limited", "message": "Speech recognition rate limit reached"})
         if error.code in (401, 403):
-            raise HTTPException(status_code=503, detail={"code": "speechkit_auth_failed", "message": "SpeechKit authentication failed"})
-        raise HTTPException(status_code=502, detail={"code": "speechkit_unavailable", "message": "SpeechKit could not recognize the audio"})
+            raise HTTPException(status_code=503, detail={"code": "transcription_auth_failed", "message": "OpenAI API authentication failed"})
+        raise HTTPException(status_code=502, detail={"code": "transcription_unavailable", "message": "Speech recognition could not process the audio"})
     except (urllib.error.URLError, TimeoutError):
-        raise HTTPException(status_code=502, detail={"code": "speechkit_unavailable", "message": "SpeechKit is unavailable"})
+        raise HTTPException(status_code=502, detail={"code": "transcription_unavailable", "message": "Speech recognition service is unavailable"})
     except (ValueError, json.JSONDecodeError):
-        raise HTTPException(status_code=502, detail={"code": "speechkit_invalid_response", "message": "SpeechKit returned an invalid response"})
+        raise HTTPException(status_code=502, detail={"code": "transcription_invalid_response", "message": "Speech recognition returned an invalid response"})
 
 
 # Redis is required for multi-instance production limits. Development can use local counters.
@@ -579,7 +568,7 @@ def _check_audio_daily_budget(device_id: str, duration_seconds: int) -> None:
         global_total = _local_audio_daily.get(global_key, 0) + seconds
         _local_audio_daily[device_key] = device_total
         _local_audio_daily[global_key] = global_total
-    if device_total > SPEECHKIT_DAILY_SECONDS_LIMIT or global_total > SPEECHKIT_DAILY_TOTAL_SECONDS_LIMIT:
+    if device_total > AUDIO_DAILY_SECONDS_LIMIT or global_total > AUDIO_DAILY_TOTAL_SECONDS_LIMIT:
         raise HTTPException(status_code=429, detail={"code": "audio_daily_budget_reached", "message": "Daily speech recognition budget reached"})
 
 
@@ -647,13 +636,12 @@ def validate_production_configuration() -> None:
         "DEVICE_ENROLLMENT_SECRET (32+ chars)": len(DEVICE_ENROLLMENT_SECRET) >= 32,
         "STORE_WEBHOOK_SECRET (32+ chars)": len(STORE_WEBHOOK_SECRET) >= 32,
         "AI_API_KEY": bool(AI_API_KEY),
-        "AI_FOLDER_ID": bool(AI_FOLDER_ID),
         "AI_MODEL": bool(AI_MODEL),
-        "SPEECHKIT_API_KEY": bool(SPEECHKIT_API_KEY),
-        "SPEECHKIT_SAMPLE_RATE=16000": SPEECHKIT_SAMPLE_RATE == 16000,
+        "AI_TRANSCRIPTION_MODEL": bool(AI_TRANSCRIPTION_MODEL),
+        "AUDIO_SAMPLE_RATE=16000": AUDIO_SAMPLE_RATE == 16000,
         "AI_ALLOWED_ORIGINS": bool(production_origins) and "*" not in production_origins and all(origin.startswith("https://") for origin in production_origins),
         "ALLOWED_HOSTS": bool(production_hosts) and "*" not in production_hosts,
-        "positive request/audio budgets": DEVICE_REQUESTS_PER_MINUTE > 0 and AI_DAILY_REQUEST_LIMIT > 0 and SPEECHKIT_DAILY_SECONDS_LIMIT > 0 and SPEECHKIT_DAILY_TOTAL_SECONDS_LIMIT > 0,
+        "positive request/audio budgets": DEVICE_REQUESTS_PER_MINUTE > 0 and AI_DAILY_REQUEST_LIMIT > 0 and AUDIO_DAILY_SECONDS_LIMIT > 0 and AUDIO_DAILY_TOTAL_SECONDS_LIMIT > 0,
         "MEMORY_RETENTION_DAYS (1..3650)": 1 <= MEMORY_RETENTION_DAYS <= 3650,
     }
     missing = [key for key, ready in required.items() if not ready]
@@ -721,10 +709,10 @@ def health() -> dict[str, str | bool]:
     return {
         "status": "ok",
         "version": APP_VERSION,
-        "ai_configured": bool(AI_MODEL and AI_API_KEY and (AI_PROVIDER != "yandex" or AI_FOLDER_ID)),
-        "provider": AI_PROVIDER,
+        "ai_configured": bool(AI_MODEL and AI_API_KEY),
+        "provider": "openai",
         "model": AI_MODEL,
-        "mode": "cloud_language_model" if AI_MODEL and AI_API_KEY and (AI_PROVIDER != "yandex" or AI_FOLDER_ID) else "local_fallback_required",
+        "mode": "cloud_language_model" if AI_MODEL and AI_API_KEY else "local_fallback_required",
     }
 
 
@@ -902,16 +890,16 @@ async def transcribe_device_audio(request: Request, authorization: str | None = 
     _check_device_rate_limit(device["device_id"])
     if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/octet-stream":
         raise HTTPException(status_code=415, detail={"code": "invalid_audio_content_type", "message": "Expected application/octet-stream PCM audio"})
-    if SPEECHKIT_SAMPLE_RATE != 16000:
-        raise HTTPException(status_code=503, detail={"code": "unsupported_speech_sample_rate", "message": "This firmware build sends 16 kHz PCM; backend SpeechKit rate must be 16000"})
-    max_audio_bytes = min(1_000_000, SPEECHKIT_SAMPLE_RATE * 2 * 30)
+    if AUDIO_SAMPLE_RATE != 16000:
+        raise HTTPException(status_code=503, detail={"code": "unsupported_speech_sample_rate", "message": "This firmware build sends 16 kHz PCM; backend OpenAI transcription rate must be 16000"})
+    max_audio_bytes = min(1_000_000, AUDIO_SAMPLE_RATE * 2 * 30)
     pcm = await _read_limited_body(request, max_audio_bytes)
-    # SpeechKit synchronous LPCM API: mono 16-bit PCM, up to 30 seconds.
+    # OpenAI transcription synchronous LPCM API: mono 16-bit PCM, up to 30 seconds.
     if len(pcm) < 3200 or len(pcm) > max_audio_bytes or len(pcm) % 2:
         raise HTTPException(status_code=413, detail={"code": "invalid_audio_size", "message": "Audio must be 0.1–30 seconds of 16-bit mono PCM and no larger than 1 MB"})
-    duration_seconds = len(pcm) // (2 * SPEECHKIT_SAMPLE_RATE)
+    duration_seconds = len(pcm) // (2 * AUDIO_SAMPLE_RATE)
     _check_audio_daily_budget(device["device_id"], duration_seconds)
-    transcript = await asyncio.to_thread(_speechkit_transcribe, pcm)
+    transcript = await asyncio.to_thread(_openai_transcribe, pcm)
     return {"text": transcript}
 
 
