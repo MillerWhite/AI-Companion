@@ -92,6 +92,7 @@ static int voice_for_emotion(companion_emotion_t emotion)
         case COMPANION_CONCERNED: return VOICE_GROWL;
         case COMPANION_SHY: return VOICE_POKE;
         case COMPANION_DIZZY: return VOICE_DIZZY;
+        case COMPANION_FLINCH: return VOICE_POKE;
         case COMPANION_CALM:
         default: return VOICE_HM;
     }
