@@ -102,4 +102,4 @@ The firmware exposes a composite BLE HID accessory named `AI Companion` (Consume
 5. Swipe left/right for previous/next track, swipe up for play/pause, swipe down for volume up, and tap the face for volume down.
 6. New ANCS notifications and AMS track title/artist updates are shown briefly in the status line and also written to the serial log.
 
-If ANCS/AMS are not discovered, check that the iPhone is bonded to `AI Companion Remote`, that system-notification sharing was accepted, and that a media app is actively playing. iOS can withhold AMS when no media session is published. This implementation has not yet been verified against a physical iPhone; CI compilation and device pairing tests remain required before calling the feature release-ready.
+If ANCS/AMS are not discovered, check that the iPhone is bonded to `AI Companion`, that system-notification sharing was accepted, and that a media app is actively playing. iOS can withhold AMS when no media session is published. This implementation has not yet been verified against a physical iPhone; CI compilation and device pairing tests remain required before calling the feature release-ready.
