@@ -1,0 +1,45 @@
+name: ESP32-S3 firmware build
+
+on:
+  push:
+    branches: [main, "feat/**"]
+    tags: ["firmware-v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:v5.5.5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure and build ESP32-S3 firmware
+        shell: bash
+        run: |
+          . "$IDF_PATH/export.sh"
+          idf.py -C firmware/esp-idf set-target esp32s3
+          idf.py -C firmware/esp-idf build
+      - name: Create merged image for ESP Web Tools
+        shell: bash
+        run: |
+          . "$IDF_PATH/export.sh"
+          idf.py -C firmware/esp-idf merge-bin -o AI-Companion-ESP32-S3-Touch-AMOLED-1.75C.bin -f raw
+          cp firmware/esp-idf/build/AI-Companion-ESP32-S3-Touch-AMOLED-1.75C.bin .
+          sha256sum AI-Companion-ESP32-S3-Touch-AMOLED-1.75C.bin > AI-Companion-ESP32-S3-Touch-AMOLED-1.75C.bin.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ai-companion-esp32s3-firmware
+          path: |
+            AI-Companion-ESP32-S3-Touch-AMOLED-1.75C.bin
+            AI-Companion-ESP32-S3-Touch-AMOLED-1.75C.bin.sha256
+      - name: Publish tagged firmware release
+        if: startsWith(github.ref, 'refs/tags/firmware-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            AI-Companion-ESP32-S3-Touch-AMOLED-1.75C.bin
+            AI-Companion-ESP32-S3-Touch-AMOLED-1.75C.bin.sha256
