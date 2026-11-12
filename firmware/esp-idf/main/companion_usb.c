@@ -35,7 +35,7 @@ void companion_usb_emit_emotion(const char *emotion)
 {
     if (!emotion || !*emotion) return;
     char line[96];
-    int written = snprintf(line, sizeof(line), "@M %s\\n", emotion);
+    int written = snprintf(line, sizeof(line), "@M %s\n", emotion);
     if (written > 0 && (size_t)written < sizeof(line)) usb_write_line(line);
 }
 
@@ -43,7 +43,7 @@ void companion_usb_emit_touch(const char *event_name)
 {
     if (!event_name || !*event_name) return;
     char line[96];
-    int written = snprintf(line, sizeof(line), "@T %s\\n", event_name);
+    int written = snprintf(line, sizeof(line), "@T %s\n", event_name);
     if (written > 0 && (size_t)written < sizeof(line)) usb_write_line(line);
 }
 
