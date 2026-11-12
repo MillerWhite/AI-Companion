@@ -54,7 +54,7 @@ static void adv_start(void)
     params.disc_mode = BLE_GAP_DISC_MODE_GEN;
     params.itvl_min = 0x30;
     params.itvl_max = 0x60;
-    int rc = ble_gap_adv_start(own_addr_type, NULL, BLE_HS_FOREVER, &params, NULL, NULL);
+    int rc = ble_gap_adv_start(own_addr_type, NULL, BLE_HS_FOREVER, &params, gap_event, NULL);
     if (rc != 0) ESP_LOGE(TAG, "BLE advertising failed: %d", rc);
 }
 static void host_sync(void) { adv_start(); }
