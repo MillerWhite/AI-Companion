@@ -40,3 +40,11 @@ jobs:
             firmware/esp-idf/tests/companion_voice_test.c \
             -lm -o /tmp/companion_voice_test
           /tmp/companion_voice_test
+
+      - name: Build and test motion classifier
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -Ifirmware/esp-idf/main \
+            firmware/esp-idf/main/companion_motion.c \
+            firmware/esp-idf/tests/companion_motion_test.c \
+            -lm -o /tmp/companion_motion_test
+          /tmp/companion_motion_test
