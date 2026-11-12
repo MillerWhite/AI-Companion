@@ -14,7 +14,7 @@ void companion_emotion_init(companion_state_t *state)
     if (!state) return;
     *state = (companion_state_t) {
         .energy = 82.0f, .comfort = 72.0f, .social = 42.0f,
-        .curiosity = 38.0f, .trust = 25.0f, .playfulness = 35.0f
+        .curiosity = 38.0f, .trust = 25.0f, .playfulness = 35.0f, .temperament = 0, .initiative = 0
     };
 }
 
@@ -71,12 +71,31 @@ companion_emotion_t companion_emotion_choose(const companion_state_t *s,
     else if (s->energy < 28.0f) chosen = COMPANION_CONCERNED;
     else {
         const uint32_t roll = random_value % 100U;
-        if (roll < 34U) chosen = COMPANION_CALM;
-        else if (roll < 54U) chosen = COMPANION_CURIOUS;
-        else if (roll < 70U) chosen = s->playfulness > 55.0f ? COMPANION_EXCITED : COMPANION_HAPPY;
-        else if (roll < 82U) chosen = COMPANION_SHY;
-        else if (roll < 91U) chosen = COMPANION_AFFECTIONATE;
-        else chosen = COMPANION_SURPRISED;
+        if (s->temperament == 1) {
+            if (roll < 62U) chosen = COMPANION_CALM;
+            else if (roll < 82U) chosen = COMPANION_CURIOUS;
+            else chosen = COMPANION_HAPPY;
+        } else if (s->temperament == 2) {
+            if (roll < 34U) chosen = COMPANION_EXCITED;
+            else if (roll < 68U) chosen = COMPANION_HAPPY;
+            else if (roll < 88U) chosen = COMPANION_CURIOUS;
+            else chosen = COMPANION_SURPRISED;
+        } else if (s->temperament == 3) {
+            if (roll < 55U) chosen = COMPANION_SHY;
+            else if (roll < 80U) chosen = COMPANION_CALM;
+            else chosen = COMPANION_CURIOUS;
+        } else if (s->temperament == 4) {
+            if (roll < 45U) chosen = COMPANION_CURIOUS;
+            else if (roll < 80U) chosen = COMPANION_CALM;
+            else chosen = COMPANION_SLEEPY;
+        } else {
+            if (roll < 34U) chosen = COMPANION_CALM;
+            else if (roll < 54U) chosen = COMPANION_CURIOUS;
+            else if (roll < 70U) chosen = s->playfulness > 55.0f ? COMPANION_EXCITED : COMPANION_HAPPY;
+            else if (roll < 82U) chosen = COMPANION_SHY;
+            else if (roll < 91U) chosen = COMPANION_AFFECTIONATE;
+            else chosen = COMPANION_SURPRISED;
+        }
     }
     /* Do not bounce between the same two faces on every autonomous tick. */
     if (chosen == previous && chosen != COMPANION_SLEEPY) return COMPANION_CALM;
