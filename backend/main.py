@@ -20,10 +20,10 @@ from pydantic import BaseModel, Field, field_validator
 load_dotenv()
 
 APP_VERSION = "1.1.0"
-AI_PROVIDER = os.getenv("AI_PROVIDER", "ollama").strip().lower()
+AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").strip().lower()
 AI_API_KEY = os.getenv("AI_API_KEY", "").strip()
-AI_API_BASE_URL = os.getenv("AI_API_BASE_URL", "http://127.0.0.1:11434/v1").rstrip("/")
-AI_MODEL = os.getenv("AI_MODEL", "qwen3.5:4b").strip()
+AI_API_BASE_URL = os.getenv("AI_API_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai").rstrip("/")
+AI_MODEL = os.getenv("AI_MODEL", "gemini-3.6-flash").strip()
 AI_TIMEOUT_SECONDS = float(os.getenv("AI_TIMEOUT_SECONDS", "20"))
 
 
@@ -131,7 +131,7 @@ def make_system_prompt(name: str, personality: dict[str, Any]) -> str:
 
 
 def call_language_model(payload: InterpretRequest) -> InterpretResult:
-    if not AI_MODEL or (AI_PROVIDER != "ollama" and not AI_API_KEY):
+    if not AI_MODEL or not AI_API_KEY:
         raise HTTPException(
             status_code=503,
             detail={
@@ -155,9 +155,8 @@ def call_language_model(payload: InterpretRequest) -> InterpretResult:
         "response_format": {"type": "json_object"},
     }).encode("utf-8")
     headers = {"Content-Type": "application/json"}
-    # Local Ollama does not require an API key. Remote OpenAI-compatible providers do.
-    if AI_API_KEY:
-        headers["Authorization"] = "Bearer " + AI_API_KEY
+    # Provider key stays on the backend; never send it to firmware or browser.
+    headers["Authorization"] = "Bearer " + AI_API_KEY
     request = urllib.request.Request(
         AI_API_BASE_URL + "/chat/completions",
         data=request_body,
@@ -201,10 +200,10 @@ def health() -> dict[str, str | bool]:
     return {
         "status": "ok",
         "version": APP_VERSION,
-        "ai_configured": bool(AI_MODEL and (AI_PROVIDER == "ollama" or AI_API_KEY)),
+        "ai_configured": bool(AI_MODEL and AI_API_KEY),
         "provider": AI_PROVIDER,
         "model": AI_MODEL,
-        "mode": "local_ollama" if AI_PROVIDER == "ollama" else ("remote_language_model" if AI_API_KEY and AI_MODEL else "local_fallback_required"),
+        "mode": "cloud_language_model" if AI_MODEL and AI_API_KEY else "local_fallback_required",
     }
 
 
