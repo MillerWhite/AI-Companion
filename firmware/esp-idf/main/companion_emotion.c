@@ -116,7 +116,7 @@ const char *companion_emotion_name(companion_emotion_t emotion)
 {
     static const char *names[COMPANION_EMOTION_COUNT] = {
         "спокойствие", "радость", "любопытство", "сонливость", "грусть",
-        "нежность", "восторг", "удивление", "беспокойство", "смущение", "головокружение"
+        "нежность", "восторг", "удивление", "беспокойство", "смущение", "головокружение", "зажмуривание"
     };
     return emotion < COMPANION_EMOTION_COUNT ? names[emotion] : names[COMPANION_CALM];
 }
