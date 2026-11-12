@@ -3,6 +3,7 @@ idf_component_register(
         "main.c"
         "qrcodegen.c"
         "companion_ble.c"
+        "companion_iphone.c"
         "cloud_client.c"
         "companion_emotion.c"
         "companion_audio.c"
