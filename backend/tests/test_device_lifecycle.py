@@ -115,7 +115,7 @@ class DeviceLifecycleTests(unittest.TestCase):
 
     def test_audio_quota_enforces_device_and_global_caps(self):
         old_app_env = main.APP_ENV
-        old_device_limit = main.SPEECHKIT_DAILY_SECONDS_LIMIT
+        old_device_limit = main.AUDIO_DAILY_SECONDS_LIMIT
         old_global_limit = main.SPEECHKIT_DAILY_TOTAL_SECONDS_LIMIT
         old_redis_url = main.REDIS_URL
         try:
