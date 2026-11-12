@@ -1,4 +1,5 @@
 #include "companion_ble.h"
+#include "companion_iphone.h"
 #include <string.h>
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -68,6 +69,10 @@ static void adv_start(void)
     fields.name_is_complete = 1;
     fields.appearance = ESP_HID_APPEARANCE_GENERIC;
     fields.appearance_is_present = 1;
+    static const ble_uuid16_t hid_service_uuid = BLE_UUID16_INIT(0x1812);
+    fields.uuids16 = (ble_uuid16_t *)&hid_service_uuid;
+    fields.num_uuids16 = 1;
+    fields.uuids16_is_complete = 1;
     if (ble_gap_adv_set_fields(&fields) != 0) {
         ESP_LOGE(TAG, "BLE advertising fields rejected");
         return;
@@ -125,9 +130,16 @@ esp_err_t companion_ble_init(void)
     ble_hs_cfg.sync_cb = host_sync;
     ble_hs_cfg.reset_cb = host_reset;
     ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
+    ble_hs_cfg.sm_bonding = 1;
+    ble_hs_cfg.sm_sc = 1;
+    ble_hs_cfg.sm_mitm = 0;
+    ble_hs_cfg.sm_io_cap = BLE_HS_IO_NO_INPUT_OUTPUT;
+    ble_hs_cfg.sm_our_key_dist |= BLE_SM_PAIR_KEY_DIST_ENC;
+    ble_hs_cfg.sm_their_key_dist |= BLE_SM_PAIR_KEY_DIST_ENC;
     ble_store_config_init();
     err = esp_hidd_dev_init(&s_hid_config, ESP_HID_TRANSPORT_BLE, hid_event, &s_hid);
     if (err != ESP_OK) return err;
+    companion_iphone_init();
     nimble_port_freertos_init(host_task);
     s_started = true;
     ESP_LOGI(TAG, "BLE HID remote ready: mouse, keyboard, presentation and media reports");
@@ -161,6 +173,16 @@ esp_err_t companion_ble_send_key(companion_ble_key_t key)
     case COMPANION_BLE_PRESENTATION_BLACK: return companion_ble_send_keyboard(0, 0x2C);
     case COMPANION_BLE_ESCAPE: return companion_ble_send_keyboard(0, 0x29);
     default: return ESP_ERR_INVALID_ARG;
+    }
+    /* Route media commands to iPhone AMS when an iPhone accessory link is active.
+     * The Consumer Control HID report remains available for computers and other hosts. */
+    switch (key) {
+    case COMPANION_BLE_PLAY_PAUSE: (void)companion_iphone_media_command(COMPANION_IPHONE_TOGGLE_PLAY_PAUSE); break;
+    case COMPANION_BLE_NEXT: (void)companion_iphone_media_command(COMPANION_IPHONE_NEXT_TRACK); break;
+    case COMPANION_BLE_PREVIOUS: (void)companion_iphone_media_command(COMPANION_IPHONE_PREVIOUS_TRACK); break;
+    case COMPANION_BLE_VOLUME_UP: (void)companion_iphone_media_command(COMPANION_IPHONE_VOLUME_UP); break;
+    case COMPANION_BLE_VOLUME_DOWN: (void)companion_iphone_media_command(COMPANION_IPHONE_VOLUME_DOWN); break;
+    default: break;
     }
     return send_consumer(usage);
 }
