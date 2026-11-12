@@ -272,6 +272,7 @@ static void refresh_personality(void)
     if (nvs_get_u8(handle, "initiative", &initiative) == ESP_OK) state.initiative = initiative <= 2 ? initiative : 0;
     if (nvs_get_u8(handle, "quirk", &quirk) == ESP_OK) state.quirk = quirk <= 4 ? quirk : 0;
     nvs_close(handle);
+    companion_emotion_set_personality(&state, state.temperament, state.initiative, state.quirk);
     if (audio_available) companion_audio_set_temperament(state.temperament);
 }
 
@@ -289,6 +290,7 @@ static void load_state(void)
     if (nvs_get_u8(handle, "initiative", &initiative) == ESP_OK) state.initiative = initiative <= 2 ? initiative : 0;
     if (nvs_get_u8(handle, "quirk", &quirk) == ESP_OK) state.quirk = quirk <= 4 ? quirk : 0;
     nvs_close(handle);
+    companion_emotion_set_personality(&state, state.temperament, state.initiative, state.quirk);
 }
 
 static companion_emotion_t parse_emotion(const char *value)
@@ -389,7 +391,9 @@ static void on_usb_command(const char *command)
     } else if (!strcmp(command, "sleep")) {
         sleeping = true;
         manual_sleep = true;
+        companion_emotion_interaction(&state, "rest");
         set_emotion(COMPANION_SLEEPY, true);
+        save_state();
     } else if (!strcmp(command, "wake")) {
         sleeping = false;
         manual_sleep = false;
@@ -704,7 +708,7 @@ static void autonomous_timer(lv_timer_t *timer)
     }
     companion_emotion_tick(&state, 8, sleeping);
     if (!sleeping) {
-        const uint32_t chance = state.initiative == 1 ? 42U : (state.initiative == 2 ? 12U : 25U);
+        const uint32_t chance = companion_emotion_initiative_chance(&state);
         if ((esp_random() % 100U) >= chance) { save_state(); return; }
     }
     if (!sleeping) {
