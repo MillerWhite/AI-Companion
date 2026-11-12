@@ -32,6 +32,7 @@ static bool sleeping;
 static bool audio_available;
 static bool imu_available;
 static char setup_info[128];
+static char owner_setup_pin[16];
 
 static const char *emotion_label(companion_emotion_t emotion)
 {
@@ -335,14 +336,22 @@ static void network_setup_task(void *arg)
 {
     (void)arg;
     while (!companion_wifi_is_connected()) vTaskDelay(pdMS_TO_TICKS(500));
+    uint32_t local_pin = 10000000U + (esp_random() % 90000000U);
+    snprintf(owner_setup_pin, sizeof(owner_setup_pin), "%08lu", (unsigned long)local_pin);
+    nvs_handle_t config_handle;
+    if (nvs_open("companion", NVS_READWRITE, &config_handle) == ESP_OK) {
+        nvs_set_str(config_handle, "setup_pin", owner_setup_pin);
+        nvs_commit(config_handle);
+        nvs_close(config_handle);
+    }
     if (companion_setup_server_start() == ESP_OK) {
         esp_netif_t *netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
         esp_netif_ip_info_t ip = {0};
-        char line[72] = "Owner portal online";
+        char line[112] = "Owner portal online";
         if (netif && esp_netif_get_ip_info(netif, &ip) == ESP_OK) {
-            snprintf(line, sizeof(line), "Setup: http://" IPSTR, IP2STR(&ip.ip));
+            snprintf(line, sizeof(line), "http://" IPSTR "  PIN:%s", IP2STR(&ip.ip), owner_setup_pin);
         }
-        ESP_LOGI(TAG, "%s", line);
+        ESP_LOGI(TAG, "Owner setup portal ready. PIN is displayed on the device.");
         if (bsp_display_lock(pdMS_TO_TICKS(1000)) == ESP_OK) {
             lv_label_set_text(setup_label, line);
             bsp_display_unlock();
