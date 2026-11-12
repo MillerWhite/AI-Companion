@@ -9,6 +9,7 @@ idf_component_register(
         "companion_motion.c"
         "companion_wifi.c"
         "companion_setup.c"
+        "companion_usb.c"
     INCLUDE_DIRS "."
     REQUIRES
         lvgl
@@ -19,6 +20,7 @@ idf_component_register(
         esp_event
         esp_netif
         esp_timer
+        esp_driver_usb_serial_jtag
         esp_system
         esp_hw_support
         heap
