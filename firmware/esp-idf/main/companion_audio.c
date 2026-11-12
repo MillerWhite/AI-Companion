@@ -8,8 +8,8 @@
 #include "esp_timer.h"
 #include "bsp/esp-bsp.h"
 
-#define AUDIO_RATE 24000
-#define AUDIO_FRAME_SAMPLES 480
+#define AUDIO_RATE 16000
+#define AUDIO_FRAME_SAMPLES 320
 #define AUDIO_COOLDOWN_US 5200000LL
 #define VAD_RMS_THRESHOLD 460.0f
 #define VAD_END_SILENCE_FRAMES 32
@@ -27,16 +27,14 @@ bool companion_audio_is_ready(void) { return audio_ready; }
 esp_err_t companion_audio_init(void)
 {
     if (audio_ready) return ESP_OK;
-    ESP_RETURN_ON_ERROR(bsp_audio_init_voice_24k(), TAG, "board voice I2S init failed");
     speaker = bsp_audio_codec_speaker_init();
     microphone = bsp_audio_codec_microphone_init();
     if (!speaker || !microphone) return ESP_FAIL;
 
     const esp_codec_dev_sample_info_t format = {
-        .sample_rate = AUDIO_RATE,
+         .sample_rate = AUDIO_RATE,
         .channel = 2,
         .bits_per_sample = 16,
-        .channel_mask = BSP_AUDIO_TDM_SLOT_MASK_FL_FR,
     };
     ESP_RETURN_ON_ERROR(esp_codec_dev_open(speaker, &format), TAG, "speaker codec open failed");
     ESP_RETURN_ON_ERROR(esp_codec_dev_set_out_vol(speaker, 18), TAG, "speaker volume setup failed");
