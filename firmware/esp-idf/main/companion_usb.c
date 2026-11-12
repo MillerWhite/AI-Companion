@@ -14,7 +14,7 @@
 #include "companion_power.h"
 
 #define USB_LINE_CAPACITY 192
-#define USB_FIRMWARE_VERSION "2.1.0"
+#define USB_FIRMWARE_VERSION "2.2.0"
 
 static const char *TAG = "companion_usb";
 static companion_usb_command_handler_t command_handler;
