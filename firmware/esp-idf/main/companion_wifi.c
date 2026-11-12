@@ -87,19 +87,21 @@ esp_err_t companion_wifi_start(char *setup_info, size_t setup_info_size)
         ESP_RETURN_ON_ERROR(esp_wifi_set_mode(WIFI_MODE_STA), TAG, "station mode");
         ESP_RETURN_ON_ERROR(esp_wifi_start(), TAG, "station start");
         ESP_RETURN_ON_ERROR(esp_wifi_connect(), TAG, "station connect");
-        setup_code[0] = '\0';
+        setup_info[0] = '\0';
         return ESP_OK;
     }
 
     uint8_t mac[6] = {0};
     ESP_RETURN_ON_ERROR(esp_read_mac(mac, ESP_MAC_WIFI_STA), TAG, "read MAC");
     const uint32_t pin = 10000000U + (esp_random() % 90000000U);
-    snprintf(setup_code, setup_code_size, "%08lu", (unsigned long)pin);
+    char pop[16];
+    snprintf(pop, sizeof(pop), "%08lu", (unsigned long)pin);
     char service_name[24], service_key[16];
     snprintf(service_name, sizeof(service_name), "AIC-%02X%02X%02X", mac[3], mac[4], mac[5]);
     snprintf(service_key, sizeof(service_key), "AC%08lu", (unsigned long)pin);
-    ESP_LOGI(TAG, "Wi-Fi setup AP: %s / password: %s", service_name, service_key);
-    ESP_RETURN_ON_ERROR(wifi_prov_mgr_start_provisioning(WIFI_PROV_SECURITY_1, setup_code, service_name, service_key), TAG, "start secure SoftAP provisioning");
+    snprintf(setup_info, setup_info_size, "Wi-Fi: %s\nPassword: %s\nPIN: %s", service_name, service_key, pop);
+    ESP_LOGI(TAG, "Wi-Fi setup AP: %s / password: %s / PIN: %s", service_name, service_key, pop);
+    ESP_RETURN_ON_ERROR(wifi_prov_mgr_start_provisioning(WIFI_PROV_SECURITY_1, pop, service_name, service_key), TAG, "start secure SoftAP provisioning");
     return ESP_OK;
 }
 
