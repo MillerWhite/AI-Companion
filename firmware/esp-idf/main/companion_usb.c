@@ -83,7 +83,7 @@ static void send_status(void)
     cJSON_Delete(json);
     if (!payload) return;
     char line[256];
-    int written = snprintf(line, sizeof(line), "@S %s\\n", payload);
+    int written = snprintf(line, sizeof(line), "@S %s\n", payload);
     cJSON_free(payload);
     if (written > 0 && (size_t)written < sizeof(line)) usb_write_line(line);
 }
