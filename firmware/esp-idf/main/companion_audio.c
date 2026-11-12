@@ -124,8 +124,14 @@ esp_err_t companion_audio_capture_utterance(int16_t *mono_pcm, size_t capacity_s
     const uint32_t max_frames = (max_duration_ms ? max_duration_ms : 6500U) / 20U;
 
     for (uint32_t frame = 0; frame < max_frames && *captured_samples + AUDIO_FRAME_SAMPLES <= capacity_samples; ++frame) {
-        if (playback_active) { vTaskDelay(pdMS_TO_TICKS(20)); continue; }
+        if (xSemaphoreTake(audio_mutex, pdMS_TO_TICKS(80)) != pdTRUE) continue;
+        if (playback_active) {
+            xSemaphoreGive(audio_mutex);
+            vTaskDelay(pdMS_TO_TICKS(20));
+            continue;
+        }
         esp_err_t err = esp_codec_dev_read(microphone, frame_pcm, sizeof(frame_pcm));
+        xSemaphoreGive(audio_mutex);
         if (err != ESP_OK) return err;
 
         float energy = 0.0f;
