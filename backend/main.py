@@ -334,6 +334,8 @@ def _device_db():
                 order_id TEXT PRIMARY KEY, event_id TEXT NOT NULL UNIQUE, created_at BIGINT NOT NULL
             )
         """)
+        connection.execute("CREATE INDEX IF NOT EXISTS idx_devices_token_hash ON devices(token_hash)")
+        connection.execute("CREATE INDEX IF NOT EXISTS idx_enrollment_grants_expiry ON enrollment_grants(expires_at)")
         raw.commit()
         return connection
     connection = sqlite3.connect(DEVICE_DB_PATH, timeout=10)
@@ -365,6 +367,8 @@ def _device_db():
             created_at INTEGER NOT NULL
         )
     """)
+    connection.execute("CREATE INDEX IF NOT EXISTS idx_devices_token_hash ON devices(token_hash)")
+    connection.execute("CREATE INDEX IF NOT EXISTS idx_enrollment_grants_expiry ON enrollment_grants(expires_at)")
     columns = {row[1] for row in connection.execute("PRAGMA table_info(devices)").fetchall()}
     if "memory_json" not in columns:
         connection.execute("ALTER TABLE devices ADD COLUMN memory_json TEXT NOT NULL DEFAULT '{}'")
@@ -567,15 +571,23 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 def validate_production_configuration() -> None:
     if APP_ENV != "production":
         return
+    production_origins = [origin.strip() for origin in os.getenv("AI_ALLOWED_ORIGINS", "").split(",") if origin.strip()]
+    production_hosts = [host.strip() for host in os.getenv("ALLOWED_HOSTS", "").split(",") if host.strip()]
     required = {
         "DATABASE_URL (PostgreSQL)": DATABASE_URL.startswith(("postgresql://", "postgres://")),
         "REDIS_URL": bool(REDIS_URL),
-        "DEVICE_ENROLLMENT_SECRET": len(DEVICE_ENROLLMENT_SECRET) >= 32,
-        "STORE_WEBHOOK_SECRET": len(STORE_WEBHOOK_SECRET) >= 32,
+        "DEVICE_ENROLLMENT_SECRET (32+ chars)": len(DEVICE_ENROLLMENT_SECRET) >= 32,
+        "STORE_WEBHOOK_SECRET (32+ chars)": len(STORE_WEBHOOK_SECRET) >= 32,
         "AI_API_KEY": bool(AI_API_KEY),
+        "AI_FOLDER_ID": bool(AI_FOLDER_ID),
+        "AI_MODEL": bool(AI_MODEL),
         "SPEECHKIT_API_KEY": bool(SPEECHKIT_API_KEY),
-        "AI_ALLOWED_ORIGINS": bool(os.getenv("AI_ALLOWED_ORIGINS", "").strip()),
-        "ALLOWED_HOSTS": bool(os.getenv("ALLOWED_HOSTS", "").strip()),
+        "SPEECHKIT_FOLDER_ID": bool(SPEECHKIT_FOLDER_ID),
+        "SPEECHKIT_SAMPLE_RATE=16000": SPEECHKIT_SAMPLE_RATE == 16000,
+        "AI_ALLOWED_ORIGINS": bool(production_origins) and "*" not in production_origins and all(origin.startswith("https://") for origin in production_origins),
+        "ALLOWED_HOSTS": bool(production_hosts) and "*" not in production_hosts,
+        "positive request/audio budgets": DEVICE_REQUESTS_PER_MINUTE > 0 and AI_DAILY_REQUEST_LIMIT > 0 and SPEECHKIT_DAILY_SECONDS_LIMIT > 0,
+        "MEMORY_RETENTION_DAYS (1..3650)": 1 <= MEMORY_RETENTION_DAYS <= 3650,
     }
     missing = [key for key, ready in required.items() if not ready]
     if missing:
