@@ -26,6 +26,8 @@ typedef struct {
     float playfulness;
     uint32_t interactions;
     uint32_t last_interaction_ms;
+    uint8_t temperament; /* 0 balanced, 1 calm, 2 energetic, 3 shy, 4 dreamy */
+    uint8_t initiative;  /* 0 medium, 1 high, 2 low */
 } companion_state_t;
 
 void companion_emotion_init(companion_state_t *state);
