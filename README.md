@@ -1,78 +1,58 @@
 # AI Companion
 
-Невербальный виртуальный компаньон для **Waveshare ESP32-S3-Touch-AMOLED-1.75C**. Проект разделяет локальное поведение устройства и облачную интерпретацию естественной речи. Компаньон не разговаривает и не использует TTS.
+Невербальный виртуальный компаньон для **Waveshare ESP32-S3-Touch-AMOLED-1.75C**. Локальная прошивка отвечает за эмоции, мимику, автономное поведение, звук, касания и IMU; облачный backend распознаёт речь и интерпретирует намерения владельца.
 
-## Текущее состояние
+## Новая рабочая ветка
 
-Рабочая ветка завершения основы: `feat/companion-completion-foundation`.
+`feat/companion-completion-foundation`
 
-### Что есть в репозитории
-- Браузерный симулятор с лицом, анимациями, эмоциями, потребностями, инициативой и локальной памятью.
-- Голосовое управление браузерного прототипа через Web Speech API (зависит от браузера и сети).
-- FastAPI backend с ограниченным JSON-контрактом действий и эмоций.
-- Регистрация устройств с уникальным Bearer token; хранятся только хеши токенов.
-- Ограниченный контекст последних текстовых обращений на сервере для физических устройств.
-- ESP-IDF каркас для Waveshare и HTTPS-клиент с проверкой allowlist полей cloud response.
-- Unit tests backend и GitHub Actions workflow.
-- Документы статуса реализации и протокола устройства.
+Черновик Pull Request: https://github.com/MillerWhite/AI-Companion/pull/1
 
-### Что НЕ готово
-- Реальное подключение облачного JSON к циклу поведения прошивки.
-- Wi-Fi provisioning, ASR на устройстве, драйверы микрофонов/динамика, звуковые паттерны на плате.
-- QMI8658 IMU integration, калибровка и фильтрация.
-- UI сброса/экспорта/удаления памяти.
-- Веб-прошивальщик, заказ/оплата, одноразовые enrollment grants и привязка к владельцу.
-- Production hosting, PostgreSQL, Redis, backups, мониторинг и бюджетные ограничения.
-- Успешный live smoke test Yandex AI Studio.
-- Сборка ESP-IDF и тест на физической плате.
+## Что добавлено в программную основу
 
-См. [матрицу готовности и этапы](docs/IMPLEMENTATION_STATUS.md) и [протокол устройства](docs/DEVICE_PROTOCOL.md).
+- Десять эмоций с анимированной мимикой, отдельным выражением грусти, слезами/бровями и морганием.
+- Потребности, доверие, игривость, темперамент и инициативность с локальным сохранением.
+- ES8311/ES7210 BSP audio path: мягкие процедурные невербальные звуки, VAD и захват PCM 16 kHz.
+- QMI8658 motion/tilt service with filtering and event cooldowns.
+- SoftAP Wi-Fi provisioning, сохранение credentials и автоматическое переподключение.
+- Полный программный маршрут: microphone → SpeechKit → language model → validated intent → local emotion/action.
+- Ограниченная долговременная память с безопасными категориями фактов, сроком хранения и удалением владельцем.
+- Локальная страница настройки устройства с PIN с экрана, одноразовой активацией, настройкой характера и управлением памятью.
+- Backend с PostgreSQL/Redis adapters, daily AI/audio caps, one-time enrollment grants и generic signed payment webhook.
+- ESP Web Tools installer и CI workflow для сборки/публикации tagged firmware.
 
-## Запуск браузерного симулятора
+## Важные ограничения
 
-Откройте `AI_Companion_Emotional_Engine.html` напрямую в Chrome или Edge. Локальные эмоции и анимации не требуют backend. Облачный интеллект из локального `file://` режима не работает.
+Код прошивки ещё не прошёл подтверждённую ESP-IDF сборку или тест на физической плате. Нет live smoke test Yandex AI/SpeechKit. Веб-прошивальщик сможет загрузить образ после успешной сборки и публикации первого firmware release. Generic HMAC webhook ещё не подключён к конкретному платёжному провайдеру. Production deployment template готов, но реальный сервер, домен, секреты, backups и monitoring нужно настроить.
 
-Для локальной разработки backend из корня репозитория:
+Подробности:
+- [Статус и release gates](docs/IMPLEMENTATION_STATUS.md)
+- [Протокол устройства и backend](docs/DEVICE_PROTOCOL.md)
+- [Backend setup](backend/README.md)
+- [Firmware setup](firmware/esp-idf/README.md)
+- [Web installer](web/installer/index.html)
 
-```powershell
-py -m pip install -r backend\requirements.txt
-Copy-Item backend\.env.example backend\.env
-py -m uvicorn backend.main:app --host 127.0.0.1 --port 8787
+## Browser simulator
+
+Откройте `AI_Companion_Emotional_Engine.html` в Chrome или Edge. Локальные эмоции и анимации работают без backend. Облачные функции из `file://` режима не работают.
+
+## Backend local development
+
+Из корня репозитория:
+
+```bash
+python -m pip install -r backend/requirements.txt
+cp backend/.env.example backend/.env
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8787
+python -m unittest discover -s backend/tests -v
 ```
 
-Проверка: `http://127.0.0.1:8787/health`.
+Не помещайте API keys в HTML, firmware или GitHub. Ключ, ранее раскрытый в переписке, необходимо отозвать и заменить новым серверным секретом.
 
-Симулятор использует development-only `POST /api/interpret`. В production этот неавторизованный маршрут намеренно выключен; нельзя просто включать его на публичном сервере. Для production нужен отдельный защищённый simulator session flow или авторизованный аккаунт.
+## Firmware installer
 
-## Секреты
+Откройте `web/installer/index.html` через GitHub Pages/HTTPS. Используйте Chrome или Edge и USB-кабель с передачей данных. Публичный бинарник появится только после успешного workflow и тега `firmware-vX.Y.Z`.
 
-- Не помещайте Yandex API key в HTML, JavaScript, firmware или GitHub.
-- Не используйте ранее раскрытый в переписке ключ: отзовите его и создайте новый.
-- Указывайте новый ключ только в секретах backend-хостинга или локальном `backend/.env`.
-- `AI_FOLDER_ID` — идентификатор каталога, не секрет.
-- `DEVICE_ENROLLMENT_SECRET` — серверный секрет, никогда не передавать в браузер/прошивку.
+## Hardware
 
-## Backend tests
-
-```powershell
-py -m pip install -r backend\requirements.txt
-py -m unittest discover -s backend/tests -v
-```
-
-GitHub Actions запускает тот же набор тестов на push и pull request.
-
-## Hardware target
-
-Waveshare ESP32-S3-Touch-AMOLED-1.75C: CO5300 AMOLED 466×466, CST9217 touch, QMI8658 IMU, AXP2101 PMU, ES8311/ES7210 audio. Firmware исходники находятся в `firmware/esp-idf/`.
-
-**Важно:** плата пока не приобретена. Сборка, прошивка, звук, микрофоны, IMU, энергопотребление и тепловые характеристики не проверялись на реальном устройстве. Код не является готовым бинарным релизом.
-
-## Стоимость AI
-
-Не существует гарантированного безлимитного бесплатного публичного облачного API. Проверьте актуальные тарифы и квоты Yandex Cloud. В production обязательны лимиты по устройствам и бюджету.
-
-## Официальные ресурсы
-
-- [Waveshare docs](https://docs.waveshare.com/ESP32-S3-Touch-AMOLED-1.75C)
-- [Waveshare BSP](https://github.com/waveshareteam/ESP32-S3-Touch-AMOLED-1.75C)
-- [Yandex AI Studio](https://aistudio.yandex.ru/)
+Плата ещё не прошла физическую проверку. До продажи обязательны build, flash, audio, mic, touch, Wi-Fi, IMU, thermal/power and long-run tests. См. [release gates](docs/IMPLEMENTATION_STATUS.md).
