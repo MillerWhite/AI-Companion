@@ -6,6 +6,7 @@
 #include "esp_crt_bundle.h"
 #include "esp_http_client.h"
 #include "esp_log.h"
+#include "esp_check.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "cJSON.h"
@@ -197,14 +198,14 @@ esp_err_t companion_cloud_transcribe(const int16_t *mono_pcm,
                                      size_t transcript_capacity)
 {
     if (!mono_pcm || !sample_count || !transcript || transcript_capacity < 2) return ESP_ERR_INVALID_ARG;
-    transcript[0] = '\\0';
+    transcript[0] = '\0';
     if (sample_count > 24000U * 30U) return ESP_ERR_INVALID_SIZE;
 
     char api_base[192] = {0}, token[160] = {0}, url[256] = {0}, authorization[192] = {0};
     ESP_RETURN_ON_ERROR(read_nvs_string("api_base", api_base, sizeof(api_base)), TAG, "API base missing");
     ESP_RETURN_ON_ERROR(read_nvs_string("device_token", token, sizeof(token)), TAG, "device token missing");
     size_t n = strlen(api_base);
-    while (n && api_base[n - 1] == '/') api_base[--n] = '\\0';
+    while (n && api_base[n - 1] == '/') api_base[--n] = '\0';
     int len = snprintf(url, sizeof(url), "%s/api/device/transcribe", api_base);
     if (len < 0 || (size_t)len >= sizeof(url)) return ESP_ERR_INVALID_SIZE;
     len = snprintf(authorization, sizeof(authorization), "Bearer %s", token);
@@ -236,7 +237,7 @@ esp_err_t companion_cloud_claim(const char *api_base,
 {
     if (!api_base || !serial || !companion_name || !enrollment_grant ||
         !device_id || device_id_capacity < 8) return ESP_ERR_INVALID_ARG;
-    device_id[0] = '\\0';
+    device_id[0] = '\0';
     cJSON *body = cJSON_CreateObject();
     if (!body) return ESP_ERR_NO_MEM;
     cJSON_AddStringToObject(body, "serial", serial);
@@ -250,7 +251,7 @@ esp_err_t companion_cloud_claim(const char *api_base,
     char base[192], url[256], response[2048] = {0};
     strlcpy(base, api_base, sizeof(base));
     size_t n = strlen(base);
-    while (n && base[n - 1] == '/') base[--n] = '\\0';
+    while (n && base[n - 1] == '/') base[--n] = '\0';
     int len = snprintf(url, sizeof(url), "%s/api/devices/claim", base);
     if (len < 0 || (size_t)len >= sizeof(url)) {
         cJSON_free(body_json);
