@@ -155,7 +155,7 @@ esp_err_t companion_cloud_interpret(const char *utterance,
         confidence->valuedouble >= 0.0 && confidence->valuedouble <= 1.0;
     cJSON_Delete(result);
     if (!valid) {
-        response_json[0] = '\\0';
+        response_json[0] = '\0';
         ESP_LOGW(TAG, "Cloud response did not match the intent allowlist");
         return ESP_ERR_INVALID_RESPONSE;
     }
