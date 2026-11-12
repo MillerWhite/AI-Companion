@@ -159,6 +159,7 @@ static void face_apply_emotion(companion_emotion_t emotion)
     }
     face_gaze_target_x = gaze_x;
     face_gaze_target_y = gaze_y;
+    face_base_lid = lid;
 }
 
 static void face_animation_timer(lv_timer_t *timer)
@@ -876,6 +877,7 @@ void app_main(void)
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, 0);
 
     lv_obj_t *face = lv_obj_create(screen);
+    screen_face = face;
     lv_obj_remove_style_all(face);
     lv_obj_set_size(face, 466, 330);
     lv_obj_align(face, LV_ALIGN_CENTER, 0, -25);
@@ -938,7 +940,6 @@ void app_main(void)
 
     render_emotion(COMPANION_CALM);
     lv_timer_create(autonomous_timer, 8000, NULL);
-    lv_timer_create(blink_timer, 2600, NULL);
     if (face_pixels) lv_timer_create(face_animation_timer, 50, NULL);
     bsp_display_unlock();
 
