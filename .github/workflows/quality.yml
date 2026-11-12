@@ -75,3 +75,20 @@ jobs:
           print(f"Found {len(scripts)} inline script(s)")
           PY
           for file in /tmp/installer-*.js; do node --check "$file"; done
+      - name: Validate firmware installer manifest
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path("web/installer/manifest.json").read_text(encoding="utf-8"))
+          firmware_version = Path("firmware/esp-idf/version.txt").read_text(encoding="utf-8").strip()
+          assert manifest["version"] == firmware_version, (manifest["version"], firmware_version)
+          assert len(manifest.get("builds", [])) == 1
+          build = manifest["builds"][0]
+          assert build["chipFamily"] == "ESP32-S3"
+          parts = build.get("parts", [])
+          assert len(parts) == 1 and parts[0]["offset"] == 0
+          assert parts[0]["path"].endswith("/releases/latest/download/AI-Companion-ESP32-S3-Touch-AMOLED-1.75C.bin")
+          print(f"Installer manifest OK for firmware {firmware_version}")
+          PY
