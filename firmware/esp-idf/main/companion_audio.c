@@ -22,7 +22,8 @@ static const char *TAG = "companion_audio";
 static esp_codec_dev_handle_t speaker;
 static esp_codec_dev_handle_t microphone;
 static bool audio_ready;
-static int64_t last_sound_us;\nstatic volatile bool playback_active;
+static int64_t last_sound_us;
+static volatile bool playback_active;
 
 bool companion_audio_is_ready(void) { return audio_ready; }
 
@@ -64,7 +65,8 @@ static float emotion_frequency(companion_emotion_t emotion)
 esp_err_t companion_audio_play(companion_emotion_t emotion, bool force)
 {
     if (!audio_ready) return ESP_ERR_INVALID_STATE;
-    if (playback_active) return ESP_ERR_TIMEOUT;\n    const int64_t now = esp_timer_get_time();
+    if (playback_active) return ESP_ERR_TIMEOUT;
+    const int64_t now = esp_timer_get_time();
     if (!force && now - last_sound_us < AUDIO_COOLDOWN_US) return ESP_ERR_TIMEOUT;
     last_sound_us = now;
 
@@ -90,7 +92,10 @@ esp_err_t companion_audio_play(companion_emotion_t emotion, bool force)
         offset += count;
         offset += 420; /* deliberate silence between notes */
     }
-    playback_active = true;\n    esp_err_t err = esp_codec_dev_write(speaker, pcm, offset * 2 * sizeof(int16_t));\n    playback_active = false;\n    return err;
+    playback_active = true;
+    esp_err_t err = esp_codec_dev_write(speaker, pcm, offset * 2 * sizeof(int16_t));
+    playback_active = false;
+    return err;
 }
 
 esp_err_t companion_audio_capture_utterance(int16_t *mono_pcm, size_t capacity_samples,
@@ -105,7 +110,8 @@ esp_err_t companion_audio_capture_utterance(int16_t *mono_pcm, size_t capacity_s
     const uint32_t max_frames = (max_duration_ms ? max_duration_ms : AUDIO_MAX_UTTERANCE_MS) / 20U;
 
     for (uint32_t frame = 0; frame < max_frames && *captured_samples + AUDIO_FRAME_SAMPLES <= max_samples; ++frame) {
-        if (playback_active) { vTaskDelay(pdMS_TO_TICKS(20)); continue; }\n        esp_err_t err = esp_codec_dev_read(microphone, stereo, sizeof(stereo));
+        if (playback_active) { vTaskDelay(pdMS_TO_TICKS(20)); continue; }
+        esp_err_t err = esp_codec_dev_read(microphone, stereo, sizeof(stereo));
         if (err != ESP_OK) return err;
         float energy = 0.0f;
         for (size_t i = 0; i < AUDIO_FRAME_SAMPLES; ++i) {
