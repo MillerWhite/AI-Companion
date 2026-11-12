@@ -565,7 +565,7 @@ void app_main(void)
         ESP_LOGW(TAG, "QMI8658 unavailable; IMU reactions disabled");
     }
     xTaskCreate(network_setup_task, "companion_setup", 4096, NULL, 2, NULL);
-    ESP_LOGI(TAG, "AI Companion firmware 2.0 started. Nonverbal output only; offline local mode retained.");
+    ESP_LOGI(TAG, "AI Companion firmware 2.1.0 started. Nonverbal output only; offline local mode retained.");
     if (companion_usb_start(on_usb_command) != ESP_OK) {
         ESP_LOGW(TAG, "USB Serial/JTAG control protocol unavailable");
     }
