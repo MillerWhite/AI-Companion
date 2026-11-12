@@ -126,6 +126,8 @@ esp_err_t companion_audio_capture_utterance(int16_t *mono_pcm, size_t capacity_s
             if (active_frames >= VAD_START_FRAMES) started = true;
         } else if (started) {
             silent_frames++;
+        } else {
+            active_frames = 0;
         }
         if (started) *captured_samples += AUDIO_FRAME_SAMPLES;
         if (started && silent_frames >= VAD_END_SILENCE_FRAMES) break;
