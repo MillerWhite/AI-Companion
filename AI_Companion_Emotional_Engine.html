@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AI Companion — Emotional Engine v0.2</title>
+<title>AI Companion — Emotional Engine v0.5</title>
 <style>
 :root{color-scheme:dark;--bg:#080b12;--panel:#111927;--line:#2b3b52;--text:#edf5ff;--muted:#91a0b7;--cyan:#9ceaff;--violet:#c8b5ff}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% 0,#1a2c42 0,#0a101a 42%,#06080d 100%);color:var(--text);font:15px/1.45 system-ui,Arial,sans-serif}
@@ -24,9 +24,9 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 </style>
 </head>
 <body><main>
-<div class="head"><div class="brand">NIFORTT LABS · COMPANION SYSTEMS</div><div class="version">EMOTIONAL ENGINE v0.4</div></div>
+<div class="head"><div class="brand">NIFORTT LABS · COMPANION SYSTEMS</div><div class="version">EMOTIONAL ENGINE v0.5</div></div>
 <h1>Лаборатория<br>эмоций и звуков</h1>
-<p class="intro">Комбинационный движок состояний, индивидуальный профиль и более мягкие звуковые реакции. Звуки приглушены, автоматические звуковые инициативы редкие. Это браузерный симулятор для проектирования поведения до покупки платы.</p>
+<p class="intro">35 эмоциональных состояний, индивидуальный профиль и процедурная звуковая библиотека: по 50 вариантов на каждую эмоцию. Варианты различаются высотой, ритмом, тембром и мелодическим контуром. Это браузерный симулятор для проектирования поведения до покупки платы.</p>
 <div class="grid">
 <section class="panel">
 <div class="stage">
@@ -39,7 +39,7 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 <div class="stats">
 <div class="stat"><b id="emotionCount">30+</b><span>базовых состояний</span></div>
 <div class="stat"><b id="comboCount">1 134 000</b><span>комбинаций параметров*</span></div>
-<div class="stat"><b id="soundCount">18</b><span>звуковых жестов</span></div>
+<div class="stat"><b id="soundCount">1 750</b><span>вариантов звука · 35 × 50</span></div>
 </div>
 <div class="log"><div class="logtop"><span>ЖУРНАЛ ПОВЕДЕНИЯ</span><span id="count">0 событий</span></div><div class="logbody" id="log"><div>Система запущена. Нажми на звуковую пробу или вызови эмоцию.</div></div></div>
 <p class="soundnote">* Число комбинаций — расчётное пространство вариантов, а не тысячи вручную нарисованных кадров. Визуальный рендерер пока демонстрационный.</p>
@@ -59,21 +59,41 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 <button class="main" style="width:100%" onclick="makeProfile()">Сгенерировать личность</button>
 <div class="profile" id="profile"><strong>Milo · личность</strong><p>Игривый, дружелюбный, любопытный. Иногда сам инициирует контакт и внимательно наблюдает за владельцем.</p><div class="chips"><span class="chip">игривый</span><span class="chip">дружелюбный</span><span class="chip">любопытный</span></div></div>
 <h2 style="margin-top:18px">Звуковая лаборатория</h2>
-<div class="soundgrid">
-<button class="sound" onclick="playSound('greeting',true)">♡ Приветствие</button><button class="sound" onclick="playSound('happy',true)">✧ Радость</button><button class="sound" onclick="playSound('curious',true)">? Любопытство</button>
-<button class="sound" onclick="playSound('surprise',true)">! Удивление</button><button class="sound" onclick="playSound('shy',true)">◌ Смущение</button><button class="sound" onclick="playSound('sleep',true)">z Сон</button>
-<button class="sound" onclick="playSound('attention',true)">♡ Внимание</button><button class="sound" onclick="playSound('giggle',true)">♪ Хихиканье</button><button class="sound" onclick="playSound('purr',true)">≈ Довольство</button>
-<button class="sound" onclick="playSound('boop',true)">● Буп</button><button class="sound" onclick="playSound('sad',true)">☁ Грусть</button><button class="sound" onclick="playSound('nope',true)">⊘ Недовольство</button>
-<button class="sound" onclick="playSound('trill',true)">〰 Трель</button><button class="sound" onclick="playSound('bubble',true)">◉ Пузырёк</button><button class="sound" onclick="playSound('whistle',true)">♬ Свист</button>
-<button class="sound" onclick="playSound('squeak',true)">⌁ Писк</button><button class="sound" onclick="playSound('coo',true)">♡ Нежность</button><button class="sound" onclick="playSound('wonder',true)">✧ Восхищение</button>
+<div class="field"><label>Эмоция для прослушивания</label><select id="soundEmotion"></select></div>
+<div class="two">
+<div class="field"><label>Вариант из 50</label><select id="soundVariant"></select></div>
+<div class="field"><label>Режим выбора</label><select id="soundMode"><option value="random">Случайный, без недавних повторов</option><option value="ordered">По порядку</option></select></div>
 </div>
+<div class="two">
+<button class="sound" onclick="playSelectedSound()">▶ Прослушать вариант</button>
+<button class="main" onclick="playNextSound()">✧ Следующий уникальный</button>
+</div>
+<div class="profile" id="soundInfo"><strong>50 звуков на каждую эмоцию</strong><p>Выбери эмоцию и прослушай её варианты. Система избегает недавних повторов и не использует один и тот же короткий сигнал для всех состояний.</p><div class="chips"><span class="chip">35 эмоций</span><span class="chip">50 вариантов на эмоцию</span><span class="chip">1 750 параметрических вариантов</span></div></div>
+<p class="soundnote">Нажми кнопку, чтобы включить звук. Браузер может запросить разрешение на воспроизведение после первого нажатия. Варианты синтезируются на лету через Web Audio API.</p>
 <p class="soundnote">Нажми любую пробу — звук воспроизведётся через динамики или наушники компьютера. Браузер может запросить разрешение на звук после первого нажатия.</p>
 </section></div></main>
 <script>
 const $=id=>document.getElementById(id),orb=$('orb');let soundEnabled=true,events=0,current='neutral',intensity=6,lastSoundAt=0,profile={temper:'playful',initiative:'medium',bond:'friendly',quirk:'curious'};
 const moods=[
 ['joy','радость','happy'],['delight','восторг','excited'],['content','довольство','happy'],['curiosity','любопытство','curious'],['wonder','изумление','surprised'],['surprise','удивление','surprised'],['shyness','смущение','shy'],['affection','нежность','love'],['calm','спокойствие','neutral'],['sleepiness','сонливость','sleep'],['sleep','сон','sleep'],['sadness','грусть','sad'],['disappointment','разочарование','sad'],['annoyance','досада','angry'],['playfulness','озорство','happy'],['mischief','хитрость','curious'],['excitement','возбуждение','excited'],['anticipation','ожидание','curious'],['loneliness','скука','sad'],['relief','облегчение','happy'],['pride','гордость','happy'],['confusion','замешательство','surprised'],['embarrassment','неловкость','shy'],['tenderness','ласка','love'],['alertness','внимание','curious'],['fear','испуг','surprised'],['jealousy','ревность','angry'],['boredom','скука','sleep'],['gratitude','благодарность','love'],['trust','доверие','happy'],['hope','надежда','curious'],['frustration','раздражение','angry'],['curiosity2','пристальный интерес','curious'],['serenity','умиротворение','neutral'],['mischievousJoy','шалость','happy']];
-const moodSound={happy:'happy',excited:'trill',curious:'curious',surprised:'surprise',shy:'shy',love:'coo',neutral:'bubble',sleep:'sleep',sad:'sad',angry:'nope'};
+const soundFamilyByMood={joy:'bright',delight:'bright',content:'warm',curiosity:'curious',wonder:'wonder',surprise:'surprise',shyness:'shy',affection:'tender',calm:'calm',sleepiness:'sleep',sleep:'sleep',sadness:'sad',disappointment:'sad',annoyance:'grumpy',playfulness:'playful',mischief:'curious',excitement:'bright',anticipation:'curious',loneliness:'softSad',relief:'warm',pride:'bright',confusion:'wonder',embarrassment:'shy',tenderness:'tender',alertness:'alert',fear:'surprise',jealousy:'grumpy',boredom:'sleep',gratitude:'tender',trust:'warm',hope:'wonder',frustration:'grumpy',curiosity2:'curious',serenity:'calm',mischievousJoy:'playful'};
+const soundNames={bright:'радостный',warm:'тёплый',curious:'любопытный',wonder:'восхищённый',surprise:'удивлённый',shy:'застенчивый',tender:'нежный',calm:'спокойный',sleep:'сонный',sad:'грустный',softSad:'тихо-грустный',grumpy:'недовольный',playful:'озорной',alert:'внимательный'};
+const soundMemory={};let orderedSoundIndex=0;
+function seedRandom(seed){let x=seed>>>0;return()=>{x=(x+0x6D2B79F5)|0;let t=Math.imul(x^(x>>>15),1|x);t=(t+Math.imul(t^(t>>>7),61|t))^t;return ((t^(t>>>14))>>>0)/4294967296}}
+function makeEmotionSoundSet(moodKey,family){const variants=[];const familyNotes={bright:[660,830,990,780,1120],warm:[470,590,650,540,720],curious:[390,510,690,610,820],wonder:[350,520,740,980,1180],surprise:[420,980,620,1120,760],shy:[650,560,490,610,430],tender:[510,620,560,690,480],calm:[390,430,370,460,350],sleep:[330,290,250,220,190],sad:[420,360,310,270,230],softSad:[390,350,300,260,220],grumpy:[300,240,330,210,280],playful:[580,850,690,1020,760],alert:[760,620,880,700,940]};
+ const base=familyNotes[family]||familyNotes.warm;
+ for(let i=0;i<50;i++){const rand=seedRandom([...moodKey].reduce((a,c)=>Math.imul(a^c.charCodeAt(0),16777619)>>>0,2166136261)^((i+1)*2654435761));const count=3+Math.floor(rand()*3),scale=.88+rand()*.25,tempo=.82+rand()*.42,offset=rand()*38,waves=['sine','triangle','sine','triangle','sawtooth'];const notes=[];let cursor=0;
+ for(let n=0;n<count;n++){const idx=(n+Math.floor(rand()*2))%base.length;const direction=family==='sad'||family==='sleep'||family==='softSad'?-1:family==='grumpy'?-1:1;const drift=(rand()-.5)*150;const freq=Math.max(115,base[idx]*scale+drift+offset);const duration=(.075+rand()*.12)*(family==='sleep'||family==='calm'?1.5:1);notes.push({freq,duration,delay:cursor,ending:Math.max(110,freq*(.76+rand()*.52)),volume:.020+rand()*.012});cursor+=duration*(.85+rand()*.55)*tempo; if(direction<0&&n>0)cursor+=.015;}
+ variants.push({notes,wave:waves[Math.floor(rand()*waves.length)],tempo,noise:rand()>.58,noiseFreq:700+rand()*1900,noiseVol:.002+rand()*.004,tail:cursor});}
+ return variants;}
+const emotionSoundLibrary=Object.fromEntries(moods.map(m=>[m[0],makeEmotionSoundSet(m[0],soundFamilyByMood[m[0]]||'warm')]));
+function initSoundSelector(){const select=$('soundEmotion');if(!select)return;moods.forEach(m=>{const o=document.createElement('option');o.value=m[0];o.textContent=m[1];select.append(o)});moods.forEach(m=>{const o=document.createElement('option');o.value=m[0];o.textContent=m[1];$('soundEmotion').append(o)});for(let i=1;i<=50;i++){const o=document.createElement('option');o.value=String(i-1);o.textContent='Вариант '+i;$('soundVariant').append(o)};select.value='joy';$('soundVariant').value='0';updateSoundInfo();}
+function updateSoundInfo(){const key=$('soundEmotion').value,m=moods.find(x=>x[0]===key),family=soundFamilyByMood[key]||'warm';$('soundInfo').querySelector('strong').textContent=(m?m[1]:key)+' · 50 вариантов';$('soundInfo').querySelector('p').textContent='Звуковой характер: '+(soundNames[family]||family)+'. Каждый вариант имеет собственный набор нот, длительность, темп, частотный контур и тембр.';}
+function playEmotionSound(moodKey,variantIndex){const c=audio();if(!c){log('Web Audio API недоступен');return}const set=emotionSoundLibrary[moodKey]||emotionSoundLibrary.joy;const v=set[variantIndex%50],t=c.currentTime;v.notes.forEach(n=>tone(c,t+n.delay,n.freq,n.duration,v.wave,n.volume,n.ending));if(v.noise)noise(c,t+.02,Math.min(.22,v.tail*.55),v.noiseVol,v.noiseFreq);const m=moods.find(x=>x[0]===moodKey);log('Звук «'+(m?m[1]:moodKey)+'» · вариант '+(variantIndex+1)+'/50');}
+function chooseSoundVariant(key){const recent=soundMemory[key]||(soundMemory[key]=[]);let idx;if($('soundMode')?.value==='ordered'){idx=orderedSoundIndex++%50;}else{const candidates=Array.from({length:50},(_,i)=>i).filter(i=>!recent.includes(i));idx=candidates[Math.floor(Math.random()*candidates.length)]??Math.floor(Math.random()*50);}recent.push(idx);if(recent.length>10)recent.shift();return idx;}
+function playSelectedSound(){const key=$('soundEmotion').value,idx=+$('soundVariant').value;playEmotionSound(key,idx);}
+function playNextSound(){const key=$('soundEmotion').value,idx=chooseSoundVariant(key);$('soundVariant').value=String(idx);playEmotionSound(key,idx);}
+$('soundEmotion')?.addEventListener('change',updateSoundInfo);
 function log(s){let d=document.createElement('div');d.textContent=new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})+' · '+s;$('log').prepend(d);events++;$('count').textContent=events+' событий';if($('log').children.length>18)$('log').lastChild.remove()}
 function audio(){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;let c=audio.ctx||(audio.ctx=new C());if(c.state==='suspended')c.resume();return c}
 function tone(c,t,f,dur,wave='sine',vol=.045,endF=null){let o=c.createOscillator(),g=c.createGain(),filter=c.createBiquadFilter();o.type=wave;o.frequency.setValueAtTime(f,t);if(endF)o.frequency.exponentialRampToValueAtTime(Math.max(30,endF),t+dur);filter.type='lowpass';filter.frequency.value=1700;filter.Q.value=.35;o.connect(filter);filter.connect(g);g.connect(c.destination);const v=vol*.30;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.035);g.gain.setTargetAtTime(.0001,t+Math.min(.07,dur*.45),Math.max(.05,dur*.25));o.start(t);o.stop(t+dur+.06)}
@@ -84,34 +104,11 @@ function noise(c,t,dur,vol=.018,filterFreq=1800){
 }
 function playSound(type,force=false){
  const nowMs=Date.now();if(!force&&nowMs-lastSoundAt<4200){log('Звук пропущен: пауза между реакциями');return}lastSoundAt=nowMs;
- const c=audio();if(!c){log('Web Audio API недоступен');return}const t=c.currentTime, r=()=>.94+Math.random()*.12;
- const patterns={
- greeting:{wave:'sine',notes:[[510,0,.13,700],[760,.16,.13,920],[880,.34,.2,690]]},
- happy:{wave:'triangle',notes:[[650,0,.09,900],[850,.105,.09,1120],[1040,.22,.1,880],[920,.34,.16,1180]]},
- curious:{wave:'sine',notes:[[430,0,.16,500],[590,.21,.18,760],[720,.45,.22,850]]},
- surprise:{wave:'sawtooth',notes:[[390,0,.055,1050],[1050,.075,.18,590]],noise:true},
- shy:{wave:'sine',notes:[[690,0,.13,570],[560,.17,.17,470],[470,.4,.14,420]]},
- sleep:{wave:'sine',notes:[[360,0,.28,310],[300,.32,.3,250],[240,.68,.42,190]]},
- attention:{wave:'triangle',notes:[[780,0,.09,850],[620,.22,.09,700],[880,.45,.16,980]]},
- giggle:{wave:'triangle',notes:[[720,0,.07,900],[850,.1,.07,680],[760,.2,.07,980],[940,.3,.08,760],[820,.42,.12,1050]]},
- purr:{wave:'sine',notes:[[150,0,.28,185],[185,.29,.28,155],[160,.58,.3,205],[175,.89,.28,145]]},
- boop:{wave:'sine',notes:[[540,0,.075,230]],noise:true},
- sad:{wave:'sine',notes:[[420,0,.24,360],[350,.29,.28,290],[290,.62,.34,240]]},
- nope:{wave:'square',notes:[[250,0,.09,190],[205,.14,.13,155]],noise:true},
- trill:{wave:'triangle',notes:[[620,0,.055,850],[900,.07,.055,680],[650,.14,.055,940],[980,.21,.06,720],[720,.29,.08,1100],[1040,.4,.13,820]]},
- bubble:{wave:'sine',notes:[[330,0,.11,520],[520,.13,.12,390],[390,.28,.11,620],[620,.42,.16,480]],noise:true},
- whistle:{wave:'sine',notes:[[1050,0,.22,1450],[1450,.25,.24,980],[980,.55,.2,1250]]},
- squeak:{wave:'square',notes:[[1250,0,.045,1650],[1500,.09,.05,1100],[1320,.19,.055,1750]]},
- coo:{wave:'sine',notes:[[520,0,.22,640],[640,.26,.28,490]]},
- wonder:{wave:'sine',notes:[[390,0,.2,560],[560,.24,.22,790],[790,.5,.25,1120],[1120,.78,.32,1320]],noise:true}
- };
- const p=patterns[type]||patterns.boop;
- p.notes.forEach(([f,dt,d,e])=>tone(c,t+dt,f*r(),d*r(),p.wave,type==='purr'?.020:.027,e*r()));
- if(p.noise)noise(c,t+(type==='surprise'?.07:.015),type==='wonder'?.22:.07,type==='wonder'?.006:.004,type==='bubble'?900:2200);
- log('Звуковая проба: '+type);
+ const key=moods.find(m=>m[2]===type)?.[0]||({happy:'joy',excited:'delight',curious:'curiosity',surprised:'surprise',shy:'shyness',love:'affection',neutral:'calm',sleep:'sleep',sad:'sadness',angry:'annoyance'}[type]||'joy');
+ const idx=chooseSoundVariant(key);playEmotionSound(key,idx);
 }
 function setMood(key,why='реакция компаньона',sound=true){current=key;const map={happy:'радуется',excited:'в восторге',curious:'с любопытством наблюдает',surprised:'удивлён',shy:'смущается',love:'проявляет нежность',neutral:'спокойно наблюдает',sleep:'засыпает',sad:'немного грустит',angry:'недоволен'};
-orb.className='orb '+(key==='neutral'?'':key);$('status').textContent=map[key]||key;$('substatus').textContent=why+' · интенсивность '+intensity+'/10';if(sound)playSound(moodSound[key]||'boop');log(($('name').value||'Компаньон')+': '+(map[key]||key))}
+orb.className='orb '+(key==='neutral'?'':key);$('status').textContent=map[key]||key;$('substatus').textContent=why+' · интенсивность '+intensity+'/10';if(sound)playSound(key==='neutral'?'bubble':(soundFamilyByMood[moods.find(m=>m[2]===key)?.[0]]||'warm'));log(($('name').value||'Компаньон')+': '+(map[key]||key))}
 function trigger(key){if(key==='sleep'){setMood('sleep','переходит в режим отдыха');return}if(key==='neutral'){setMood('neutral','проснулся и огляделся',false);return}setMood(key,key==='happy'?'приятное прикосновение':key==='curious'?'заметил внимание владельца':'неожиданное событие');setTimeout(()=>{if(current===key)setMood('neutral','возвращается к спокойному состоянию',false)},2400)}
 function randomEmotion(){let candidates=moods.filter(x=>!['sleep','sleepiness','fear','jealousy'].includes(x[0]));let m=candidates[Math.floor(Math.random()*candidates.length)];let key=m[2];intensity=+$('intensity').value;setMood(key,'смешанная эмоция: '+m[1]+' · '+m[0]);}
 function makeProfile(){profile={temper:$('temper').value,initiative:$('initiative').value,bond:$('bond').value,quirk:$('quirk').value};let n=$('name').value.trim()||'Milo';let dict={temper:{calm:'спокойный',playful:'игривый',shy:'стеснительный',energetic:'энергичный',dreamy:'мечтательный'},initiative:{low:'редко проявляет инициативу',medium:'иногда проявляет инициативу',high:'часто ищет контакт'},bond:{gentle:'ласковый',friendly:'дружелюбный',independent:'независимый',mischief:'озорной'},quirk:{curious:'любит всё разглядывать',sleepy:'часто сонный',dramatic:'ярко выражает эмоции',bouncy:'непоседливый',shy:'смущается от внимания'}};
@@ -123,5 +120,5 @@ setInterval(()=>{if(current!=='sleep'&&Math.random()<.72)blink()},2500);
 setInterval(()=>{if(current==='sleep')return;let p=profile.initiative==='high'?.30:profile.initiative==='low'?.07:.16;if(Math.random()<p){let pool=profile.temper==='calm'?['curious','neutral']:profile.temper==='energetic'?['happy','excited','curious']:profile.temper==='shy'?['shy','curious']:['curious','happy','shy'];let m=pool[Math.floor(Math.random()*pool.length)];setMood(m,'самостоятельная инициатива',Math.random()<.18);setTimeout(()=>{if(current===m)setMood('neutral','снова наблюдает',false)},2100)}},10500);
 $('orb').addEventListener('click',()=>trigger(profile.bond==='mischief'?'surprised':'happy'));
 $('comboCount').textContent=(35*10*9*12*5*6).toLocaleString('ru-RU');
-log('Emotional Engine v0.4 готов. Звуки приглушены; автоматические звуковые реакции ограничены.');
+initSoundSelector();log('Emotional Engine v0.5 готов. Создано 1 750 параметрических звуковых вариантов.');
 </script></body></html>
