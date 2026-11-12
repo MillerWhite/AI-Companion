@@ -14,7 +14,7 @@ void companion_emotion_init(companion_state_t *state)
     if (!state) return;
     *state = (companion_state_t) {
         .energy = 82.0f, .comfort = 72.0f, .social = 42.0f,
-        .curiosity = 38.0f, .trust = 25.0f, .playfulness = 35.0f, .temperament = 0, .initiative = 0
+        .curiosity = 38.0f, .trust = 25.0f, .playfulness = 35.0f, .temperament = 0, .initiative = 0, .quirk = 0
     };
 }
 
@@ -67,10 +67,16 @@ companion_emotion_t companion_emotion_choose(const companion_state_t *s,
     if (s->energy < 13.0f || (hour >= 23 || hour < 6) && s->energy < 48.0f) chosen = COMPANION_SLEEPY;
     else if (s->comfort < 18.0f) chosen = COMPANION_SAD;
     else if (s->social > 88.0f && s->trust > 35.0f) chosen = COMPANION_AFFECTIONATE;
+    else if (s->quirk == 1 && s->energy < 58.0f) chosen = COMPANION_SLEEPY;
+    else if (s->quirk == 2 && s->curiosity > 52.0f) chosen = COMPANION_CURIOUS;
+    else if (s->quirk == 4 && s->social > 58.0f) chosen = COMPANION_SHY;
     else if (s->curiosity > 88.0f) chosen = COMPANION_CURIOUS;
     else if (s->energy < 28.0f) chosen = COMPANION_CONCERNED;
     else {
-        const uint32_t roll = random_value % 100U;
+        uint32_t roll = random_value % 100U;
+        if (s->quirk == 2) roll = (roll + 18U) % 100U;
+        if (s->quirk == 3) roll = (roll + 35U) % 100U;
+        if (s->quirk == 4) roll = (roll + 8U) % 100U;
         if (s->temperament == 1) {
             if (roll < 62U) chosen = COMPANION_CALM;
             else if (roll < 82U) chosen = COMPANION_CURIOUS;
