@@ -47,7 +47,7 @@ static const char *emotion_label(companion_emotion_t emotion)
 {
     static const char *labels[COMPANION_EMOTION_COUNT] = {
         "Calm", "Happy", "Curious", "Sleepy", "Sad",
-        "Affection", "Excited", "Surprised", "Concerned", "Shy", "Dizzy"
+        "Affection", "Excited", "Surprised", "Concerned", "Shy", "Dizzy", "Flinch"
     };
     return labels[emotion < COMPANION_EMOTION_COUNT ? emotion : COMPANION_CALM];
 }
@@ -97,6 +97,7 @@ static void render_emotion(companion_emotion_t emotion)
     const bool excited = emotion == COMPANION_EXCITED;
     const bool curious = emotion == COMPANION_CURIOUS || emotion == COMPANION_SURPRISED;
     const bool dizzy = emotion == COMPANION_DIZZY;
+    const bool flinch = emotion == COMPANION_FLINCH;
     int eye_width = 58, eye_height = 78, mouth_width = 27, mouth_height = 8;
     int mouth_top = 0;
 
@@ -111,6 +112,7 @@ static void render_emotion(companion_emotion_t emotion)
         case COMPANION_CONCERNED: eye_width = 57; eye_height = 70; mouth_width = 29; mouth_height = 8; break;
         case COMPANION_SHY: eye_width = 58; eye_height = 60; mouth_width = 16; mouth_height = 7; break;
         case COMPANION_DIZZY: eye_width = 54; eye_height = 48; mouth_width = 34; mouth_height = 12; break;
+        case COMPANION_FLINCH: eye_width = 58; eye_height = 4; mouth_width = 11; mouth_height = 4; break;
         default: break;
     }
 
@@ -123,8 +125,8 @@ static void render_emotion(companion_emotion_t emotion)
         lv_obj_set_style_bg_color(eyes[i], sad ? lv_color_hex(0xDCEEFF) : lv_color_hex(0xFFFFFF), 0);
         lv_obj_set_style_shadow_color(eyes[i], sad ? lv_color_hex(0x6BB7E8) : lv_color_hex(0xA8D9FF), 0);
         lv_obj_set_style_shadow_width(eyes[i], sad ? 20 : 12, 0);
-        lv_obj_set_style_bg_opa(eyes[i], sleepy ? LV_OPA_80 : LV_OPA_COVER, 0);
-        lv_obj_set_style_radius(eyes[i], sleepy ? 8 : LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_opa(eyes[i], (sleepy || flinch) ? LV_OPA_80 : LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(eyes[i], (sleepy || flinch) ? 8 : LV_RADIUS_CIRCLE, 0);
         lv_obj_set_style_transform_rotation(eyes[i], sad ? (i == 0 ? -65 : 65) : (dizzy ? (i == 0 ? 18 : -18) : 0), 0);
         lv_obj_clear_flag(tears[i], LV_OBJ_FLAG_HIDDEN);
         if (sad) lv_obj_set_y(tears[i], 218 + (i ? 5 : 0));
@@ -233,6 +235,7 @@ static companion_emotion_t parse_emotion(const char *value)
     if (!strcmp(value, "concerned")) return COMPANION_CONCERNED;
     if (!strcmp(value, "shy")) return COMPANION_SHY;
     if (!strcmp(value, "dizzy")) return COMPANION_DIZZY;
+    if (!strcmp(value, "flinch")) return COMPANION_FLINCH;
     return COMPANION_CALM;
 }
 
@@ -427,8 +430,10 @@ static void voice_task(void *arg)
         esp_err_t err = companion_audio_capture_utterance(pcm, max_samples, &samples, 6000);
         const uint32_t audio_events = companion_audio_take_events();
         if (audio_events & COMPANION_AUDIO_BLOW) {
-            set_emotion(COMPANION_SURPRISED, false);
+            set_emotion(COMPANION_FLINCH, false);
             if (audio_available) companion_audio_play_sound(VOICE_POKE, false);
+            vTaskDelay(pdMS_TO_TICKS(850));
+            if (!sleeping) set_emotion(COMPANION_CURIOUS, false);
             continue;
         }
         if (audio_events & COMPANION_AUDIO_CLAP) {
