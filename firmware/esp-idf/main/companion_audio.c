@@ -4,6 +4,7 @@
 #include <string.h>
 #include "esp_codec_dev.h"
 #include "esp_log.h"
+#include "esp_check.h"
 #include "esp_timer.h"
 #include "bsp/esp-bsp.h"
 
@@ -84,7 +85,6 @@ esp_err_t companion_audio_play(companion_emotion_t emotion, bool force)
         offset += count;
         offset += 420; /* deliberate silence between notes */
     }
-    memset(&pcm[note_len[0] * 2], 0, 0);
     return esp_codec_dev_write(speaker, pcm, offset * 2 * sizeof(int16_t));
 }
 
