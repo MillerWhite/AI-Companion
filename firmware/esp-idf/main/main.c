@@ -11,6 +11,7 @@
 #include "esp_random.h"
 #include "esp_heap_caps.h"
 #include "esp_netif.h"
+#include "esp_netif_ip_addr.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "bsp/esp-bsp.h"
