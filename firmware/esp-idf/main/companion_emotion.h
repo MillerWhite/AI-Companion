@@ -17,6 +17,7 @@ typedef enum {
     COMPANION_SHY,
     COMPANION_DIZZY,
     COMPANION_FLINCH,
+    COMPANION_ANGRY,
     COMPANION_EMOTION_COUNT
 } companion_emotion_t;
 
