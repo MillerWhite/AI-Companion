@@ -230,6 +230,16 @@ static void apply_cloud_intent(const char *json_text)
     cJSON_Delete(json);
 }
 
+static void on_face_long_press(lv_event_t *event)
+{
+    (void)event;
+    if (bsp_display_lock(pdMS_TO_TICKS(1000)) == ESP_OK) {
+        lv_label_set_text(status_label, "Resetting Wi-Fi…");
+        bsp_display_unlock();
+    }
+    companion_wifi_reset();
+}
+
 static void on_face_tap(lv_event_t *event)
 {
     (void)event;
@@ -386,6 +396,7 @@ void app_main(void)
     lv_obj_align(face, LV_ALIGN_CENTER, 0, -25);
     lv_obj_add_flag(face, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(face, on_face_tap, LV_EVENT_CLICKED, NULL);
+    lv_obj_add_event_cb(face, on_face_long_press, LV_EVENT_LONG_PRESSED, NULL);
 
     for (int i = 0; i < 2; ++i) {
         eyes[i] = lv_obj_create(face);
