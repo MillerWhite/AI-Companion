@@ -55,9 +55,9 @@ static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, voi
     }
 }
 
-esp_err_t companion_wifi_start(char *setup_code, size_t setup_code_size)
+esp_err_t companion_wifi_start(char *setup_info, size_t setup_info_size)
 {
-    if (!setup_code || setup_code_size < 9) return ESP_ERR_INVALID_ARG;
+    if (!setup_info || setup_info_size < 96) return ESP_ERR_INVALID_ARG;
     wifi_events = xEventGroupCreate();
     if (!wifi_events) return ESP_ERR_NO_MEM;
     esp_timer_create_args_t timer_args = {.callback = reconnect_timer_callback, .name = "wifi_reconnect"};
