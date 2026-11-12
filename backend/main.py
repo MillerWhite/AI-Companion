@@ -19,11 +19,13 @@ from pydantic import BaseModel, Field, field_validator
 
 load_dotenv()
 
-APP_VERSION = "1.1.0"
-AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").strip().lower()
+APP_VERSION = "1.2.0"
+AI_PROVIDER = os.getenv("AI_PROVIDER", "yandex").strip().lower()
 AI_API_KEY = os.getenv("AI_API_KEY", "").strip()
-AI_API_BASE_URL = os.getenv("AI_API_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai").rstrip("/")
-AI_MODEL = os.getenv("AI_MODEL", "gemini-3.6-flash").strip()
+AI_FOLDER_ID = os.getenv("AI_FOLDER_ID", "").strip()
+_DEFAULT_BASE_URL = "https://ai.api.cloud.yandex.net/v1" if AI_PROVIDER == "yandex" else "https://generativelanguage.googleapis.com/v1beta/openai"
+AI_API_BASE_URL = os.getenv("AI_API_BASE_URL", _DEFAULT_BASE_URL).rstrip("/")
+AI_MODEL = os.getenv("AI_MODEL", "aliceai-llm-flash" if AI_PROVIDER == "yandex" else "gemini-3.6-flash").strip()
 AI_TIMEOUT_SECONDS = float(os.getenv("AI_TIMEOUT_SECONDS", "20"))
 
 
@@ -131,7 +133,7 @@ def make_system_prompt(name: str, personality: dict[str, Any]) -> str:
 
 
 def call_language_model(payload: InterpretRequest) -> InterpretResult:
-    if not AI_MODEL or not AI_API_KEY:
+    if not AI_MODEL or not AI_API_KEY or (AI_PROVIDER == "yandex" and not AI_FOLDER_ID):
         raise HTTPException(
             status_code=503,
             detail={
@@ -148,15 +150,24 @@ def call_language_model(payload: InterpretRequest) -> InterpretResult:
         messages.append({"role": role, "content": turn.text[:500]})
     messages.append({"role": "user", "content": payload.utterance})
 
+    model_id = AI_MODEL
+    headers = {"Content-Type": "application/json"}
+    # Provider credentials stay on the backend; never send them to firmware or browser.
+    if AI_PROVIDER == "yandex":
+        model_id = AI_MODEL if AI_MODEL.startswith("gpt://") else f"gpt://{AI_FOLDER_ID}/{AI_MODEL}"
+        headers["Authorization"] = "Api-Key " + AI_API_KEY
+        headers["OpenAI-Project"] = AI_FOLDER_ID
+    elif AI_PROVIDER == "gemini":
+        headers["Authorization"] = "Bearer " + AI_API_KEY
+    else:
+        raise HTTPException(status_code=503, detail={"code": "unsupported_ai_provider", "message": "Unsupported AI provider"})
+
     request_body = json.dumps({
-        "model": AI_MODEL,
+        "model": model_id,
         "messages": messages,
         "temperature": 0.2,
         "response_format": {"type": "json_object"},
     }).encode("utf-8")
-    headers = {"Content-Type": "application/json"}
-    # Provider key stays on the backend; never send it to firmware or browser.
-    headers["Authorization"] = "Bearer " + AI_API_KEY
     request = urllib.request.Request(
         AI_API_BASE_URL + "/chat/completions",
         data=request_body,
@@ -200,10 +211,10 @@ def health() -> dict[str, str | bool]:
     return {
         "status": "ok",
         "version": APP_VERSION,
-        "ai_configured": bool(AI_MODEL and AI_API_KEY),
+        "ai_configured": bool(AI_MODEL and AI_API_KEY and (AI_PROVIDER != "yandex" or AI_FOLDER_ID)),
         "provider": AI_PROVIDER,
         "model": AI_MODEL,
-        "mode": "cloud_language_model" if AI_MODEL and AI_API_KEY else "local_fallback_required",
+        "mode": "cloud_language_model" if AI_MODEL and AI_API_KEY and (AI_PROVIDER != "yandex" or AI_FOLDER_ID) else "local_fallback_required",
     }
 
 
