@@ -4,6 +4,7 @@
 #include <string.h>
 #include "esp_event.h"
 #include "esp_log.h"
+#include "esp_check.h"
 #include "esp_mac.h"
 #include "esp_netif.h"
 #include "esp_random.h"
@@ -64,7 +65,7 @@ esp_err_t companion_wifi_start(char *setup_code, size_t setup_code_size)
     ESP_RETURN_ON_ERROR(wifi_prov_mgr_is_provisioned(&provisioned), TAG, "provision state");
     if (provisioned) {
         ESP_LOGI(TAG, "Stored Wi-Fi credentials found; starting station");
-        ESP_RETURN_ON_ERROR(wifi_prov_mgr_deinit(), TAG, "provision manager cleanup");
+        wifi_prov_mgr_deinit();
         ESP_RETURN_ON_ERROR(esp_wifi_set_mode(WIFI_MODE_STA), TAG, "station mode");
         ESP_RETURN_ON_ERROR(esp_wifi_start(), TAG, "station start");
         ESP_RETURN_ON_ERROR(esp_wifi_connect(), TAG, "station connect");
@@ -74,11 +75,11 @@ esp_err_t companion_wifi_start(char *setup_code, size_t setup_code_size)
 
     uint8_t mac[6] = {0};
     ESP_RETURN_ON_ERROR(esp_read_mac(mac, ESP_MAC_WIFI_STA), TAG, "read MAC");
-    const uint32_t pin = 100000U + (esp_random() % 900000U);
-    snprintf(setup_code, setup_code_size, "%06lu", (unsigned long)pin);
+    const uint32_t pin = 10000000U + (esp_random() % 90000000U);
+    snprintf(setup_code, setup_code_size, "%08lu", (unsigned long)pin);
     char service_name[24], service_key[16];
     snprintf(service_name, sizeof(service_name), "AIC-%02X%02X%02X", mac[3], mac[4], mac[5]);
-    snprintf(service_key, sizeof(service_key), "AC%06lu", (unsigned long)pin);
+    snprintf(service_key, sizeof(service_key), "AC%08lu", (unsigned long)pin);
     ESP_LOGI(TAG, "Wi-Fi setup AP: %s / password: %s", service_name, service_key);
     ESP_RETURN_ON_ERROR(wifi_prov_mgr_start_provisioning(WIFI_PROV_SECURITY_1, setup_code, service_name, service_key), TAG, "start secure SoftAP provisioning");
     return ESP_OK;
