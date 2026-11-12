@@ -1,5 +1,6 @@
 import json
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -60,7 +61,7 @@ class DeviceLifecycleTests(unittest.TestCase):
         with main._device_db() as connection:
             connection.execute(
                 "UPDATE devices SET memory_json = ? WHERE device_id = ?",
-                (json.dumps({"recent_context": [{"role": "owner", "text": "hello"}], "facts": [{"kind": "nickname", "value": "Milo"}]}), result["device_id"]),
+                (json.dumps({"recent_context": [{"role": "owner", "text": "hello"}], "facts": [{"kind": "nickname", "value": "Milo", "timestamp": int(time.time())}]}), result["device_id"]),
             )
         memory = main.get_device_memory(authorization=auth)
         self.assertEqual(len(memory["memory"]["facts"]), 1)
