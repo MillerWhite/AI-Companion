@@ -406,6 +406,85 @@ def health() -> dict[str, str | bool]:
     }
 
 
+
+@app.post("/api/admin/enrollment-grants")
+def admin_create_enrollment_grant(
+    payload: EnrollmentGrantRequest,
+    x_enrollment_secret: str | None = Header(default=None, alias="X-Enrollment-Secret"),
+) -> dict[str, Any]:
+    if not DEVICE_ENROLLMENT_SECRET or not x_enrollment_secret or not hmac.compare_digest(x_enrollment_secret, DEVICE_ENROLLMENT_SECRET):
+        raise HTTPException(status_code=401, detail={"code": "admin_auth_failed", "message": "Enrollment administration authorization failed"})
+    try:
+        grant = _create_enrollment_grant(payload.order_id.strip(), payload.ttl_hours)
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail={"code": "order_already_granted", "message": "This order already has an enrollment grant"})
+    return {"enrollment_grant": grant, "expires_in_seconds": payload.ttl_hours * 3600, "order_id": payload.order_id}
+
+
+@app.post("/api/store/webhook")
+async def store_payment_webhook(
+    request: Request,
+    x_store_signature: str | None = Header(default=None, alias="X-Store-Signature"),
+) -> dict[str, Any]:
+    """Generic HMAC-signed adapter. A real payment provider must be verified before forwarding."""
+    if not STORE_WEBHOOK_SECRET:
+        raise HTTPException(status_code=503, detail={"code": "store_webhook_not_configured", "message": "Store webhook is not configured"})
+    body = await request.body()
+    expected = hmac.new(STORE_WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
+    if not x_store_signature or not hmac.compare_digest(x_store_signature, expected):
+        raise HTTPException(status_code=401, detail={"code": "invalid_store_signature", "message": "Payment webhook signature is invalid"})
+    try:
+        event = json.loads(body.decode("utf-8"))
+        order_id = str(event["order_id"]).strip()
+        event_id = str(event["event_id"]).strip()
+        paid = event["payment_status"] == "paid"
+    except (ValueError, KeyError, TypeError):
+        raise HTTPException(status_code=400, detail={"code": "invalid_store_event", "message": "Malformed payment event"})
+    if not paid:
+        return {"accepted": True, "grant_created": False}
+    if not order_id or not event_id:
+        raise HTTPException(status_code=400, detail={"code": "invalid_store_event", "message": "order_id and event_id are required"})
+    grant = secrets.token_urlsafe(32)
+    now = int(time.time())
+    try:
+        with _device_db() as connection:
+            connection.execute("INSERT INTO store_orders (order_id, event_id, created_at) VALUES (?, ?, ?)", (order_id, event_id, now))
+            connection.execute(
+                "INSERT INTO enrollment_grants (grant_hash, order_id, created_at, expires_at, used_at) VALUES (?, ?, ?, ?, NULL)",
+                (_token_hash(grant), order_id, now, now + 86400),
+            )
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail={"code": "duplicate_payment_event", "message": "Order or payment event already processed"})
+    return {"accepted": True, "grant_created": True, "enrollment_grant": grant, "expires_in_seconds": 86400}
+
+
+@app.post("/api/devices/claim")
+def claim_device(payload: DeviceClaimRequest) -> dict[str, str]:
+    grant_hash = _token_hash(payload.enrollment_grant)
+    now = int(time.time())
+    serial = payload.serial.strip()
+    name = " ".join(payload.companion_name.split()) or "Companion"
+    personality = allowed_personality(payload.personality)
+    device_id = uuid.uuid4().hex
+    device_token = secrets.token_urlsafe(32)
+    with _device_db() as connection:
+        grant = connection.execute(
+            "SELECT order_id, expires_at, used_at FROM enrollment_grants WHERE grant_hash = ?",
+            (grant_hash,),
+        ).fetchone()
+        if not grant or grant[2] is not None or int(grant[1]) < now:
+            raise HTTPException(status_code=401, detail={"code": "invalid_enrollment_grant", "message": "Enrollment grant is invalid, expired or already used"})
+        try:
+            connection.execute(
+                "INSERT INTO devices (device_id, serial, token_hash, companion_name, personality_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (device_id, serial, _token_hash(device_token), name, json.dumps(personality, ensure_ascii=False), now),
+            )
+        except sqlite3.IntegrityError:
+            raise HTTPException(status_code=409, detail={"code": "device_already_enrolled", "message": "This device serial is already enrolled"})
+        connection.execute("UPDATE enrollment_grants SET used_at = ? WHERE grant_hash = ? AND used_at IS NULL", (now, grant_hash))
+    return {"device_id": device_id, "device_token": device_token, "message": "Store this token securely. It is returned only once."}
+
+
 @app.post("/api/devices/enroll")
 def enroll_device(
     payload: DeviceEnrollRequest,
