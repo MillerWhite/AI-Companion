@@ -44,9 +44,11 @@ uint32_t companion_imu_poll(void)
     last_sample_us = now;
     if (dt <= 0.0f || dt > 0.5f) return 0;
 
+    /* QMI8658 is rotated 90 degrees on the Waveshare board.
+       Map sensor axes to device axes: X = -sensor Y, Y = sensor X, Z = sensor Z. */
     return companion_motion_feed(&motion,
+        -data.accelY / GRAVITY_MPS2,
         data.accelX / GRAVITY_MPS2,
-        data.accelY / GRAVITY_MPS2,
         data.accelZ / GRAVITY_MPS2,
         dt);
 }
