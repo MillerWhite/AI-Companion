@@ -232,12 +232,53 @@ static void parse_ancs_data(void)
     if (pos == s_data_len && (s_data_attr_mask & 0x0B) == 0x0B) { s_data_len = 0; s_data_attr_mask = 0; }
 }
 
+static void parse_ams_update(const uint8_t *data, size_t len);
+
+static int ams_entity_attribute_read_cb(uint16_t conn, const struct ble_gatt_error *error,
+                                        struct ble_gatt_attr *attr, void *arg)
+{
+    (void)conn; (void)arg;
+    if (error->status == 0 && attr && attr->om) {
+        uint8_t packet[131];
+        size_t n = attr->om->om_len;
+        if (n > sizeof(packet) - 3) n = sizeof(packet) - 3;
+        packet[0] = s_pending_entity;
+        packet[1] = s_pending_attribute;
+        packet[2] = 0;
+        memcpy(packet + 3, attr->om->om_data, n);
+        parse_ams_update(packet, n + 3);
+    } else if (error->status) {
+        ESP_LOGW(TAG, "AMS full attribute read failed: %d", error->status);
+    }
+    return 0;
+}
+
+static int ams_entity_attribute_write_cb(uint16_t conn, const struct ble_gatt_error *error,
+                                         struct ble_gatt_attr *attr, void *arg)
+{
+    (void)attr; (void)arg;
+    if (error->status) {
+        ESP_LOGW(TAG, "AMS full attribute request failed: %d", error->status);
+        return 0;
+    }
+    int rc = ble_gattc_read(conn, s_ams_entity_attr, ams_entity_attribute_read_cb, NULL);
+    if (rc) ESP_LOGW(TAG, "AMS full attribute read could not start: %d", rc);
+    return 0;
+}
+
 static void parse_ams_update(const uint8_t *data, size_t len)
 {
     if (!data || len < 3) return;
     uint8_t entity = data[0], attr = data[1], flags = data[2];
     const uint8_t *v = data + 3; size_t n = len - 3;
-    if (flags & 1) ESP_LOGW(TAG, "AMS attribute truncated; requesting full value is not yet enabled");
+    if (flags & 1) {
+        s_pending_entity = entity;
+        s_pending_attribute = attr;
+        const uint8_t request[2] = {entity, attr};
+        int rc = ble_gattc_write_flat(s_conn, s_ams_entity_attr, request, sizeof(request),
+                                      ams_entity_attribute_write_cb, NULL);
+        if (rc) ESP_LOGW(TAG, "AMS full attribute request could not be queued: %d", rc);
+    }
     portENTER_CRITICAL(&s_lock);
     if (entity == 2 && attr == 2) { size_t k = n < sizeof(s_track_title)-1 ? n : sizeof(s_track_title)-1; memcpy(s_track_title,v,k); s_track_title[k]=0; }
     else if (entity == 2 && attr == 0) { size_t k = n < sizeof(s_track_artist)-1 ? n : sizeof(s_track_artist)-1; memcpy(s_track_artist,v,k); s_track_artist[k]=0; }
