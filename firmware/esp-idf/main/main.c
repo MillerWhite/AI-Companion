@@ -402,6 +402,7 @@ void app_main(void)
         lv_obj_set_pos(eyes[i], i == 0 ? 92 : 262, 112);
         lv_obj_add_flag(eyes[i], LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_event_cb(eyes[i], on_face_tap, LV_EVENT_CLICKED, NULL);
+        lv_obj_add_event_cb(eyes[i], on_face_long_press, LV_EVENT_LONG_PRESSED, NULL);
         brows[i] = lv_obj_create(face);
         lv_obj_remove_style_all(brows[i]);
         lv_obj_set_size(brows[i], 48, 7);
@@ -432,6 +433,7 @@ void app_main(void)
     lv_obj_set_style_radius(mouth, LV_RADIUS_CIRCLE, 0);
     lv_obj_add_flag(mouth, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(mouth, on_face_tap, LV_EVENT_CLICKED, NULL);
+    lv_obj_add_event_cb(mouth, on_face_long_press, LV_EVENT_LONG_PRESSED, NULL);
 
     status_label = lv_label_create(screen);
     lv_obj_set_style_text_color(status_label, lv_color_hex(0xD9E8F6), 0);
