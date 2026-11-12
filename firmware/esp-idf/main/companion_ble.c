@@ -7,6 +7,7 @@
 #include "esp_hidd.h"
 #include "esp_hid_common.h"
 #include "host/ble_hs.h"
+#include "host/ble_store.h"
 #include "host/ble_gap.h"
 #include "host/ble_hs_adv.h"
 #include "nimble/nimble_port.h"
