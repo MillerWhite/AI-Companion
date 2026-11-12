@@ -20,7 +20,7 @@ static esp_err_t root_handler(httpd_req_t *req)
         "<!doctype html><html lang='ru'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
         "<title>AI Companion setup</title><style>body{margin:0;background:#08090d;color:#f4f4f5;font:16px system-ui;display:grid;place-items:center;min-height:100vh}"
         "main{width:min(92vw,430px);padding:26px;background:#151820;border:1px solid #303744;border-radius:20px}h1{font-size:23px}p{color:#aab2c0;font-size:13px;line-height:1.5}"
-        "input{box-sizing:border-box;width:100%;padding:13px;margin:6px 0 13px;background:#090b10;color:white;border:1px solid #343c49;border-radius:10px}"
+        "input,select{box-sizing:border-box;width:100%;padding:13px;margin:6px 0 13px;background:#090b10;color:white;border:1px solid #343c49;border-radius:10px}"
         "button{width:100%;padding:14px;background:#d9f4ff;color:#08121a;border:0;border-radius:12px;font-weight:700}small{color:#9ba5b5}</style>"
         "<main><h1>Настройка AI Companion</h1><p>Устройство уже подключено к Wi-Fi. Вставьте одноразовый код активации, полученный после покупки. Токен устройства будет сохранён внутри него и не покажется в браузере.</p>"
         "<label>Адрес backend</label><input id='api' value='https://api.example.com' placeholder='https://ваш-backend'>"
@@ -168,6 +168,29 @@ static esp_err_t owner_profile_handler(httpd_req_t *req)
     if (!json) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid profile JSON");
         return ESP_FAIL;
+    }
+    const cJSON *personality = cJSON_GetObjectItemCaseSensitive(json, "personality");
+    if (cJSON_IsObject(personality)) {
+        const cJSON *temper = cJSON_GetObjectItemCaseSensitive(personality, "temperament");
+        const cJSON *initiative = cJSON_GetObjectItemCaseSensitive(personality, "initiative");
+        uint8_t temper_value = 0, initiative_value = 0;
+        if (cJSON_IsString(temper)) {
+            if (!strcmp(temper->valuestring, "calm")) temper_value = 1;
+            else if (!strcmp(temper->valuestring, "energetic")) temper_value = 2;
+            else if (!strcmp(temper->valuestring, "shy")) temper_value = 3;
+            else if (!strcmp(temper->valuestring, "dreamy")) temper_value = 4;
+        }
+        if (cJSON_IsString(initiative)) {
+            if (!strcmp(initiative->valuestring, "high")) initiative_value = 1;
+            else if (!strcmp(initiative->valuestring, "low")) initiative_value = 2;
+        }
+        nvs_handle_t handle;
+        if (nvs_open("companion", NVS_READWRITE, &handle) == ESP_OK) {
+            nvs_set_u8(handle, "temperament", temper_value);
+            nvs_set_u8(handle, "initiative", initiative_value);
+            nvs_commit(handle);
+            nvs_close(handle);
+        }
     }
     char *payload = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
