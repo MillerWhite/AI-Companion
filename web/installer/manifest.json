@@ -1,0 +1,16 @@
+{
+  "name": "AI Companion — Waveshare ESP32-S3-Touch-AMOLED-1.75C",
+  "version": "2.0.0",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32-S3",
+      "parts": [
+        {
+          "path": "https://github.com/MillerWhite/AI-Companion/releases/latest/download/AI-Companion-ESP32-S3-Touch-AMOLED-1.75C.bin",
+          "offset": 0
+        }
+      ]
+    }
+  ]
+}
