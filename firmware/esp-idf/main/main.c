@@ -33,9 +33,10 @@
 #include "qrcodegen.h"
 #include "companion_ble.h"
 #include "companion_iphone.h"
+#include "companion_face_renderer.h"
 
 static const char *TAG = "ai_companion";
-static lv_obj_t *eyes[2], *pupils[2], *glints[2], *mouth, *status_label, *brows[2], *tears[2], *setup_label, *screen_face;
+static lv_obj_t *eyes[2], *pupils[2], *glints[2], *mouth, *status_label, *brows[2], *tears[2], *setup_label, *screen_face, *face_canvas;\nstatic face_t face_model;\nstatic uint16_t *face_pixels;\nstatic float face_gaze_x, face_gaze_y, face_gaze_target_x, face_gaze_target_y;\nstatic int64_t face_next_glance_us;\nstatic int64_t face_last_frame_us;
 static bool screen_asleep;
 static int64_t dizzy_until_us;
 static int64_t last_activity_us;
@@ -153,10 +154,94 @@ static void apply_display_settings(void)
     if (!screen_asleep) (void)bsp_display_brightness_set(display_brightness);
 }
 
+static void face_apply_emotion(companion_emotion_t emotion)
+{
+    static const float neutral_w = 116.0f, neutral_h = 132.0f;
+    float w = neutral_w, h = neutral_h, lid = 0.0f, tilt = 0.0f, smile = 0.0f;
+    float pw = 0.30f, ph = 0.36f, heart = 0.0f, wet = 0.0f, veins = 0.0f, spiral = 0.0f, blush = 0.0f;
+    uint16_t white = 0xFFFF, pupil = 0x0841;
+    float gaze_x = 0.0f, gaze_y = 0.0f;
+    switch (emotion) {
+        case COMPANION_HAPPY: w=120; h=122; smile=.52f; pw=.34f; ph=.36f; gaze_y=-.08f; break;
+        case COMPANION_CURIOUS: w=119; h=151; pw=.43f; ph=.46f; gaze_x=.20f; gaze_y=-.12f; break;
+        case COMPANION_SLEEPY: w=118; h=128; lid=.62f; tilt=-.08f; pw=.40f; ph=.42f; gaze_y=.35f; break;
+        case COMPANION_SAD: w=112; h=128; lid=.24f; tilt=-.34f; pw=.48f; ph=.52f; gaze_y=.36f; wet=.62f; white=0xE73F; break;
+        case COMPANION_AFFECTIONATE: w=119; h=128; heart=1; smile=.20f; blush=.48f; pw=.43f; ph=.43f; break;
+        case COMPANION_EXCITED: w=125; h=153; pw=.27f; ph=.29f; smile=.30f; break;
+        case COMPANION_SURPRISED: w=122; h=163; pw=.20f; ph=.23f; break;
+        case COMPANION_SCARED: w=120; h=145; pw=.19f; ph=.23f; veins=.12f; gaze_y=-.22f; break;
+        case COMPANION_CONCERNED: w=115; h=126; lid=.16f; tilt=.16f; pw=.34f; ph=.40f; break;
+        case COMPANION_SHY: w=115; h=116; lid=.12f; tilt=-.12f; pw=.39f; ph=.43f; blush=.70f; gaze_x=-.38f; break;
+        case COMPANION_DIZZY: w=118; h=130; pw=.33f; ph=.33f; spiral=.90f; break;
+        case COMPANION_FLINCH: w=116; h=18; lid=.98f; pw=.12f; ph=.12f; break;
+        default: break;
+    }
+    face_model.color = white;
+    face_model.pupil_color = pupil;
+    face_model.heart_color = 0xF9B2;
+    face_model.blush_color = 0xF2B6;
+    face_model.vein_color = 0xE8A2;
+    face_model.water_color = 0x9F3F;
+    face_model.shading = .72f;
+    face_model.blush = blush;
+    face_model.swapped = 0;
+    for (int i=0;i<2;i++) {
+        eye_t *e=&face_model.eye[i];
+        e->x = i ? 316.0f : 150.0f;
+        e->y = 158.0f;
+        e->w = w * (i ? .98f : 1.0f);
+        e->h = h * (i ? 1.0f : .98f);
+        e->depth = 78.0f;
+        e->yaw = 0; e->pitch = 0; e->roll = (i ? -1.0f : 1.0f) * (emotion==COMPANION_SAD ? -.12f : .015f);
+        e->taper = emotion==COMPANION_ANGRY ? .28f : 0;
+        e->lid = lid + (i ? .035f : 0);
+        e->tilt = i ? -tilt : tilt;
+        e->smile = smile;
+        e->look_x = gaze_x;
+        e->look_y = gaze_y;
+        e->pw = pw; e->ph = ph; e->square = 0;
+        e->heart = heart; e->wobble = .85f; e->wob_t = 0;
+        e->glint = .9f; e->spiral = spiral; e->veins = veins; e->wet = wet;
+    }
+    face_gaze_target_x = gaze_x;
+    face_gaze_target_y = gaze_y;
+}
+
+static void face_animation_timer(lv_timer_t *timer)
+{
+    (void)timer;
+    if (!face_pixels || !face_canvas || sleeping || screen_asleep || qr_mode) return;
+    const int64_t now = esp_timer_get_time();
+    float dt = face_last_frame_us ? (float)(now-face_last_frame_us)/1000000.0f : .05f;
+    face_last_frame_us = now;
+    if (dt < .005f || dt > .2f) dt = .05f;
+    float tx=0,ty=0;
+    companion_imu_get_tilt(&tx,&ty);
+    if (now >= face_next_glance_us) {
+        face_gaze_target_x = ((int)(esp_random()%101U)-50)/100.0f;
+        face_gaze_target_y = ((int)(esp_random()%61U)-30)/100.0f;
+        face_next_glance_us = now + 1800000LL + (int64_t)(esp_random()%3600000U);
+    }
+    face_gaze_x += (face_gaze_target_x-face_gaze_x)*fminf(1.0f,dt*2.2f);
+    face_gaze_y += (face_gaze_target_y-face_gaze_y)*fminf(1.0f,dt*2.0f);
+    for(int i=0;i<2;i++) {
+        eye_t *e=&face_model.eye[i];
+        e->yaw = tx*.34f + face_gaze_x*.22f;
+        e->pitch = ty*.30f + face_gaze_y*.20f;
+        e->roll += ((tx*.10f + ty*.04f)-e->roll)*fminf(1.0f,dt*2.5f);
+        e->look_x = face_gaze_x + tx*.18f;
+        e->look_y = face_gaze_y + ty*.16f;
+        e->wob_t += dt;
+    }
+    face_draw(&face_model,face_pixels,466,330);
+    lv_obj_invalidate(face_canvas);
+}
+
 static void render_emotion(companion_emotion_t emotion)
 {
     if (emotion >= COMPANION_EMOTION_COUNT) emotion = COMPANION_CALM;
     current_emotion = emotion;
+    face_apply_emotion(emotion);
     const bool sad = emotion == COMPANION_SAD;
     const bool sleepy = emotion == COMPANION_SLEEPY;
     const bool excited = emotion == COMPANION_EXCITED;
@@ -1001,6 +1086,21 @@ void app_main(void)
     /* The face is intentionally mouthless: interaction is handled by the whole face surface. */
     lv_obj_add_flag(mouth, LV_OBJ_FLAG_HIDDEN);
 
+    face_pixels = heap_caps_calloc(466U * 330U, sizeof(uint16_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (!face_pixels) face_pixels = heap_caps_calloc(466U * 330U, sizeof(uint16_t), MALLOC_CAP_8BIT);
+    if (face_pixels) {
+        face_canvas = lv_canvas_create(face);
+        lv_canvas_set_buffer(face_canvas, face_pixels, 466, 330, LV_COLOR_FORMAT_RGB565);
+        lv_obj_set_size(face_canvas, 466, 330);
+        lv_obj_center(face_canvas);
+        lv_obj_clear_flag(face_canvas, LV_OBJ_FLAG_CLICKABLE);
+        memset(&face_model, 0, sizeof(face_model));
+        face_apply_emotion(COMPANION_CALM);
+        face_draw(&face_model, face_pixels, 466, 330);
+    } else {
+        ESP_LOGE(TAG, "Unable to allocate procedural face framebuffer; using fallback eyes");
+    }
+
     status_label = lv_label_create(screen);
     lv_obj_set_style_text_color(status_label, lv_color_hex(0xD9E8F6), 0);
     lv_obj_align(status_label, LV_ALIGN_CENTER, 0, 166);
@@ -1042,7 +1142,7 @@ void app_main(void)
     render_emotion(COMPANION_CALM);
     lv_timer_create(autonomous_timer, 8000, NULL);
     lv_timer_create(blink_timer, 2600, NULL);
-    lv_timer_create(gaze_timer, 1850, NULL);
+    lv_timer_create(gaze_timer, 1850, NULL);\n    if (face_pixels) lv_timer_create(face_animation_timer, 50, NULL);
     bsp_display_unlock();
 
     err = companion_ble_init();
