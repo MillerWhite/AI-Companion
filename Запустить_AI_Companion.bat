@@ -38,8 +38,22 @@ if errorlevel 1 (
   )
   echo Запускаю облачный backend на http://127.0.0.1:8787 ...
   start "AI Companion Backend" /min "%ROOT%backend\start_backend.bat"
-  timeout /t 3 /nobreak >nul
+  echo Ожидаю готовности backend...
+  set "BACKEND_READY="
+  for /L %%i in (1,1,12) do (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $r=Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 '%BACKEND_URL%'; if($r.StatusCode -eq 200){exit 0}else{exit 1} } catch { exit 1 }" >nul 2>nul
+    if not errorlevel 1 (
+      set "BACKEND_READY=1"
+      goto :backend_ready
+    )
+    timeout /t 1 /nobreak >nul
+  )
+  echo ВНИМАНИЕ: backend не ответил на http://127.0.0.1:8787/health.
+  echo Проверьте окно "AI Companion Backend": возможна ошибка Python или занятый порт 8787.
+  echo Симулятор откроется, но облачный ИИ не заработает, пока backend не запущен.
 )
+:backend_ready
+
 
 where msedge >nul 2>nul
 if not errorlevel 1 (
