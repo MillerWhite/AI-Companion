@@ -2,9 +2,8 @@ name: ESP32-S3 firmware build
 
 on:
   push:
-    branches: [main, "feat/**"]
+    branches: [main]
     tags: ["firmware-v*"]
-  pull_request:
   workflow_dispatch:
 
 permissions:
