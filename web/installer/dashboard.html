@@ -141,7 +141,7 @@ hr{border:0;border-top:1px solid var(--line);margin:17px 0}
  }
  $("#connect").onclick=async()=>{
   try{
-   $("#connect").disabled=true;status("Выберите порт ESP32-S3…");
+   $("#connect").disabled=true;configReceived=false;status("Выберите порт ESP32-S3…");
    port=await navigator.serial.requestPort({filters:[{usbVendorId:0x303a}]});
    await port.open({baudRate:115200});try{await port.setSignals({dataTerminalReady:false,requestToSend:false})}catch{}
    $("#disconnect").disabled=false;status("Подключено. Считываю настройки…");readLoop(port);
