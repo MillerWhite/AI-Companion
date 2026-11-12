@@ -97,7 +97,7 @@ static void apply_display_settings(void)
     if (bsp_display_lock(pdMS_TO_TICKS(1000)) != ESP_OK) return;
     lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(theme_background()), 0);
     lv_obj_set_style_bg_opa(lv_screen_active(), LV_OPA_COVER, 0);
-    if (status_label) lv_obj_set_style_text_color(status_label, lv_color_hex(display_theme == 1 ? 0x263442 : theme_face_color()), 0);
+    if (status_label) lv_obj_set_style_text_color(status_label, lv_color_hex(display_theme == 1 ? 0x263442 : 0xFFFFFF), 0);
     if (setup_label) lv_obj_set_style_text_color(setup_label, lv_color_hex(display_theme == 1 ? 0x536272 : 0x7F91A5), 0);
     bsp_display_unlock();
     if (!screen_asleep) (void)bsp_display_brightness_set(display_brightness);
