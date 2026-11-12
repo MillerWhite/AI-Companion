@@ -16,7 +16,7 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 | Task | Code status | Remaining acceptance gate |
 |---|---|---|
 | Full emotional transitions and facial expressions | Implemented in firmware/browser code: ten moods, animated eye/mouth geometry, sadness brows/tears, blink and need-driven transitions | ESP-IDF build; physical display smoothness and emotional clarity test |
-| Unique personality and long-term development | Implemented foundation: temperament, initiative, needs, trust/playfulness, persistent local state and safe durable preference facts | Broader traits/quirks, multi-month progression tuning and owner data export review |
+| Unique personality and long-term development | Implemented foundation: temperament, initiative, selectable quirks, needs, trust/playfulness, persistent local state and safe durable preference facts | Broader traits/quirks, multi-month progression tuning and owner data export review |
 | Physical speaker sound system | Implemented driver path: ES8311 BSP handle, soft procedural motifs, low gain and cooldown | Board test, audio calibration, echo/feedback and listening-quality review |
 | Microphone speech recognition | Implemented pipeline: ES7210 BSP capture, VAD, mono 16 kHz PCM, backend SpeechKit route | Board microphone slot mapping, Russian/noise tests, live SpeechKit credentials and quota test |
 | Wi-Fi and automatic reconnect | Implemented: SoftAP Security 1 provisioning, NVS credential persistence, exponential reconnect | First-boot test with actual router and recovery/reset test |
