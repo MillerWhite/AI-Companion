@@ -94,7 +94,7 @@ memory.sessions=(memory.sessions||0)+1;memory.actions=memory.actions||{};
 function recordAction(action,bondGain=0){memory.actions[action]=(memory.actions[action]||0)+1;memory.actionTimes=memory.actionTimes||{};memory.actionTimes[action]=Date.now();memory.traits=memory.traits||{trust:25,playfulness:35,calmness:35,responsiveness:30};memory.bond=(memory.bond||0)+bondGain;memory.lastAction=action;if(action==='pet'||action==='longPet'){memory.traits.trust=Math.min(100,memory.traits.trust+(action==='longPet'?3:1.8));memory.traits.calmness=Math.min(100,memory.traits.calmness+(action==='longPet'?1.4:.7))}if(action==='play')memory.traits.playfulness=Math.min(100,memory.traits.playfulness+2.2);if(action==='call')memory.traits.responsiveness=Math.min(100,memory.traits.responsiveness+1.7);if(action==='rest')memory.traits.calmness=Math.min(100,memory.traits.calmness+1.2);saveMemory();updateNeeds();}
 function saveMemory(){try{localStorage.setItem('ai-companion-memory-v1',JSON.stringify({...memory,profile,name:$('name').value.trim()||'Milo'}))}catch(e){}}
 function resetCompanionMemory(){
- if(!confirm('Сбросить накопленные отношения, привычки и внутренние потребности?'))return;
+ if(!confirm('Сбросить накопленные отношения и привычки?'))return;
  memory.bond=0;memory.petCount=0;memory.callCount=0;memory.playCount=0;memory.lastAction='';memory.actions={};memory.actionTimes={};memory.traits={trust:25,playfulness:35,calmness:35,responsiveness:30};
  saveMemory();updateNeeds();setMood('neutral','память отношений сброшена',false,'calm',0);log('Память и отношения сброшены владельцем');
 }
@@ -310,5 +310,5 @@ $('name').addEventListener('change',()=>{const n=$('name').value.trim()||'Milo';
 try{$('name').value=localStorage.getItem('ai-companion-name-v1')||$('name').value}catch(e){}
 for(const key of ['temper','initiative','bond','quirk'])$(key).addEventListener('change',()=>{profile[key]=$(key).value;saveMemory();});
 $('comboCount').textContent=(35*10*9*12*5*6).toLocaleString('ru-RU');$('soundCount').textContent=(soundCategories.length*50).toLocaleString('ru-RU');
-updateNeeds();updateDayPeriod();setInterval(updateDayPeriod,60000);log('Emotional Core v0.9 запущен. Локальная память отношений и поведенческие привычки активны.');
+updateNeeds();updateDayPeriod();setInterval(updateDayPeriod,60000);log('Компаньон готов к общению. Память отношений и характер активны.');
 </script></body></html>
