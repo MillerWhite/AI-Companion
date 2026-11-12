@@ -9,7 +9,7 @@ Firmware target: Waveshare ESP32-S3-Touch-AMOLED-1.75C (ESP32-S3, 32 MB flash, 8
 | `main.c` | LVGL face, touch reactions, autonomous timer, speech and IMU tasks, cloud intent application |
 | `companion_emotion.c` | Needs, trust/playfulness progression, temperament-dependent emotional decisions |
 | `companion_audio.c` | Waveshare BSP ES8311/ES7210 codec handles, soft procedural nonverbal cues, VAD and 16 kHz PCM capture |
-| `companion_imu.c` | QMI8658 accelerometer, smoothing, motion/tilt gesture cooldowns |
+| `companion_imu.c` | QMI8658 sensor adapter; Pip-derived classifier detects shake, face-down/up, upside-down, falls and steps |
 | `companion_wifi.c` | Secure SoftAP provisioning and reconnect with exponential backoff |
 | `companion_setup.c` | Local owner portal, activation claim, personality controls, memory export/reset |
 | `cloud_client.c` | HTTPS SpeechKit upload, intent request, schema/allowlist validation, one-time claim and owner API proxy |
