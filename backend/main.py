@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field, field_validator
 
 load_dotenv()
 
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.5.0"
 AI_PROVIDER = os.getenv("AI_PROVIDER", "yandex").strip().lower()
 AI_API_KEY = os.getenv("AI_API_KEY", "").strip()
 AI_FOLDER_ID = os.getenv("AI_FOLDER_ID", "").strip()
@@ -182,6 +182,14 @@ def call_language_model(payload: InterpretRequest) -> InterpretResult:
         return validate_model_result(parsed)
     except HTTPException:
         raise
+    except urllib.error.HTTPError as error:
+        if error.code == 429:
+            raise HTTPException(status_code=503, detail={"code": "provider_rate_limited", "message": "AI provider rate limit reached"})
+        if error.code in (401, 403):
+            raise HTTPException(status_code=503, detail={"code": "provider_auth_failed", "message": "AI provider authentication or access failed"})
+        if error.code in (400, 404, 422):
+            raise HTTPException(status_code=502, detail={"code": "provider_request_rejected", "message": "AI provider rejected the configured model or request"})
+        raise HTTPException(status_code=502, detail={"code": "provider_unavailable", "message": "AI provider unavailable"})
     except (urllib.error.URLError, TimeoutError):
         raise HTTPException(status_code=502, detail={"code": "provider_unavailable", "message": "AI provider unavailable"})
     except (KeyError, IndexError, TypeError, json.JSONDecodeError, ValueError):
@@ -194,7 +202,7 @@ app = FastAPI(title="AI Companion Language Backend", version=APP_VERSION)
 
 origins = [
     item.strip() for item in os.getenv(
-        "AI_ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000"
+        "AI_ALLOWED_ORIGINS", "null,http://localhost:8000,http://127.0.0.1:8000,http://localhost:8787,http://127.0.0.1:8787"
     ).split(",") if item.strip()
 ]
 app.add_middleware(
