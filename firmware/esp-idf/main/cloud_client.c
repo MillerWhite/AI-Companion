@@ -284,3 +284,44 @@ esp_err_t companion_cloud_claim(const char *api_base,
     cJSON_Delete(json);
     return err;
 }
+
+
+esp_err_t companion_cloud_owner_request(esp_http_client_method_t method,
+                                        const char *path,
+                                        const char *json_body,
+                                        char *response,
+                                        size_t response_capacity)
+{
+    if (!path || path[0] != '/' || !response || response_capacity < 2) return ESP_ERR_INVALID_ARG;
+    response[0] = '\\0';
+    char api_base[192] = {0}, token[160] = {0}, url[320] = {0}, authorization[192] = {0};
+    ESP_RETURN_ON_ERROR(read_nvs_string("api_base", api_base, sizeof(api_base)), TAG, "API base missing");
+    ESP_RETURN_ON_ERROR(read_nvs_string("device_token", token, sizeof(token)), TAG, "device token missing");
+    size_t n = strlen(api_base);
+    while (n && api_base[n - 1] == '/') api_base[--n] = '\\0';
+    int len = snprintf(url, sizeof(url), "%s%s", api_base, path);
+    if (len < 0 || (size_t)len >= sizeof(url)) return ESP_ERR_INVALID_SIZE;
+    len = snprintf(authorization, sizeof(authorization), "Bearer %s", token);
+    if (len < 0 || (size_t)len >= sizeof(authorization)) return ESP_ERR_INVALID_SIZE;
+
+    response_buffer_t target = {.buffer = response, .capacity = response_capacity, .length = 0};
+    esp_http_client_config_t config = {
+        .url = url, .method = method, .timeout_ms = CLOUD_TIMEOUT_MS,
+        .event_handler = on_http_event, .user_data = &target,
+        .crt_bundle_attach = esp_crt_bundle_attach
+    };
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    if (!client) return ESP_FAIL;
+    esp_http_client_set_header(client, "Authorization", authorization);
+    esp_http_client_set_header(client, "Content-Type", "application/json");
+    if (json_body) esp_http_client_set_post_field(client, json_body, (int)strlen(json_body));
+    esp_err_t err = esp_http_client_perform(client);
+    int status = esp_http_client_get_status_code(client);
+    esp_http_client_cleanup(client);
+    if (err != ESP_OK) return err;
+    if (status < 200 || status >= 300) {
+        ESP_LOGW(TAG, "Owner API returned HTTP %d", status);
+        return status == 401 ? ESP_ERR_INVALID_STATE : ESP_FAIL;
+    }
+    return ESP_OK;
+}
