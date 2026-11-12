@@ -51,7 +51,7 @@ static esp_hid_raw_report_map_t s_report_maps[] = {
 };
 static esp_hid_device_config_t s_hid_config = {
     .vendor_id = 0xCafe, .product_id = 0x4010, .version = 0x0100,
-    .device_name = "AI Companion Remote",
+    .device_name = "AI Companion",
     .manufacturer_name = "AI Companion",
     .serial_number = "AICOMPANION01",
     .report_maps = s_report_maps, .report_maps_len = 1
