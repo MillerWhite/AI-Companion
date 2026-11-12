@@ -296,8 +296,7 @@ $('orb').addEventListener('pointerdown',()=>{touchStartAt=Date.now();});
 $('orb').addEventListener('pointerup',()=>{if(!touchStartAt)return;const held=Date.now()-touchStartAt;touchStartAt=0;if(held>650){recordAction('longPet',2);needs.comfort=Math.min(100,needs.comfort+13);needs.social=Math.max(0,needs.social-8);setMood('love','долгое нежное прикосновение',true,'comfort',3300);log('Долгое прикосновение распознано');}else trigger(profile.bond==='mischief'?'surprised':'happy');});
 $('orb').addEventListener('pointercancel',()=>{touchStartAt=0});
 $('name').addEventListener('change',()=>{const n=$('name').value.trim()||'Milo';$('name').value=n;try{localStorage.setItem('ai-companion-name-v1',n)}catch(e){}});
-try{$('name').value=localStorage.getItem('ai-companion-name-v1')||$('name').value;$('nameAliases').value=localStorage.getItem('ai-companion-aliases-v1')||''}catch(e){}
-$('nameAliases').addEventListener('change',()=>{try{localStorage.setItem('ai-companion-aliases-v1',$('nameAliases').value)}catch(e){}});
+try{$('name').value=localStorage.getItem('ai-companion-name-v1')||$('name').value}catch(e){}
 $('comboCount').textContent=(35*10*9*12*5*6).toLocaleString('ru-RU');$('soundCount').textContent=(soundCategories.length*50).toLocaleString('ru-RU');
 updateNeeds();updateDayPeriod();setInterval(updateDayPeriod,60000);log('Emotional Core v0.9 запущен. Локальная память отношений и поведенческие привычки активны.');
 </script></body></html>
