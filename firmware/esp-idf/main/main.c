@@ -109,7 +109,7 @@ static void render_emotion(companion_emotion_t emotion)
         int old_height = lv_obj_get_height(eyes[i]);
         lv_obj_set_width(eyes[i], eye_width);
         animate_size(eyes[i], old_height > 0 ? old_height : 78, eye_height, 260, animate_eye_height);
-        lv_obj_set_x(eyes[i], i == 0 ? 150 - eye_width : 316 - eye_width / 2);
+        lv_obj_set_x(eyes[i], i == 0 ? 150 - eye_width / 2 : 316 - eye_width / 2);
         lv_obj_set_y(eyes[i], sad ? 156 : 164);
         lv_obj_set_style_bg_color(eyes[i], sad ? lv_color_hex(0xDCEEFF) : lv_color_hex(0xFFFFFF), 0);
         lv_obj_set_style_shadow_color(eyes[i], sad ? lv_color_hex(0x6BB7E8) : lv_color_hex(0xA8D9FF), 0);
@@ -404,14 +404,14 @@ void app_main(void)
         eyes[i] = lv_obj_create(face);
         style_eye(eyes[i]);
         lv_obj_set_size(eyes[i], 58, 78);
-        lv_obj_set_pos(eyes[i], i == 0 ? 92 : 262, 112);
+        lv_obj_set_pos(eyes[i], i == 0 ? 121 : 287, 112);
         lv_obj_add_flag(eyes[i], LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_event_cb(eyes[i], on_face_tap, LV_EVENT_CLICKED, NULL);
         lv_obj_add_event_cb(eyes[i], on_face_long_press, LV_EVENT_LONG_PRESSED, NULL);
         brows[i] = lv_obj_create(face);
         lv_obj_remove_style_all(brows[i]);
         lv_obj_set_size(brows[i], 48, 7);
-        lv_obj_set_pos(brows[i], i == 0 ? 96 : 268, 94);
+        lv_obj_set_pos(brows[i], i == 0 ? 126 : 292, 94);
         lv_obj_set_style_bg_color(brows[i], lv_color_hex(0xDCEEFF), 0);
         lv_obj_set_style_bg_opa(brows[i], LV_OPA_COVER, 0);
         lv_obj_set_style_radius(brows[i], LV_RADIUS_CIRCLE, 0);
