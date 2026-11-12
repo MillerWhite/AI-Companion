@@ -70,7 +70,7 @@ static void style_eye(lv_obj_t *eye)
 static void animate_size(lv_obj_t *object, int32_t from, int32_t to,
                          uint32_t duration, lv_anim_exec_xcb_t callback)
 {
-    lv_anim_del(object, callback);
+    lv_anim_delete(object, callback);
     lv_anim_t animation;
     lv_anim_init(&animation);
     lv_anim_set_var(&animation, object);
