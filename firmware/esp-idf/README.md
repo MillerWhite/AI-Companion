@@ -9,7 +9,7 @@ Firmware target: Waveshare ESP32-S3-Touch-AMOLED-1.75C (ESP32-S3, 32 MB flash, 8
 | `main.c` | LVGL face, touch reactions, autonomous timer, speech and IMU tasks, cloud intent application |
 | `companion_emotion.c` | Needs, trust/playfulness progression, temperament-dependent emotional decisions |
 | `companion_audio.c` | Waveshare BSP ES8311/ES7210 codec handles, low-volume procedural nonverbal playback, VAD and 16 kHz PCM capture |\n| `companion_voice.c` | MIT-derived procedural vocalization engine adapted from Pip-KeyPet; no TTS or spoken words |
-| `companion_imu.c` | QMI8658 sensor adapter; Pip-derived classifier detects shake, face-down/up, upside-down, falls and steps |
+| `companion_imu.c` | QMI8658 sensor adapter; Pip-derived classifier detects shake, face-down/up, upside-down, falls and steps |\n| `companion_power.c` | AXP2101 I2C telemetry for VBUS, charging state and battery percentage; charger insertion triggers feeding behavior |
 | `companion_wifi.c` | Secure SoftAP provisioning and reconnect with exponential backoff |
 | `companion_setup.c` | Local owner portal, activation claim, personality controls, memory export/reset |
 | `cloud_client.c` | HTTPS SpeechKit upload, intent request, schema/allowlist validation, one-time claim and owner API proxy |
@@ -20,10 +20,10 @@ The firmware exposes a small line-oriented USB Serial/JTAG protocol compatible w
 
 Commands are newline-terminated UTF-8:
 - `config` — returns `@C {json}` with firmware version, companion name and personality settings.
-- `status` / `ping` — returns `@S {json}`.
+- `status` / `ping` — returns `@S {json}` with USB, VBUS, charging and battery fields when the PMIC is available.
 - `name <text>`, `temperament <0..4>`, `initiative <0..2>`, `quirk <0..4>` — validate and persist owner settings in NVS.
 - `pet`, `play`, `sleep`, `wake` — trigger local pet reactions.
-- `wifi-reset` — clear Wi-Fi provisioning and restart setup.
+- `emotion <name>` — trigger an allowlisted emotion for developer testing.\n- `sound <purr|growl|nom|dizzy|surprise|hmph>` — trigger a procedural nonverbal sound.\n- `wifi-reset` — clear Wi-Fi provisioning and restart setup.
 
 Responses use `@C`, `@S`, and `@E` prefixes so browser code can ignore boot logs. Device tokens, enrollment grants, setup PINs and Wi-Fi passwords are never sent over this USB settings protocol.
 
@@ -53,7 +53,7 @@ The VAD threshold, microphone channel selection, echo handling and audio levels 
 
 The provisioning manager uses SoftAP + Security 1 proof-of-possession. Wi-Fi credentials are stored by the ESP-IDF provisioning manager in NVS. Reconnect attempts use bounded exponential backoff and continue after repeated failures. To clear saved Wi-Fi credentials and re-enter provisioning, hold the face touch area; the device restarts into setup mode.
 
-## Audio and sensors
+## Audio and sensors\n\nBlowing is detected from sustained low-frequency microphone energy; a nearby clap is classified as a short high-crest impulse. These heuristics are provisional and must be calibrated on the physical board. Shake invokes a dedicated dizzy face and procedural dizzy cue. Face-down blanks the AMOLED content to black (the panel controller itself is not yet put into a verified deep-sleep state); face-up restores the face. AXP2101 VBUS insertion feeds the pet and increases its energy/comfort needs.\n
 
 Audio uses the Waveshare BSP codec factory handles and the reference close/reopen codec configuration sequence at 16 kHz, stereo, 16-bit. The QMI8658 managed component is configured for ±8 g and 500 Hz; filtered motion and tilt events have cooldowns.
 
