@@ -282,7 +282,7 @@ app.add_middleware(
     allow_origins=origins,
     # Local development servers commonly choose a random port (VS Code Live Server, etc.).
     # Keep this convenience strictly out of production; production uses exact configured origins.
-    allow_origin_regex=None if APP_ENV == "production" else r"^https?://(localhost|127\\.0\\.0\\.1)(:\\d+)?$",
+    allow_origin_regex=None if APP_ENV == "production" else r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=False,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
