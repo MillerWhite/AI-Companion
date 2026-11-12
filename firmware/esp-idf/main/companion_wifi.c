@@ -108,3 +108,11 @@ bool companion_wifi_is_connected(void)
 {
     return wifi_events && (xEventGroupGetBits(wifi_events) & WIFI_CONNECTED_BIT) != 0;
 }
+
+esp_err_t companion_wifi_reset(void)
+{
+    ESP_LOGW(TAG, "Owner requested Wi-Fi provisioning reset");
+    ESP_RETURN_ON_ERROR(wifi_prov_mgr_reset_provisioning(), TAG, "clear stored Wi-Fi credentials");
+    esp_restart();
+    return ESP_OK;
+}
