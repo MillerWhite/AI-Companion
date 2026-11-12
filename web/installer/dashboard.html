@@ -124,7 +124,8 @@ hr{border:0;border-top:1px solid var(--line);margin:17px 0}
  function applyConfig(c){
   $("#name").value=c.name||"Milo";$("#version").textContent=c.version||"—";$("#deviceName").textContent=c.name||"Milo";
   $("#temperament").value=String(c.temperament??0);$("#initiative").value=String(c.initiative??0);$("#quirk").value=String(c.quirk??0);
-  $("#owner").value=c.owner||"";$("#badge").value=c.badge||"";for(let i=0;i<4;i++)$("#qr"+i).value=c["qr"+i]||"";$("#brightness").value=String(c.brightness??85);$("#brightnessValue").textContent=$("#brightness").value+"%";$("#theme").value=String(c.theme??0);$("#sleepTimeout").value=String(c.sleep_timeout??30);\n  configReceived=true;$("#connection").textContent="Подключено";$("#liveText").textContent="Устройство на связи";$("#liveDot").className="dot ok";
+  $("#owner").value=c.owner||"";$("#badge").value=c.badge||"";for(let i=0;i<4;i++)$("#qr"+i).value=c["qr"+i]||"";$("#brightness").value=String(c.brightness??85);$("#brightnessValue").textContent=$("#brightness").value+"%";$("#theme").value=String(c.theme??0);$("#sleepTimeout").value=String(c.sleep_timeout??30);
+  configReceived=true;$("#connection").textContent="Подключено";$("#liveText").textContent="Устройство на связи";$("#liveDot").className="dot ok";
   status("Конфигурация получена");
  }
  function applyStatus(s){
@@ -167,7 +168,10 @@ hr{border:0;border-top:1px solid var(--line);margin:17px 0}
   try{await send("name "+name);await send("temperament "+$("#temperament").value);await send("initiative "+$("#initiative").value);await send("quirk "+$("#quirk").value);await send("config");$("#saved").textContent="Команды отправлены. Конфигурация обновится после ответа устройства."}
   catch(e){status(e.message)}
  };
- $("#brightness").oninput=()=>$("#brightnessValue").textContent=$("#brightness").value+"%";\n $("#saveProfile").onclick=async()=>{try{const owner=$("#owner").value.trim(),badge=$("#badge").value.trim();if(owner.length>40||badge.length>56)throw Error("Слишком длинное значение");await send("owner "+(owner||"-"));await send("badge "+(badge||"-"));for(let i=0;i<4;i++)await send("qr"+i+" "+($("#qr"+i).value.trim()||"-"));await send("config");$("#profileSaved").textContent="Отправлено";}catch(e){status(e.message)}};\n $("#saveDisplay").onclick=async()=>{try{await send("brightness "+$("#brightness").value);await send("theme "+$("#theme").value);await send("sleep-timeout "+$("#sleepTimeout").value);await send("config");$("#displaySaved").textContent="Отправлено";}catch(e){status(e.message)}};\n document.querySelectorAll("[data-cmd]").forEach(b=>b.onclick=async()=>{try{await send(b.dataset.cmd);status("Команда: "+b.textContent)}catch(e){status(e.message)}});
+ $("#brightness").oninput=()=>$("#brightnessValue").textContent=$("#brightness").value+"%";
+ $("#saveProfile").onclick=async()=>{try{const owner=$("#owner").value.trim(),badge=$("#badge").value.trim();if(owner.length>40||badge.length>56)throw Error("Слишком длинное значение");await send("owner "+(owner||"-"));await send("badge "+(badge||"-"));for(let i=0;i<4;i++)await send("qr"+i+" "+($("#qr"+i).value.trim()||"-"));await send("config");$("#profileSaved").textContent="Отправлено";}catch(e){status(e.message)}};
+ $("#saveDisplay").onclick=async()=>{try{await send("brightness "+$("#brightness").value);await send("theme "+$("#theme").value);await send("sleep-timeout "+$("#sleepTimeout").value);await send("config");$("#displaySaved").textContent="Отправлено";}catch(e){status(e.message)}};
+ document.querySelectorAll("[data-cmd]").forEach(b=>b.onclick=async()=>{try{await send(b.dataset.cmd);status("Команда: "+b.textContent)}catch(e){status(e.message)}});
  document.querySelectorAll("[data-sound]").forEach(b=>b.onclick=async()=>{try{await send("sound "+b.dataset.sound);status("Звуковой тест: "+b.textContent)}catch(e){status(e.message)}});
  $("#testEmotion").onclick=async()=>{try{await send("emotion "+$("#emotion").value);status("Эмоция отправлена на устройство")}catch(e){status(e.message)}};
  if(!("serial"in navigator)){ $("#connect").disabled=true;status("Для USB-подключения откройте страницу в Chrome или Edge на компьютере.") }
