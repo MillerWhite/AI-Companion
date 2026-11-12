@@ -219,6 +219,7 @@ static void render_emotion(companion_emotion_t emotion)
     lv_obj_set_style_radius(mouth, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_transform_rotation(mouth, emotion == COMPANION_SHY ? -40 : (dizzy ? 12 : 0), 0);
     lv_label_set_text(status_label, emotion_label(emotion));
+    companion_usb_emit_emotion(emotion_label(emotion));
 }
 
 static void set_emotion(companion_emotion_t emotion, bool sound)
@@ -624,6 +625,7 @@ static void on_face_tap(lv_event_t *event)
     last_activity_us = esp_timer_get_time();
     set_screen_sleep(false);
     companion_emotion_interaction(&state, "pet");
+    companion_usb_emit_touch("tap");
     render_emotion(COMPANION_HAPPY);
     if (audio_available) companion_audio_play(COMPANION_HAPPY, false);
     save_state();
@@ -732,6 +734,7 @@ static void voice_task(void *arg)
         esp_err_t err = companion_audio_capture_utterance(pcm, max_samples, &samples, 6000);
         const uint32_t audio_events = companion_audio_take_events();
         if (audio_events & COMPANION_AUDIO_BLOW) {
+            companion_usb_emit_touch("blow");
             set_emotion(COMPANION_FLINCH, false);
             if (audio_available) companion_audio_play_sound(VOICE_POKE, false);
             vTaskDelay(pdMS_TO_TICKS(850));
@@ -739,6 +742,7 @@ static void voice_task(void *arg)
             continue;
         }
         if (audio_events & COMPANION_AUDIO_CLAP) {
+            companion_usb_emit_touch("clap");
             set_emotion(COMPANION_SCARED, false);
             if (audio_available) companion_audio_play_sound(VOICE_OH, false);
             continue;
@@ -773,16 +777,19 @@ static void imu_task(void *arg)
         if (imu_available) {
             const uint32_t events = companion_imu_poll();
             if (events & COMPANION_MOTION_FACE_DOWN) {
+                companion_usb_emit_touch("face_down");
                 sleeping = true;
                 manual_sleep = false;
                 set_emotion(COMPANION_SLEEPY, false);
                 set_screen_sleep(true);
             } else if (events & COMPANION_MOTION_FACE_UP) {
+                companion_usb_emit_touch("face_up");
                 sleeping = false;
                 manual_sleep = false;
                 set_screen_sleep(false);
                 set_emotion(COMPANION_HAPPY, true);
             } else if (events & COMPANION_MOTION_SHAKE) {
+                companion_usb_emit_touch("shake");
                 dizzy_until_us = esp_timer_get_time() + 2600000LL;
                 set_emotion(COMPANION_DIZZY, true);
             } else if (events & COMPANION_MOTION_FALL) {
@@ -813,6 +820,7 @@ static void power_task(void *arg)
     while (true) {
         const uint32_t events = companion_power_poll();
         if (events & COMPANION_POWER_CHARGER_CONNECTED) {
+            companion_usb_emit_touch("charge");
             companion_emotion_interaction(&state, "charge");
             set_emotion(COMPANION_HAPPY, false);
             if (audio_available) companion_audio_play_sound(VOICE_OH, false);
