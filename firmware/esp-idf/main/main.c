@@ -119,7 +119,7 @@ static void load_display_settings(void)
     uint8_t brightness = 85, theme = 0, timeout = 30;
     if (nvs_get_u8(handle, "brightness", &brightness) == ESP_OK && brightness <= 100) display_brightness = brightness;
     if (nvs_get_u8(handle, "theme", &theme) == ESP_OK && theme <= 4) display_theme = theme;
-    if (nvs_get_u8(handle, "sleep_timeout", &timeout) == ESP_OK && timeout <= 300) display_sleep_timeout = timeout;
+    if (nvs_get_u8(handle, "sleep_timeout", &timeout) == ESP_OK && timeout <= 240) display_sleep_timeout = timeout;
     nvs_close(handle);
 }
 
@@ -135,6 +135,8 @@ static void apply_display_settings(void)
         }
     }
     if (mouth) lv_obj_set_style_border_color(mouth, lv_color_hex(theme_face_color()), 0);
+    if (status_label) lv_obj_set_style_text_color(status_label, lv_color_hex(display_theme == 1 ? 0x263442 : theme_face_color()), 0);
+    if (setup_label) lv_obj_set_style_text_color(setup_label, lv_color_hex(display_theme == 1 ? 0x536272 : 0x7F91A5), 0);
     bsp_display_unlock();
     if (!screen_asleep) (void)bsp_display_brightness_set(display_brightness);
 }
@@ -596,18 +598,13 @@ static void power_task(void *arg)
         vTaskDelete(NULL);
         return;
     }
-    int64_t last_meal_us = 0;
     while (true) {
         const uint32_t events = companion_power_poll();
-        const int64_t now = esp_timer_get_time();
-        const bool connected = companion_power_vbus_present();
-        if ((events & COMPANION_POWER_CHARGER_CONNECTED) ||
-            (connected && (last_meal_us == 0 || now - last_meal_us > 25000000LL))) {
+        if (events & COMPANION_POWER_CHARGER_CONNECTED) {
             companion_emotion_interaction(&state, "feed");
             set_emotion(COMPANION_HAPPY, false);
             if (audio_available) companion_audio_play_sound(VOICE_NOM, false);
             save_state();
-            last_meal_us = now;
         }
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
@@ -755,7 +752,7 @@ void app_main(void)
     }
     xTaskCreate(network_setup_task, "companion_setup", 4096, NULL, 2, NULL);
     xTaskCreate(power_task, "companion_power", 4096, NULL, 2, NULL);
-    ESP_LOGI(TAG, "AI Companion firmware 2.2.0 started. Nonverbal output only; offline local mode retained.");
+    ESP_LOGI(TAG, "AI Companion firmware 2.3.0 started. Nonverbal output only; offline local mode retained.");
     if (companion_usb_start(on_usb_command) != ESP_OK) {
         ESP_LOGW(TAG, "USB Serial/JTAG control protocol unavailable");
     }
