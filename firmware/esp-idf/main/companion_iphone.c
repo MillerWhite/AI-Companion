@@ -62,6 +62,9 @@ static void reset_handles(void)
     s_ams_end = s_ams_remote = s_ams_entity_update = s_ams_entity_attr = 0;
     s_ancs_ready = s_ams_ready = s_ams_started = false;
     s_ancs_desc_pending = 0;
+    s_mtu_pending = false;
+    s_attr_head = s_attr_tail = s_attr_count = 0;
+    s_attr_in_flight = false;
     s_data_len = 0;
     s_data_attr_mask = 0;
 }
@@ -137,7 +140,7 @@ static int discover_ancs_chr(uint16_t conn, const struct ble_gatt_error *error,
         ESP_LOGI(TAG, "ANCS discovery %s", s_ancs_ready ? "complete" : "incomplete");
         return 0;
     }
-    if (error->status) return error->status;
+    if (error->status) { start_ams_discovery(conn); return error->status; }
     if (ble_uuid_cmp(&chr->uuid.u, &UUID_ANCS_NS.u) == 0) s_ancs_ns = chr->val_handle;
     else if (ble_uuid_cmp(&chr->uuid.u, &UUID_ANCS_CP.u) == 0) s_ancs_cp = chr->val_handle;
     else if (ble_uuid_cmp(&chr->uuid.u, &UUID_ANCS_DS.u) == 0) s_ancs_ds = chr->val_handle;
@@ -155,8 +158,8 @@ static int discover_ancs(uint16_t conn, const struct ble_gatt_error *error,
         }
         return 0;
     }
-    if (error->status) return error->status;
-    if (!svc) return BLE_HS_EUNKNOWN;
+    if (error->status) { start_ams_discovery(conn); return error->status; }
+    if (!svc) { start_ams_discovery(conn); return BLE_HS_EUNKNOWN; }
     s_ancs_end = svc->end_handle;
     return ble_gattc_disc_all_chrs(conn, svc->start_handle, svc->end_handle, discover_ancs_chr, NULL);
 }
@@ -172,7 +175,7 @@ static int discover_ams_chr(uint16_t conn, const struct ble_gatt_error *error,
         ESP_LOGI(TAG, "AMS discovery %s", s_ams_ready ? "complete" : "incomplete");
         return 0;
     }
-    if (error->status) return error->status;
+    if (error->status) { s_ams_started = false; return error->status; }
     if (ble_uuid_cmp(&chr->uuid.u, &UUID_AMS_REMOTE.u) == 0) s_ams_remote = chr->val_handle;
     else if (ble_uuid_cmp(&chr->uuid.u, &UUID_AMS_UPDATE.u) == 0) s_ams_entity_update = chr->val_handle;
     else if (ble_uuid_cmp(&chr->uuid.u, &UUID_AMS_ATTRIBUTE.u) == 0) s_ams_entity_attr = chr->val_handle;
