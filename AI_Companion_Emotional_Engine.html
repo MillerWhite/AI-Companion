@@ -195,7 +195,7 @@ function applyCloudIntent(result){
 let lastCloudUtterance='';
 async function interpretWithCloud(utterance){
  if(!cloudEnabled||cloudRequestInFlight)return false;
- const base=$('cloudApiUrl').value.trim().replace(/\\/+$/,'');if(!/^https?:\\/\\//i.test(base)){setVoiceState('Проверь адрес backend: нужен http:// или https://');return false;}
+ let base=$('cloudApiUrl').value.trim();while(base.endsWith('/'))base=base.slice(0,-1);if(!(base.startsWith('http://')||base.startsWith('https://'))){setVoiceState('Проверь адрес backend: нужен http:// или https://');return false;}
  cloudRequestInFlight=true;setVoiceState('Думает… обращаюсь к облачному интеллекту',true);
  const personality={temperament:profile.temper,initiative:profile.initiative,playfulness:profile.bond,calmness:profile.temper==='calm'?'high':'medium',quirks:profile.quirk};
  try{
