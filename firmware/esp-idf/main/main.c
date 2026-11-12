@@ -37,7 +37,7 @@
 #include "companion_face_renderer.h"
 
 static const char *TAG = "ai_companion";
-static lv_obj_t *status_label, *setup_label, *face_canvas;\nstatic face_t face_model;\nstatic uint16_t *face_pixels;\nstatic float face_gaze_x, face_gaze_y, face_gaze_target_x, face_gaze_target_y;\nstatic int64_t face_next_glance_us;\nstatic int64_t face_last_frame_us;
+static lv_obj_t *status_label, *setup_label, *face_canvas;\nstatic face_t face_model;\nstatic uint16_t *face_pixels;\nstatic float face_gaze_x, face_gaze_y, face_gaze_target_x, face_gaze_target_y, face_base_lid;\nstatic int64_t face_next_glance_us, face_next_blink_us, face_blink_start_us;\nstatic int64_t face_last_frame_us;
 static bool screen_asleep;
 static int64_t dizzy_until_us;
 static int64_t last_activity_us;
@@ -171,6 +171,11 @@ static void face_animation_timer(lv_timer_t *timer)
         face_gaze_target_y = ((int)(esp_random()%61U)-30)/100.0f;
         face_next_glance_us = now + 1800000LL + (int64_t)(esp_random()%3600000U);
     }
+    if (!face_next_blink_us) face_next_blink_us = now + 1700000LL;
+    if (now >= face_next_blink_us) {
+        face_blink_start_us = now;
+        face_next_blink_us = now + 2600000LL + (int64_t)(esp_random()%4300000U);
+    }
     face_gaze_x += (face_gaze_target_x-face_gaze_x)*fminf(1.0f,dt*2.2f);
     face_gaze_y += (face_gaze_target_y-face_gaze_y)*fminf(1.0f,dt*2.0f);
     for(int i=0;i<2;i++) {
@@ -178,8 +183,15 @@ static void face_animation_timer(lv_timer_t *timer)
         e->yaw = tx*.34f + face_gaze_x*.22f;
         e->pitch = ty*.30f + face_gaze_y*.20f;
         e->roll += ((tx*.10f + ty*.04f)-e->roll)*fminf(1.0f,dt*2.5f);
-        e->look_x = face_gaze_x + tx*.18f;
+        e->look_x = face_gaze_x + tx*.18f + (i ? .018f : -.018f);
         e->look_y = face_gaze_y + ty*.16f;
+        const int64_t blink_age = now - face_blink_start_us - (i ? 38000LL : 0LL);
+        float blink = 0.0f;
+        if (face_blink_start_us && blink_age >= 0 && blink_age < 150000LL) {
+            const float phase = (float)blink_age / 150000.0f;
+            blink = sinf(phase * 3.14159265f) * .94f;
+        }
+        e->lid = face_base_lid + blink * (1.0f-face_base_lid);
         e->wob_t += dt;
     }
     face_draw(&face_model,face_pixels,466,330);
