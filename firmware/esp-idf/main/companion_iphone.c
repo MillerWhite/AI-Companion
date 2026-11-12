@@ -24,6 +24,10 @@ static uint16_t s_ams_end, s_ams_remote, s_ams_entity_update, s_ams_entity_attr;
 static bool s_ancs_ready, s_ams_ready, s_ams_started;
 static uint8_t s_ancs_desc_pending;
 static uint8_t s_pending_entity, s_pending_attribute;
+static struct { uint8_t entity, attribute; } s_attr_queue[8];
+static uint8_t s_attr_head, s_attr_tail, s_attr_count;
+static bool s_attr_in_flight;
+static void ams_process_next_attribute_request(void);
 static uint8_t s_data[512];
 static size_t s_data_len;
 static uint8_t s_data_attr_mask;
@@ -259,6 +263,8 @@ static int ams_entity_attribute_read_cb(uint16_t conn, const struct ble_gatt_err
     } else if (error->status) {
         ESP_LOGW(TAG, "AMS full attribute read failed: %d", error->status);
     }
+    s_attr_in_flight = false;
+    ams_process_next_attribute_request();
     return 0;
 }
 
@@ -268,11 +274,48 @@ static int ams_entity_attribute_write_cb(uint16_t conn, const struct ble_gatt_er
     (void)attr; (void)arg;
     if (error->status) {
         ESP_LOGW(TAG, "AMS full attribute request failed: %d", error->status);
+        s_attr_in_flight = false;
+        ams_process_next_attribute_request();
         return 0;
     }
     int rc = ble_gattc_read(conn, s_ams_entity_attr, ams_entity_attribute_read_cb, NULL);
-    if (rc) ESP_LOGW(TAG, "AMS full attribute read could not start: %d", rc);
+    if (rc) {
+        ESP_LOGW(TAG, "AMS full attribute read could not start: %d", rc);
+        s_attr_in_flight = false;
+        ams_process_next_attribute_request();
+    }
     return 0;
+}
+
+static void ams_process_next_attribute_request(void)
+{
+    if (s_attr_in_flight || !s_ams_entity_attr || !s_attr_count || s_conn == BLE_HS_CONN_HANDLE_NONE) return;
+    s_pending_entity = s_attr_queue[s_attr_head].entity;
+    s_pending_attribute = s_attr_queue[s_attr_head].attribute;
+    s_attr_head = (uint8_t)((s_attr_head + 1U) % 8U);
+    s_attr_count--;
+    s_attr_in_flight = true;
+    const uint8_t request[2] = {s_pending_entity, s_pending_attribute};
+    int rc = ble_gattc_write_flat(s_conn, s_ams_entity_attr, request, sizeof(request),
+                                  ams_entity_attribute_write_cb, NULL);
+    if (rc) {
+        ESP_LOGW(TAG, "AMS full attribute request could not be queued: %d", rc);
+        s_attr_in_flight = false;
+        ams_process_next_attribute_request();
+    }
+}
+
+static void ams_queue_attribute_request(uint8_t entity, uint8_t attribute)
+{
+    if (s_attr_count >= 8) {
+        ESP_LOGW(TAG, "AMS full attribute request queue full; dropping entity=%u attribute=%u", entity, attribute);
+        return;
+    }
+    s_attr_queue[s_attr_tail].entity = entity;
+    s_attr_queue[s_attr_tail].attribute = attribute;
+    s_attr_tail = (uint8_t)((s_attr_tail + 1U) % 8U);
+    s_attr_count++;
+    ams_process_next_attribute_request();
 }
 
 static void parse_ams_update(const uint8_t *data, size_t len)
@@ -280,14 +323,7 @@ static void parse_ams_update(const uint8_t *data, size_t len)
     if (!data || len < 3) return;
     uint8_t entity = data[0], attr = data[1], flags = data[2];
     const uint8_t *v = data + 3; size_t n = len - 3;
-    if (flags & 1) {
-        s_pending_entity = entity;
-        s_pending_attribute = attr;
-        const uint8_t request[2] = {entity, attr};
-        int rc = ble_gattc_write_flat(s_conn, s_ams_entity_attr, request, sizeof(request),
-                                      ams_entity_attribute_write_cb, NULL);
-        if (rc) ESP_LOGW(TAG, "AMS full attribute request could not be queued: %d", rc);
-    }
+    if (flags & 1) ams_queue_attribute_request(entity, attr);
     portENTER_CRITICAL(&s_lock);
     if (entity == 2 && attr == 2) { size_t k = n < sizeof(s_track_title)-1 ? n : sizeof(s_track_title)-1; memcpy(s_track_title,v,k); s_track_title[k]=0; }
     else if (entity == 2 && attr == 0) { size_t k = n < sizeof(s_track_artist)-1 ? n : sizeof(s_track_artist)-1; memcpy(s_track_artist,v,k); s_track_artist[k]=0; }
