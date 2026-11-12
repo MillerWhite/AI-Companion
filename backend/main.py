@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import secrets
+import asyncio
 import hashlib
 import hmac
 import sqlite3
@@ -832,7 +833,8 @@ async async def transcribe_device_audio(request: Request, authorization: str | N
         raise HTTPException(status_code=413, detail={"code": "invalid_audio_size", "message": "Audio must be 0.1–30 seconds of 16-bit mono PCM and no larger than 1 MB"})
     duration_seconds = len(pcm) // (2 * SPEECHKIT_SAMPLE_RATE)
     _check_audio_daily_budget(device["device_id"], duration_seconds)
-    return {"text": _speechkit_transcribe(pcm)}
+    transcript = await asyncio.to_thread(_speechkit_transcribe, pcm)
+    return {"text": transcript}
 
 
 @app.post("/api/device/interpret", response_model=InterpretResult)
