@@ -120,7 +120,8 @@ static bool save_name(const char *name)
 
 static bool save_profile_string(const char *key, const char *value, size_t maximum)
 {
-    if (!value || !*value) return false;
+    if (!value) return false;
+    if (!strcmp(value, "-")) value = "";
     size_t length = strlen(value);
     if (length > maximum) return false;
     for (size_t i = 0; i < length; ++i) {
