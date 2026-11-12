@@ -6,6 +6,8 @@
 #include "esp_log.h"
 #include "esp_check.h"
 #include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "bsp/esp-bsp.h"
 
 #define AUDIO_RATE 16000
@@ -20,7 +22,7 @@ static const char *TAG = "companion_audio";
 static esp_codec_dev_handle_t speaker;
 static esp_codec_dev_handle_t microphone;
 static bool audio_ready;
-static int64_t last_sound_us;
+static int64_t last_sound_us;\nstatic volatile bool playback_active;
 
 bool companion_audio_is_ready(void) { return audio_ready; }
 
@@ -46,7 +48,7 @@ esp_err_t companion_audio_init(void)
     ESP_RETURN_ON_ERROR(esp_codec_dev_set_out_vol(speaker, 18), TAG, "speaker volume setup failed");
     ESP_RETURN_ON_ERROR(esp_codec_dev_open(microphone, &format), TAG, "microphone codec open failed");
     audio_ready = true;
-    ESP_LOGI(TAG, "ES8311 speaker and ES7210 microphones initialized at 24 kHz");
+    ESP_LOGI(TAG, "ES8311 speaker and ES7210 microphones initialized at 16 kHz");
     return ESP_OK;
 }
 
@@ -62,7 +64,7 @@ static float emotion_frequency(companion_emotion_t emotion)
 esp_err_t companion_audio_play(companion_emotion_t emotion, bool force)
 {
     if (!audio_ready) return ESP_ERR_INVALID_STATE;
-    const int64_t now = esp_timer_get_time();
+    if (playback_active) return ESP_ERR_TIMEOUT;\n    const int64_t now = esp_timer_get_time();
     if (!force && now - last_sound_us < AUDIO_COOLDOWN_US) return ESP_ERR_TIMEOUT;
     last_sound_us = now;
 
@@ -88,7 +90,7 @@ esp_err_t companion_audio_play(companion_emotion_t emotion, bool force)
         offset += count;
         offset += 420; /* deliberate silence between notes */
     }
-    return esp_codec_dev_write(speaker, pcm, offset * 2 * sizeof(int16_t));
+    playback_active = true;\n    esp_err_t err = esp_codec_dev_write(speaker, pcm, offset * 2 * sizeof(int16_t));\n    playback_active = false;\n    return err;
 }
 
 esp_err_t companion_audio_capture_utterance(int16_t *mono_pcm, size_t capacity_samples,
@@ -103,7 +105,7 @@ esp_err_t companion_audio_capture_utterance(int16_t *mono_pcm, size_t capacity_s
     const uint32_t max_frames = (max_duration_ms ? max_duration_ms : AUDIO_MAX_UTTERANCE_MS) / 20U;
 
     for (uint32_t frame = 0; frame < max_frames && *captured_samples + AUDIO_FRAME_SAMPLES <= max_samples; ++frame) {
-        esp_err_t err = esp_codec_dev_read(microphone, stereo, sizeof(stereo));
+        if (playback_active) { vTaskDelay(pdMS_TO_TICKS(20)); continue; }\n        esp_err_t err = esp_codec_dev_read(microphone, stereo, sizeof(stereo));
         if (err != ESP_OK) return err;
         float energy = 0.0f;
         for (size_t i = 0; i < AUDIO_FRAME_SAMPLES; ++i) {
