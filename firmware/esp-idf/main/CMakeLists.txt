@@ -2,6 +2,7 @@ idf_component_register(
     SRCS
         "main.c"
         "qrcodegen.c"
+        "companion_ble.c"
         "cloud_client.c"
         "companion_emotion.c"
         "companion_audio.c"
