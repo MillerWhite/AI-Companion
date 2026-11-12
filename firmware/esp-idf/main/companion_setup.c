@@ -87,11 +87,14 @@ static esp_err_t device_info_handler(httpd_req_t *req)
             cJSON_AddStringToObject(json, "companion_name", companion_name);
         uint8_t temperament = 0, initiative = 0, quirk = 0;
         nvs_get_u8(nvs, "temperament", &temperament);
-        nvs_get_u8(nvs, "initiative", &initiative);\n        nvs_get_u8(nvs, "quirk", &quirk);
+        nvs_get_u8(nvs, "initiative", &initiative);
+        nvs_get_u8(nvs, "quirk", &quirk);
         static const char *temper_names[] = {"balanced", "calm", "energetic", "shy", "dreamy"};
         static const char *initiative_names[] = {"medium", "high", "low"};
         cJSON_AddStringToObject(json, "temperament", temper_names[temperament <= 4 ? temperament : 0]);
-        cJSON_AddStringToObject(json, "initiative", initiative_names[initiative <= 2 ? initiative : 0]);\n        static const char *quirk_names[] = {"none", "sleepy", "curious", "playful", "shy"};\n        cJSON_AddStringToObject(json, "quirks", quirk_names[quirk <= 4 ? quirk : 0]);
+        cJSON_AddStringToObject(json, "initiative", initiative_names[initiative <= 2 ? initiative : 0]);
+        static const char *quirk_names[] = {"none", "sleepy", "curious", "playful", "shy"};
+        cJSON_AddStringToObject(json, "quirks", quirk_names[quirk <= 4 ? quirk : 0]);
         nvs_close(nvs);
     }
     char *body = cJSON_PrintUnformatted(json);
