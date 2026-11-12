@@ -31,7 +31,7 @@ static companion_emotion_t current_emotion = COMPANION_CALM;
 static bool sleeping;
 static bool audio_available;
 static bool imu_available;
-static char setup_code[16];
+static char setup_info[128];
 
 static const char *emotion_label(companion_emotion_t emotion)
 {
@@ -406,12 +406,12 @@ void app_main(void)
     lv_timer_create(blink_timer, 2600, NULL);
     bsp_display_unlock();
 
-    err = companion_wifi_start(setup_code, sizeof(setup_code));
-    if (err == ESP_OK && setup_code[0]) {
+    err = companion_wifi_start(setup_info, sizeof(setup_info));
+    if (err == ESP_OK && setup_info[0]) {
         ESP_LOGI(TAG, "Secure Wi-Fi setup code: %s", setup_code);
         if (bsp_display_lock(pdMS_TO_TICKS(1000)) == ESP_OK) {
             char line[64];
-            snprintf(line, sizeof(line), "Wi-Fi setup PIN: %s", setup_code);
+            snprintf(line, sizeof(line), "%s", setup_info);
             lv_label_set_text(setup_label, line);
             bsp_display_unlock();
         }
