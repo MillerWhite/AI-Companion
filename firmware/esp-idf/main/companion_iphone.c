@@ -173,10 +173,13 @@ static int discover_ams(uint16_t conn, const struct ble_gatt_error *error,
 {
     (void)arg;
     if (error->status == BLE_HS_EDONE) {
-        if (!s_ams_end) ESP_LOGI(TAG, "iPhone AMS service not exposed on this connection");
+        if (!s_ams_end) {
+            ESP_LOGI(TAG, "iPhone AMS service not exposed yet; will retry while connected");
+            s_ams_started = false;
+        }
         return 0;
     }
-    if (error->status) return error->status;
+    if (error->status) { s_ams_started = false; return error->status; }
     if (!svc) return BLE_HS_EUNKNOWN;
     s_ams_end = svc->end_handle;
     return ble_gattc_disc_all_chrs(conn, svc->start_handle, svc->end_handle, discover_ams_chr, NULL);
@@ -187,7 +190,10 @@ static void start_ams_discovery(uint16_t conn)
     if (s_ams_started) return;
     s_ams_started = true;
     int rc = ble_gattc_disc_svc_by_uuid(conn, &UUID_AMS.u, discover_ams, NULL);
-    if (rc) ESP_LOGW(TAG, "AMS service discovery could not start: %d", rc);
+    if (rc) {
+        s_ams_started = false;
+        ESP_LOGW(TAG, "AMS service discovery could not start: %d", rc);
+    }
 }
 
 static void ancs_request_attributes(uint16_t conn, uint32_t uid)
@@ -353,6 +359,14 @@ void companion_iphone_init(void)
         int rc = ble_gap_event_listener_register(&s_listener, iphone_gap_event, NULL);
         if (rc == 0) s_listener_registered = true;
         else ESP_LOGE(TAG, "Could not register iPhone GATT client listener: %d", rc);
+    }
+}
+
+void companion_iphone_poll(void)
+{
+    /* iOS may publish AMS only after a media app starts. Retry discovery until it appears. */
+    if (s_conn != BLE_HS_CONN_HANDLE_NONE && !s_ams_ready && !s_ams_started) {
+        start_ams_discovery(s_conn);
     }
 }
 
