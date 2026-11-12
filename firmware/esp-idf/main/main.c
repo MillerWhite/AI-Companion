@@ -146,7 +146,7 @@ static void render_emotion(companion_emotion_t emotion)
     const bool sad = emotion == COMPANION_SAD;
     const bool sleepy = emotion == COMPANION_SLEEPY;
     const bool excited = emotion == COMPANION_EXCITED;
-    const bool curious = emotion == COMPANION_CURIOUS || emotion == COMPANION_SURPRISED;
+    const bool curious = emotion == COMPANION_CURIOUS || emotion == COMPANION_SURPRISED || emotion == COMPANION_SCARED;
     const bool dizzy = emotion == COMPANION_DIZZY;
     const bool flinch = emotion == COMPANION_FLINCH;
     const bool scared = emotion == COMPANION_SCARED;
@@ -180,7 +180,7 @@ static void render_emotion(companion_emotion_t emotion)
         lv_obj_set_style_shadow_width(eyes[i], sad ? 20 : 12, 0);
         lv_obj_set_style_bg_opa(eyes[i], (sleepy || flinch) ? LV_OPA_80 : LV_OPA_COVER, 0);
         lv_obj_set_style_radius(eyes[i], (sleepy || flinch) ? 8 : LV_RADIUS_CIRCLE, 0);
-        lv_obj_set_style_transform_rotation(eyes[i], sad ? (i == 0 ? -65 : 65) : (dizzy ? (i == 0 ? 18 : -18) : 0), 0);
+        lv_obj_set_style_transform_rotation(eyes[i], sad ? (i == 0 ? -65 : 65) : (dizzy ? (i == 0 ? 18 : -18) : (scared ? (i == 0 ? -5 : 5) : 0)), 0);
         lv_obj_clear_flag(tears[i], LV_OBJ_FLAG_HIDDEN);
         if (sad) lv_obj_set_y(tears[i], 218 + (i ? 5 : 0));
         else lv_obj_add_flag(tears[i], LV_OBJ_FLAG_HIDDEN);
