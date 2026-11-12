@@ -1,63 +1,85 @@
-# AI Companion — Backend v1.9
+# AI Companion backend 2.1
 
-FastAPI service for language interpretation and device authentication. Backend does not control display, sound, or hardware directly. Device firmware remains responsible for validating and applying bounded intents.
+FastAPI service for natural-language intent interpretation, SpeechKit transcription, device enrollment and owner controls. The backend returns constrained data; it never directly drives hardware.
 
-## Configuration
+## Implemented routes
 
-Use environment variables (or local `backend/.env` for development):
+| Route | Purpose | Authorization |
+|---|---|---|
+| `GET /health` | Health and configuration status | Public |
+| `POST /api/interpret` | Browser simulator development route | Disabled in production |
+| `POST /api/devices/claim` | Consume a one-time enrollment grant | Grant bearer in body |
+| `POST /api/device/transcribe` | 16 kHz, mono, 16-bit LPCM → Yandex SpeechKit | Device Bearer token |
+| `POST /api/device/interpret` | Speech text → validated nonverbal intent | Device Bearer token |
+| `GET /api/device/memory` | Export bounded memory JSON | Device Bearer token |
+| `DELETE /api/device/memory` | Delete all saved context and facts | Device Bearer token |
+| `PATCH /api/device/profile` | Update companion name/personality | Device Bearer token |
+| `POST /api/admin/enrollment-grants` | Create one-time activation grant | Server-only enrollment secret |
+| `POST /api/store/webhook` | HMAC-signed paid-order event → one-time grant | Store webhook signature |
+| `POST /api/devices/enroll` | Legacy trusted admin enrollment | Server-only enrollment secret |
+| `DELETE /api/devices/{device_id}` | Revoke device | Server-only enrollment secret |
 
-- `APP_ENV=development|production`
-- `AI_PROVIDER=yandex`
-- `AI_API_KEY` — server-only secret
-- `AI_FOLDER_ID` — Yandex Cloud folder ID
-- `AI_API_BASE_URL` — configured provider base URL
-- `AI_MODEL` — model alias/URI confirmed for the account
-- `DEVICE_ENROLLMENT_SECRET` — server-only enrollment/admin secret
-- `DEVICE_DB_PATH` — prototype SQLite database path
-- `DEVICE_REQUESTS_PER_MINUTE` — per-process device request limit
-- `AI_ALLOWED_ORIGINS` — exact production website origins
+## Speech pipeline
 
-The repository currently contains a Yandex OpenAI-compatible request assumption. It has **not** passed a live provider smoke test. Confirm endpoint, model URI, authentication header and JSON-mode support against current Yandex docs before production. Do not assume the example model alias is available in every folder/account.
+Firmware sends mono signed 16-bit LPCM at 16 kHz over HTTPS. The backend limits request size/duration, applies per-device daily audio quotas, and forwards audio to the synchronous Yandex SpeechKit recognition endpoint. Raw audio is not stored. Transcribed text is passed separately to the language model.
 
-## Routes
+Configure `SPEECHKIT_API_KEY`, `SPEECHKIT_FOLDER_ID` and `SPEECHKIT_SAMPLE_RATE=16000`. Confirm SpeechKit API key permissions and current account quotas before enabling the device microphone.
 
-- `GET /health` — service/provider configuration diagnostics (never returns secrets).
-- `POST /api/interpret` — development-only simulator route; returns 404 in production.
-- `POST /api/devices/enroll` — trusted server-side enrollment using `X-Enrollment-Secret`. Never call from public browser code.
-- `DELETE /api/devices/{device_id}` — trusted server-side token revocation.
-- `POST /api/device/interpret` — device Bearer token required; device name/personality are loaded server-side.
+## Memory
 
-## Intent contract
+Each device stores:
+- At most eight recent owner/companion context turns.
+- Up to twenty non-sensitive preference facts in four allowlisted categories.
+- A retention window controlled by `MEMORY_RETENTION_DAYS` (default 90 days).
 
-Every model response must include:
-`addressed_to_companion`, `understood`, `intent`, `action`, `emotion`, `confidence`, `nonverbal_cue`, `clarification`.
+Memory writes require the model to mark the utterance as addressed to the companion and return an allowlisted memory category with confidence >= 0.85. The prompt forbids sensitive information, credentials and inferred personal facts. Owners can export or delete memory using the authenticated routes; the on-device local owner portal proxies these actions after its physical setup PIN is supplied.
 
-Actions and emotions are enums. Unknown values, missing address detection, or confidence outside 0..1 are rejected. The model is instructed not to generate speech, TTS, code, hardware commands or arbitrary sound instructions.
+This is a bounded companion memory feature, not a general-purpose personal data store. Review the categories and retention policy before commercial release.
 
-## Device context
+## Enrollment and payments
 
-For authenticated devices, backend stores a bounded rolling context of at most eight text/intent turns in SQLite. This is a prototype memory feature, not a complete user memory product. It currently has no owner-facing reset/export/delete endpoint or configurable retention policy. Do not deploy this database for sensitive personal conversations until those controls exist. Raw audio is not accepted or stored.
+- Admins can issue a short-lived, single-use grant after independently verifying a paid order.
+- `POST /api/store/webhook` accepts a generic JSON event signed with HMAC-SHA256 using `STORE_WEBHOOK_SECRET`.
+- The grant is stored hashed and can be redeemed once by a device serial.
+- The device token is returned once and stored in NVS by the firmware.
 
-SQLite and in-process rate limiting are single-instance prototype choices. Production needs managed PostgreSQL, shared rate limiting (e.g. Redis), backups, retention jobs and monitoring.
+**A real payment provider is not connected yet.** The webhook is a provider-neutral adapter contract; the store must verify the provider's signature/payment status and forward a signed event. Do not trust arbitrary client-side `payment_status=paid` claims. Customer accounts, order history, refunds and automated revocation on chargeback are not implemented.
+
+## Production controls
+
+- PostgreSQL support via `DATABASE_URL`; SQLite is for local development.
+- Redis-backed per-device rate limits and daily AI/audio request budgets.
+- Production startup refuses to run without PostgreSQL, Redis, strong enrollment/webhook secrets, AI and SpeechKit keys, exact CORS origins and allowed hosts.
+- Docker Compose template includes PostgreSQL, Redis and Caddy automatic HTTPS.
+- API responses include security headers; API responses are not cached.
+- Audio request bodies and store webhooks are size-limited before buffering.
+
+The daily AI limit is a request-count ceiling, not a provider-billing meter. Add provider spend alerts, token accounting, database backups, restore drills, monitoring and incident alerts before production.
 
 ## Local development
 
-```powershell
-py -m venv backend\.venv
-backend\.venv\Scripts\Activate.ps1
-py -m pip install -r backend\requirements.txt
-Copy-Item backend/.env.example backend/.env
-py -m uvicorn backend.main:app --host 127.0.0.1 --port 8787
-py -m unittest discover -s backend/tests -v
+```bash
+python -m venv .venv
+# Windows: .venv\\Scripts\\activate
+# macOS/Linux: source .venv/bin/activate
+python -m pip install -r backend/requirements.txt
+cp backend/.env.example backend/.env
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8787
+python -m unittest discover -s backend/tests -v
 ```
 
-## Security requirements before production
+## Production template
 
-1. Rotate the API key previously disclosed in chat; configure the replacement only as a hosting secret.
-2. Never expose `DEVICE_ENROLLMENT_SECRET` to browser or device.
-3. Add one-time order-backed enrollment grants; the current shared secret is only an admin prototype.
-4. Add account ownership, device transfer, token rotation and owner-initiated memory deletion.
-5. Add IP/device/global limits with shared storage and budget alerts.
-6. Deploy only over HTTPS and configure exact CORS origins.
-7. Add a protected simulator login/session route before enabling browser AI in production.
-8. Confirm provider endpoint/model/auth details with a real request and a fresh secret.
+From the `backend` directory on a Linux host with a DNS A/AAAA record pointing to it:
+
+```bash
+cp .env.production.example .env
+# Fill all secrets, API_DOMAIN, exact origins and database credentials.
+docker compose -f docker-compose.production.yml up -d --build
+```
+
+Caddy obtains TLS certificates for `API_DOMAIN`. Keep `.env` out of Git and restrict its permissions. Put provider keys in a managed secret store where available. This repository contains deployment templates; no cloud host has been provisioned or deployed by this change.
+
+## Provider caveat
+
+The Yandex OpenAI-compatible chat endpoint/model/auth header configuration still needs a live smoke test using a newly created, unexposed key. The key disclosed earlier in the project conversation must be revoked and must not be reused.
