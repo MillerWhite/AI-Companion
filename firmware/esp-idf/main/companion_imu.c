@@ -14,6 +14,7 @@ static qmi8658_dev_t sensor;
 static companion_motion_state_t motion;
 static bool ready;
 static int64_t last_sample_us;
+static float visual_tilt_x, visual_tilt_y;
 
 esp_err_t companion_imu_init(void)
 {
@@ -46,9 +47,18 @@ uint32_t companion_imu_poll(void)
 
     /* QMI8658 is rotated 90 degrees on the Waveshare board.
        Map sensor axes to device axes: X = -sensor Y, Y = sensor X, Z = sensor Z. */
-    return companion_motion_feed(&motion,
+    const uint32_t events = companion_motion_feed(&motion,
         -data.accelY / GRAVITY_MPS2,
         data.accelX / GRAVITY_MPS2,
         data.accelZ / GRAVITY_MPS2,
         dt);
+    visual_tilt_x = motion.tilt_x;
+    visual_tilt_y = motion.tilt_y;
+    return events;
+}
+
+void companion_imu_get_tilt(float *x, float *y)
+{
+    if (x) *x = visual_tilt_x;
+    if (y) *y = visual_tilt_y;
 }
