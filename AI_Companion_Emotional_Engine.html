@@ -142,7 +142,7 @@ function runVoiceIntent(intent){
  lastVoiceIntent=intent;
  if(intent==='sleep'){trigger('sleep');return true}
  if(intent==='wake'){trigger('neutral');return true}
- if(intent==='play'){trigger('play');return true}
+ 
  if(intent==='pet'){trigger('happy');return true}
  if(intent==='surprise'){trigger('surprised');return true}
  if(intent==='attention'){recordAction('call',1);orb.classList.remove('gaze-left','gaze-right','gaze-up','gaze-down');orb.classList.add('gaze-center');setMood('curious','повернулся и сосредоточил взгляд на владельце',true,'attention',2600);return true}
