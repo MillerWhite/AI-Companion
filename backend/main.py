@@ -28,7 +28,7 @@ from pydantic import BaseModel, Field, field_validator
 
 load_dotenv(dotenv_path=Path(__file__).resolve().with_name(".env"), override=False)
 
-APP_VERSION = "2.1.0
+APP_VERSION = "2.1.0"
 APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
 DEVICE_ENROLLMENT_SECRET = os.getenv("DEVICE_ENROLLMENT_SECRET", "").strip()
 DEVICE_DB_PATH = os.getenv("DEVICE_DB_PATH", "backend/devices.sqlite3")
@@ -411,7 +411,7 @@ def _get_device(token: str) -> dict[str, Any] | None:
     cutoff = int(time.time()) - MEMORY_RETENTION_DAYS * 86400
     memory["recent_context"] = [
         item for item in memory.get("recent_context", [])
-        if int(item.get("timestamp", int(time.time()))) >= cutoff
+        if int(item.get("timestamp", 0)) >= cutoff
     ][-8:]
     memory["facts"] = [
         item for item in memory.get("facts", [])
@@ -709,7 +709,9 @@ def claim_device(payload: DeviceClaimRequest) -> dict[str, str]:
             if not _is_unique_violation(error):
                 raise
             raise HTTPException(status_code=409, detail={"code": "device_already_enrolled", "message": "This device serial is already enrolled"})
-        connection.execute("UPDATE enrollment_grants SET used_at = ? WHERE grant_hash = ? AND used_at IS NULL", (now, grant_hash))
+        used = connection.execute("UPDATE enrollment_grants SET used_at = ? WHERE grant_hash = ? AND used_at IS NULL", (now, grant_hash))
+        if used.rowcount != 1:
+            raise HTTPException(status_code=409, detail={"code": "grant_already_used", "message": "Enrollment grant has already been redeemed"})
     return {"device_id": device_id, "device_token": device_token, "message": "Store this token securely. It is returned only once."}
 
 
@@ -800,6 +802,8 @@ async def transcribe_device_audio(request: Request, authorization: str | None = 
     _check_device_rate_limit(device["device_id"])
     if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/octet-stream":
         raise HTTPException(status_code=415, detail={"code": "invalid_audio_content_type", "message": "Expected application/octet-stream PCM audio"})
+    if SPEECHKIT_SAMPLE_RATE != 16000:
+        raise HTTPException(status_code=503, detail={"code": "unsupported_speech_sample_rate", "message": "This firmware build sends 16 kHz PCM; backend SpeechKit rate must be 16000"})
     max_audio_bytes = min(1_000_000, SPEECHKIT_SAMPLE_RATE * 2 * 30)
     pcm = await _read_limited_body(request, max_audio_bytes)
     # SpeechKit synchronous LPCM API: mono 16-bit PCM, up to 30 seconds.
