@@ -52,7 +52,7 @@ static const char *emotion_label(companion_emotion_t emotion)
 {
     static const char *labels[COMPANION_EMOTION_COUNT] = {
         "Calm", "Happy", "Curious", "Sleepy", "Sad",
-        "Affection", "Excited", "Surprised", "Concerned", "Shy", "Dizzy", "Flinch"
+        "Affection", "Excited", "Surprised", "Scared", "Concerned", "Shy", "Dizzy", "Flinch"
     };
     return labels[emotion < COMPANION_EMOTION_COUNT ? emotion : COMPANION_CALM];
 }
@@ -149,6 +149,7 @@ static void render_emotion(companion_emotion_t emotion)
     const bool curious = emotion == COMPANION_CURIOUS || emotion == COMPANION_SURPRISED;
     const bool dizzy = emotion == COMPANION_DIZZY;
     const bool flinch = emotion == COMPANION_FLINCH;
+    const bool scared = emotion == COMPANION_SCARED;
     int eye_width = 58, eye_height = 78, mouth_width = 27, mouth_height = 8;
     int mouth_top = 0;
 
@@ -160,6 +161,7 @@ static void render_emotion(companion_emotion_t emotion)
         case COMPANION_AFFECTIONATE: eye_width = 61; eye_height = 70; mouth_width = 36; mouth_height = 13; break;
         case COMPANION_EXCITED: eye_width = 68; eye_height = 96; mouth_width = 24; mouth_height = 25; break;
         case COMPANION_SURPRISED: eye_width = 66; eye_height = 100; mouth_width = 15; mouth_height = 22; break;
+        case COMPANION_SCARED: eye_width = 68; eye_height = 91; mouth_width = 17; mouth_height = 23; break;
         case COMPANION_CONCERNED: eye_width = 57; eye_height = 70; mouth_width = 29; mouth_height = 8; break;
         case COMPANION_SHY: eye_width = 58; eye_height = 60; mouth_width = 16; mouth_height = 7; break;
         case COMPANION_DIZZY: eye_width = 54; eye_height = 48; mouth_width = 34; mouth_height = 12; break;
@@ -284,6 +286,7 @@ static companion_emotion_t parse_emotion(const char *value)
     if (!strcmp(value, "affectionate")) return COMPANION_AFFECTIONATE;
     if (!strcmp(value, "excited")) return COMPANION_EXCITED;
     if (!strcmp(value, "surprised")) return COMPANION_SURPRISED;
+    if (!strcmp(value, "scared")) return COMPANION_SCARED;
     if (!strcmp(value, "concerned")) return COMPANION_CONCERNED;
     if (!strcmp(value, "shy")) return COMPANION_SHY;
     if (!strcmp(value, "dizzy")) return COMPANION_DIZZY;
@@ -522,7 +525,7 @@ static void voice_task(void *arg)
             continue;
         }
         if (audio_events & COMPANION_AUDIO_CLAP) {
-            set_emotion(COMPANION_SURPRISED, false);
+            set_emotion(COMPANION_SCARED, false);
             if (audio_available) companion_audio_play_sound(VOICE_OH, false);
             continue;
         }
