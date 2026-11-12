@@ -51,6 +51,11 @@ void companion_emotion_interaction(companion_state_t *state, const char *kind)
         state->social = clamp01(state->social - 7.0f);
         state->curiosity = clamp01(state->curiosity - 6.0f);
         state->trust = clamp01(state->trust + 0.8f);
+    } else if (strcmp(kind, "feed") == 0) {
+        state->energy = clamp01(state->energy + 28.0f);
+        state->comfort = clamp01(state->comfort + 12.0f);
+        state->playfulness = clamp01(state->playfulness + 4.0f);
+        state->social = clamp01(state->social + 1.5f);
     } else if (strcmp(kind, "rest") == 0) {
         state->energy = clamp01(state->energy + 4.0f);
         state->comfort = clamp01(state->comfort + 2.0f);
@@ -111,7 +116,7 @@ const char *companion_emotion_name(companion_emotion_t emotion)
 {
     static const char *names[COMPANION_EMOTION_COUNT] = {
         "спокойствие", "радость", "любопытство", "сонливость", "грусть",
-        "нежность", "восторг", "удивление", "беспокойство", "смущение"
+        "нежность", "восторг", "удивление", "беспокойство", "смущение", "головокружение"
     };
     return emotion < COMPANION_EMOTION_COUNT ? names[emotion] : names[COMPANION_CALM];
 }
