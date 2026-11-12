@@ -1,4 +1,4 @@
-#include "face.h"
+#include "companion_face_renderer.h"
 #include <math.h>
 #include <stdbool.h>
 #include <string.h>
