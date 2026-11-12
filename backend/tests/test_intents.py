@@ -6,6 +6,7 @@ from backend.main import (
     Action,
     Emotion,
     InterpretRequest,
+    MemoryUpdate,
     allowed_personality,
     make_system_prompt,
     validate_model_result,
@@ -22,6 +23,7 @@ def valid_result(**overrides):
         "confidence": 0.93,
         "nonverbal_cue": "Поднять глаза и слегка наклониться вперёд",
         "clarification": None,
+        "memory_updates": [],
     }
     result.update(overrides)
     return result
@@ -60,6 +62,33 @@ class IntentValidationTests(unittest.TestCase):
         result.pop("addressed_to_companion")
         with self.assertRaises(ValidationError):
             validate_model_result(result)
+
+
+    def test_accepts_safe_durable_memory_update(self):
+        result = validate_model_result(valid_result(memory_updates=[{
+            "kind": "favorite_activity", "value": "любит спокойные игры", "confidence": 0.91,
+        }]))
+        self.assertEqual(result.memory_updates[0].kind.value, "favorite_activity")
+
+    def test_rejects_unknown_memory_category(self):
+        with self.assertRaises(ValidationError):
+            validate_model_result(valid_result(memory_updates=[{
+                "kind": "medical_condition", "value": "private fact", "confidence": 0.99,
+            }]))
+
+    def test_rejects_memory_update_for_unaddressed_speech(self):
+        with self.assertRaises(ValueError):
+            validate_model_result(valid_result(
+                addressed_to_companion=False, understood=False, action="idle",
+                emotion="neutral", memory_updates=[{
+                    "kind": "nickname", "value": "Milo", "confidence": 0.99,
+                }],
+            ))
+
+    def test_existing_memory_facts_are_available_as_context(self):
+        fact = MemoryUpdate(kind="favorite_activity", value="спокойные игры", confidence=0.95)
+        prompt = make_system_prompt("Milo", {}, [fact])
+        self.assertIn("спокойные игры", prompt)
 
     def test_limits_context_and_normalizes_utterance(self):
         payload = InterpretRequest(utterance="  привет   малыш  ")
