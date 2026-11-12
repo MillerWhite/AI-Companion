@@ -51,9 +51,7 @@ esp_err_t companion_audio_init(void)
         .bits_per_sample = 16,
     };
     /* Follow the Waveshare 1.75C reference sequence: the BSP owns I2S and
-       codec pins; reopen the codec handles at the mono 16 kHz voice rate. */
-    (void)esp_codec_dev_close(speaker);
-    (void)esp_codec_dev_close(microphone);
+       codec pins; open each fresh codec handle at the mono 16 kHz voice rate. */
     ESP_RETURN_ON_ERROR(esp_codec_dev_open(speaker, &format), TAG, "speaker codec open failed");
     ESP_RETURN_ON_ERROR(esp_codec_dev_set_out_vol(speaker, 24), TAG, "speaker volume setup failed");
     ESP_RETURN_ON_ERROR(esp_codec_dev_open(microphone, &format), TAG, "microphone codec open failed");
