@@ -88,4 +88,16 @@ The Waveshare board has not been physically tested in this development session. 
 The four Quick QR entries are read from NVS keys `qr0`..`qr3`. Each entry may be stored as `title|https://address` or as a plain URL. The QR button on the face opens a full-screen QR view; horizontal swipes navigate the four slots and CLOSE returns to the face. QR encoding uses Project Nayuki's MIT-licensed QR Code generator (license header retained in source).
 
 ## BLE remote
-The firmware includes a BLE HID Consumer Control peripheral named `AI Companion Remote`. After pairing with a computer, swipe left/right on the face for next/previous media, up for play/pause and down for mute. The HID stack uses ESP-IDF's NimBLE host and `esp_hid`. The iPhone ANCS notification client and AMS media-session client are not yet implemented; BLE HID and iPhone accessory services are separate GATT roles and must be integrated carefully.
+The firmware exposes a composite BLE HID accessory named `AI Companion Remote` (Consumer Control, mouse and keyboard reports) and runs ANCS/AMS GATT client procedures on the same encrypted accessory link. The iPhone module discovers Apple's Notification Center Service (ANCS) and Media Service (AMS), subscribes to notification and entity updates, requests notification title/message attributes, reads truncated media attributes, and sends AMS playback/track/volume commands. The AMOLED status line displays received notification text and now-playing title/artist. The screen button cycles through presentation, mouse and iPhone media modes: in iPhone mode swipe left/right for previous/next track, swipe up for play/pause, swipe down for volume up and tap for volume down. iPhone pairing must be initiated in iOS Settings → Bluetooth; accept the pairing request and enable Share System Notifications if iOS offers it. The AMS service may only appear while an iOS media session is available. The current ESP-IDF `esp_hid` device wrapper tracks one active HID connection, so the iPhone and computer remote are used one host at a time; disconnect the current host before switching. NimBLE GATT client, central, peripheral and observer roles plus bonding are enabled.
+
+
+## iPhone pairing and controls
+
+1. On iPhone, open **Settings → Bluetooth** and select **AI Companion Remote**.
+2. Accept the pairing request. Keep the iPhone connected to the accessory; the firmware starts encrypted GATT discovery automatically.
+3. If iOS asks whether to share system notifications, allow it. Notification visibility still follows each app's iOS notification settings.
+4. On the Waveshare screen, tap the bottom-left mode label until it reads `IPHONE`.
+5. Swipe left/right for previous/next track, swipe up for play/pause, swipe down for volume up, and tap the face for volume down.
+6. New ANCS notifications and AMS track title/artist updates are shown briefly in the status line and also written to the serial log.
+
+If ANCS/AMS are not discovered, check that the iPhone is bonded to `AI Companion Remote`, that system-notification sharing was accepted, and that a media app is actively playing. iOS can withhold AMS when no media session is published. This implementation has not yet been verified against a physical iPhone; CI compilation and device pairing tests remain required before calling the feature release-ready.
