@@ -10,6 +10,7 @@ idf_component_register(
     INCLUDE_DIRS "."
     REQUIRES
         lvgl
+        esp_codec_dev
         esp_http_client
         esp_http_server
         esp_wifi
