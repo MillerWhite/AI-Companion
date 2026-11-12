@@ -178,6 +178,7 @@ static void process_command(char *line)
     if (!*line) return;
     if (!strcmp(line, "config")) { send_config(); return; }
     if (!strcmp(line, "status") || !strcmp(line, "ping")) { send_status(); return; }
+    if (!strcmp(line, "mood")) { if (command_handler) command_handler("mood"); return; }
 
     bool profile_changed = false;
     if (!strncmp(line, "name ", 5)) {
@@ -220,7 +221,7 @@ static void process_command(char *line)
     }
 
     if (!strcmp(line, "sleep") || !strcmp(line, "wake") ||
-        !strcmp(line, "pet") || !strcmp(line, "play") ||
+        !strcmp(line, "pet") ||
         !strcmp(line, "call") ||
         !strcmp(line, "wifi-reset") || !strncmp(line, "emotion ", 8) ||
         !strncmp(line, "sound ", 6)) {
