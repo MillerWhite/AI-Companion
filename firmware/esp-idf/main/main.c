@@ -37,7 +37,12 @@
 #include "companion_face_renderer.h"
 
 static const char *TAG = "ai_companion";
-static lv_obj_t *status_label, *setup_label, *face_canvas;\nstatic face_t face_model;\nstatic uint16_t *face_pixels;\nstatic float face_gaze_x, face_gaze_y, face_gaze_target_x, face_gaze_target_y, face_base_lid;\nstatic int64_t face_next_glance_us, face_next_blink_us, face_blink_start_us;\nstatic int64_t face_last_frame_us;
+static lv_obj_t *status_label, *setup_label, *screen_face, *face_canvas;
+static face_t face_model;
+static uint16_t *face_pixels;
+static float face_gaze_x, face_gaze_y, face_gaze_target_x, face_gaze_target_y, face_base_lid;
+static int64_t face_next_glance_us, face_next_blink_us, face_blink_start_us;
+static int64_t face_last_frame_us;
 static bool screen_asleep;
 static int64_t dizzy_until_us;
 static int64_t last_activity_us;
@@ -934,7 +939,7 @@ void app_main(void)
     render_emotion(COMPANION_CALM);
     lv_timer_create(autonomous_timer, 8000, NULL);
     lv_timer_create(blink_timer, 2600, NULL);
-    lv_timer_create(gaze_timer, 1850, NULL);\n    if (face_pixels) lv_timer_create(face_animation_timer, 50, NULL);
+    if (face_pixels) lv_timer_create(face_animation_timer, 50, NULL);
     bsp_display_unlock();
 
     err = companion_ble_init();
