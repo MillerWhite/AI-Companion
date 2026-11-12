@@ -208,7 +208,7 @@ async function checkCloudBackend(force=false){
  }catch(error){
   cloudHealthCache=null;cloudHealthCheckedAt=0;$('cloudStatus').textContent='нет соединения';
   const raw=String(error.message||error);let hint='Не удалось связаться с backend.';
-  if(error.name==='TimeoutError'||error.name==='AbortError')hint='Backend не ответил за 5 секунд. Проверьте, запущен ли сервер.';
+  if(error.name==='TimeoutError'||error.name==='AbortError')hint='Сервер сайта не ответил за 5 секунд. Проверьте доступность опубликованного backend.';
   else if(error instanceof TypeError||/Failed to fetch|Load failed|NetworkError/i.test(raw)){hint='Облачный сервер AI Companion пока недоступен по адресу сайта. Для конечной версии сайт и backend должны быть опубликованы вместе за HTTPS-адресом; после этого браузер подключится автоматически. На этом этапе локальные реакции продолжают работать.';}
   else hint=raw;
   $('cloudHelp').textContent=hint+' Адрес: '+base;
@@ -216,6 +216,7 @@ async function checkCloudBackend(force=false){
   return false;
  }
 }
+if(location.protocol!=='file:')checkCloudBackend(true);
 async function interpretWithCloud(utterance){
  if(!cloudEnabled||cloudRequestInFlight)return false;
  const base=cloudBaseUrl();if(!(await checkCloudBackend(false))){setVoiceState($('cloudHelp').textContent+' Локальные реакции работают.',true);return false;}
