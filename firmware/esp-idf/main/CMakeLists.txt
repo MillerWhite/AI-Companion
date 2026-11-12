@@ -18,5 +18,4 @@ idf_component_register(
         wifi_provisioning
         nvs_flash
         json
-        qmi8658
 )
