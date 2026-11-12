@@ -786,20 +786,28 @@ static void imu_task(void *arg)
                 companion_usb_emit_touch("face_down");
                 sleeping = true;
                 manual_sleep = false;
+                companion_emotion_interaction(&state, "rest");
                 set_emotion(COMPANION_SLEEPY, false);
                 set_screen_sleep(true);
+                save_state();
             } else if (events & COMPANION_MOTION_FACE_UP) {
                 companion_usb_emit_touch("face_up");
                 sleeping = false;
                 manual_sleep = false;
+                companion_emotion_interaction(&state, "call");
                 set_screen_sleep(false);
                 set_emotion(COMPANION_HAPPY, true);
+                save_state();
             } else if (events & COMPANION_MOTION_SHAKE) {
                 companion_usb_emit_touch("shake");
+                companion_emotion_interaction(&state, "shake");
                 dizzy_until_us = esp_timer_get_time() + 2600000LL;
                 set_emotion(COMPANION_DIZZY, true);
+                save_state();
             } else if (events & COMPANION_MOTION_FALL) {
+                companion_emotion_interaction(&state, "surprise");
                 set_emotion(COMPANION_SURPRISED, false);
+                save_state();
             } else if ((events & (COMPANION_MOTION_UPSIDE_DOWN | COMPANION_MOTION_UPRIGHT)) &&
                        current_emotion == COMPANION_CALM) {
                 set_emotion(COMPANION_CURIOUS, false);
