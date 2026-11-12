@@ -568,7 +568,8 @@ void app_main(void)
     lv_obj_set_style_bg_color(screen, lv_color_hex(0x05070B), 0);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, 0);
 
-    lv_obj_t *face = lv_obj_create(screen);\n    screen_face = face;
+    lv_obj_t *face = lv_obj_create(screen);
+    screen_face = face;
     lv_obj_remove_style_all(face);
     lv_obj_set_size(face, 466, 330);
     lv_obj_align(face, LV_ALIGN_CENTER, 0, -25);
@@ -654,7 +655,8 @@ void app_main(void)
     } else {
         ESP_LOGW(TAG, "QMI8658 unavailable; IMU reactions disabled");
     }
-    xTaskCreate(network_setup_task, "companion_setup", 4096, NULL, 2, NULL);\n    xTaskCreate(power_task, "companion_power", 4096, NULL, 2, NULL);
+    xTaskCreate(network_setup_task, "companion_setup", 4096, NULL, 2, NULL);
+    xTaskCreate(power_task, "companion_power", 4096, NULL, 2, NULL);
     ESP_LOGI(TAG, "AI Companion firmware 2.1.0 started. Nonverbal output only; offline local mode retained.");
     if (companion_usb_start(on_usb_command) != ESP_OK) {
         ESP_LOGW(TAG, "USB Serial/JTAG control protocol unavailable");
