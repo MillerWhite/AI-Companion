@@ -60,12 +60,12 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 <div class="profile" id="profile"><strong>Milo · личность</strong><p>Игривый, дружелюбный, любопытный. Иногда сам инициирует контакт и внимательно наблюдает за владельцем.</p><div class="chips"><span class="chip">игривый</span><span class="chip">дружелюбный</span><span class="chip">любопытный</span></div></div>
 <h2 style="margin-top:18px">Звуковая лаборатория</h2>
 <div class="soundgrid">
-<button class="sound" onclick="playSound('greeting')">♡ Приветствие</button><button class="sound" onclick="playSound('happy')">✧ Радость</button><button class="sound" onclick="playSound('curious')">? Любопытство</button>
-<button class="sound" onclick="playSound('surprise')">! Удивление</button><button class="sound" onclick="playSound('shy')">◌ Смущение</button><button class="sound" onclick="playSound('sleep')">z Сон</button>
-<button class="sound" onclick="playSound('attention')">♡ Внимание</button><button class="sound" onclick="playSound('giggle')">♪ Хихиканье</button><button class="sound" onclick="playSound('purr')">≈ Довольство</button>
-<button class="sound" onclick="playSound('boop')">● Буп</button><button class="sound" onclick="playSound('sad')">☁ Грусть</button><button class="sound" onclick="playSound('nope')">⊘ Недовольство</button>
-<button class="sound" onclick="playSound('trill')">〰 Трель</button><button class="sound" onclick="playSound('bubble')">◉ Пузырёк</button><button class="sound" onclick="playSound('whistle')">♬ Свист</button>
-<button class="sound" onclick="playSound('squeak')">⌁ Писк</button><button class="sound" onclick="playSound('coo')">♡ Нежность</button><button class="sound" onclick="playSound('wonder')">✧ Восхищение</button>
+<button class="sound" onclick="playSound('greeting',true)">♡ Приветствие</button><button class="sound" onclick="playSound('happy',true)">✧ Радость</button><button class="sound" onclick="playSound('curious',true)">? Любопытство</button>
+<button class="sound" onclick="playSound('surprise',true)">! Удивление</button><button class="sound" onclick="playSound('shy',true)">◌ Смущение</button><button class="sound" onclick="playSound('sleep',true)">z Сон</button>
+<button class="sound" onclick="playSound('attention',true)">♡ Внимание</button><button class="sound" onclick="playSound('giggle',true)">♪ Хихиканье</button><button class="sound" onclick="playSound('purr',true)">≈ Довольство</button>
+<button class="sound" onclick="playSound('boop',true)">● Буп</button><button class="sound" onclick="playSound('sad',true)">☁ Грусть</button><button class="sound" onclick="playSound('nope',true)">⊘ Недовольство</button>
+<button class="sound" onclick="playSound('trill',true)">〰 Трель</button><button class="sound" onclick="playSound('bubble',true)">◉ Пузырёк</button><button class="sound" onclick="playSound('whistle',true)">♬ Свист</button>
+<button class="sound" onclick="playSound('squeak',true)">⌁ Писк</button><button class="sound" onclick="playSound('coo',true)">♡ Нежность</button><button class="sound" onclick="playSound('wonder',true)">✧ Восхищение</button>
 </div>
 <p class="soundnote">Нажми любую пробу — звук воспроизведётся через динамики или наушники компьютера. Браузер может запросить разрешение на звук после первого нажатия.</p>
 </section></div></main>
@@ -82,7 +82,8 @@ function noise(c,t,dur,vol=.018,filterFreq=1800){
  for(let i=0;i<n;i++)a[i]=(Math.random()*2-1)*(1-i/n);
  const src=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();src.buffer=b;f.type='bandpass';f.frequency.value=filterFreq;f.Q.value=.8;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol*.22,t+.02);g.gain.setTargetAtTime(.0001,t+.03,Math.max(.05,dur*.25));src.connect(f);f.connect(g);g.connect(c.destination);src.start(t);src.stop(t+dur+.01);
 }
-function playSound(type){
+function playSound(type,force=false){
+ const nowMs=Date.now();if(!force&&nowMs-lastSoundAt<4200){log('Звук пропущен: пауза между реакциями');return}lastSoundAt=nowMs;
  const c=audio();if(!c){log('Web Audio API недоступен');return}const t=c.currentTime, r=()=>.94+Math.random()*.12;
  const patterns={
  greeting:{wave:'sine',notes:[[510,0,.13,700],[760,.16,.13,920],[880,.34,.2,690]]},
