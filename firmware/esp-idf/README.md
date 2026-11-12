@@ -38,7 +38,7 @@ The VAD threshold, microphone channel selection, echo handling and audio levels 
 
 ## Wi-Fi
 
-The provisioning manager uses SoftAP + Security 1 proof-of-possession. Wi-Fi credentials are stored by the ESP-IDF provisioning manager in NVS. Reconnect attempts use bounded exponential backoff and continue after repeated failures.
+The provisioning manager uses SoftAP + Security 1 proof-of-possession. Wi-Fi credentials are stored by the ESP-IDF provisioning manager in NVS. Reconnect attempts use bounded exponential backoff and continue after repeated failures. To clear saved Wi-Fi credentials and re-enter provisioning, hold the face touch area; the device restarts into setup mode.
 
 ## Audio and sensors
 
