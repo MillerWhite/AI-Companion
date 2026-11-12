@@ -51,7 +51,7 @@ static void test_emotion_selection_is_valid(void)
     companion_emotion_init(&state);
     for (uint32_t roll = 0; roll < 1000; ++roll) {
         companion_emotion_t emotion = companion_emotion_choose(&state, 12, roll, COMPANION_CALM);
-        assert(emotion >= 0 && emotion < COMPANION_EMOTION_COUNT);
+        assert(emotion < COMPANION_EMOTION_COUNT);
     }
 }
 
