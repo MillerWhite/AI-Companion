@@ -161,6 +161,16 @@ static void save_state(void)
     nvs_close(handle);
 }
 
+static void refresh_personality(void)
+{
+    nvs_handle_t handle;
+    if (nvs_open("companion", NVS_READONLY, &handle) != ESP_OK) return;
+    uint8_t temperament = 0, initiative = 0;
+    if (nvs_get_u8(handle, "temperament", &temperament) == ESP_OK) state.temperament = temperament <= 4 ? temperament : 0;
+    if (nvs_get_u8(handle, "initiative", &initiative) == ESP_OK) state.initiative = initiative <= 2 ? initiative : 0;
+    nvs_close(handle);
+}
+
 static void load_state(void)
 {
     companion_emotion_init(&state);
@@ -250,6 +260,7 @@ static void blink_timer(lv_timer_t *timer)
 static void autonomous_timer(lv_timer_t *timer)
 {
     (void)timer;
+    refresh_personality();
     companion_emotion_tick(&state, 8, sleeping);
     if (!sleeping) {
         const uint32_t chance = state.initiative == 1 ? 42U : (state.initiative == 2 ? 12U : 25U);
