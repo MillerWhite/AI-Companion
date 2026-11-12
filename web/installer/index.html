@@ -4,36 +4,264 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#08090d">
-  <title>AI Companion — установка</title>
+  <title>AI Companion — установка и управление</title>
   <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
   <style>
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:#08090d;color:#f5f6f8;font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
-    main{width:min(920px,92vw);margin:0 auto;padding:58px 0 80px}.eyebrow{font-size:11px;letter-spacing:.2em;color:#91a2b6;text-transform:uppercase}
-    h1{font-size:clamp(34px,6vw,58px);line-height:1.05;margin:12px 0}p{color:#b7c0cc}.panel{margin-top:28px;padding:24px;border:1px solid #2c3440;border-radius:20px;background:#11151c}
-    .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:18px}.step{padding:16px;border:1px solid #29313d;border-radius:14px;background:#0b0e13}
-    .number{color:#8bdcff;font-size:12px;letter-spacing:.12em}.step h2{font-size:17px;margin:6px 0}.step p{font-size:13px;margin:0}
-    esp-web-install-button{display:block;margin-top:22px}esp-web-install-button::part(button){background:#d9f4ff;color:#06111a;border-radius:12px;padding:14px 20px;font-weight:800}
-    a{color:#a6ddff}code{color:#d8e5f4}.warning{font-size:13px;border-left:2px solid #d7a55c;padding-left:12px;color:#c6b9a6}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:#08090d;color:#f5f6f8;font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
+    main{width:min(940px,92vw);margin:0 auto;padding:48px 0 72px}
+    .eyebrow{font-size:11px;letter-spacing:.2em;color:#91a2b6;text-transform:uppercase}
+    h1{font-size:clamp(34px,6vw,56px);line-height:1.05;margin:12px 0}
+    h2{font-size:22px;margin:6px 0 10px}
+    p{color:#b7c0cc}
+    .panel{margin-top:20px;padding:24px;border:1px solid #2c3440;border-radius:20px;background:#11151c}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+    .step{padding:16px;border:1px solid #29313d;border-radius:14px;background:#0b0e13}
+    .number{color:#8bdcff;font-size:12px;letter-spacing:.12em}
+    .step h3{font-size:16px;margin:6px 0}
+    .step p{font-size:13px;margin:0}
+    button, input, select{font:inherit}
+    button{border:1px solid #344151;background:#1a222d;color:#f5f6f8;border-radius:11px;padding:12px 16px;font-weight:700;cursor:pointer}
+    button.primary{background:#d9f4ff;color:#06111a;border-color:#d9f4ff}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    input,select{width:100%;padding:11px 12px;background:#090d13;color:#f5f6f8;border:1px solid #344151;border-radius:10px}
+    label{display:block;color:#aeb9c7;font-size:13px;margin:10px 0 5px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .status{padding:10px 12px;border-radius:10px;background:#0a0e14;color:#b7c0cc;font-size:13px;min-height:42px}
+    .fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:14px}
+    .muted{font-size:13px;color:#8996a7}
+    .warning{font-size:13px;border-left:2px solid #d7a55c;padding-left:12px;color:#c6b9a6}
+    esp-web-install-button{display:block;margin-top:18px}
+    esp-web-install-button::part(button){background:#d9f4ff;color:#06111a;border-radius:12px;padding:14px 20px;font-weight:800}
+    a{color:#a6ddff}
+    [hidden]{display:none!important}
+    @media(max-width:560px){.fields{grid-template-columns:1fr}main{padding-top:28px}.panel{padding:18px}}
   </style>
 </head>
-<body><main>
-  <div class="eyebrow">AI Companion · firmware installer</div>
-  <h1>Оживи своего компаньона</h1>
-  <p>Установка прошивки для Waveshare ESP32-S3-Touch-AMOLED-1.75C. Используйте Chrome или Edge на компьютере и USB-кабель с передачей данных.</p>
+<body>
+<main>
+  <div class="eyebrow">AI Companion · device console</div>
+  <h1>Установка и управление компаньоном</h1>
+  <p>Подключите Waveshare ESP32-S3-Touch-AMOLED-1.75C кабелем USB с передачей данных. Сначала установите прошивку, затем подключитесь к устройству для настройки имени и характера.</p>
+
   <section class="panel">
-    <div class="eyebrow">01 · Установка прошивки</div>
-    <h2>Подключите устройство по USB</h2>
-    <p>Выберите порт устройства и подтвердите установку. Прошивальщик получает объединённый бинарный образ из последнего опубликованного релиза.</p>
+    <div class="eyebrow">01 · Firmware</div>
+    <h2>Установить или обновить прошивку</h2>
+    <p>Работает в Chrome и Edge на компьютере. Выберите USB-порт устройства в системном окне и дождитесь завершения записи. Не отключайте кабель во время установки.</p>
     <esp-web-install-button manifest="./manifest.json">
       <span slot="unsupported">Браузер не поддерживает Web Serial. Откройте страницу в Chrome или Edge на компьютере.</span>
       <span slot="not-allowed">Для установки требуется HTTPS и разрешение на доступ к последовательному порту.</span>
     </esp-web-install-button>
+    <p class="muted">Перед установкой закройте USB-подключение в панели управления ниже. После прошивки устройство перезагрузится.</p>
   </section>
-  <div class="steps">
-    <section class="step"><div class="number">02 · WI-FI</div><h2>Подключите к сети</h2><p>При первом запуске компаньон покажет SSID, пароль и PIN защищённой SoftAP-сети. Используйте <a href="https://play.google.com/store/apps/details?id=com.espressif.provsoftap" target="_blank" rel="noopener">официальное Android-приложение</a> или <a href="https://apps.apple.com/us/app/esp-softap-provisioning/id1474040630" target="_blank" rel="noopener">iOS-приложение</a> Espressif и передайте устройству данные домашней сети.</p></section>
-    <section class="step"><div class="number">03 · АКТИВАЦИЯ</div><h2>Привяжите устройство</h2><p>После подключения к Wi-Fi экран покажет локальный IP и восьмизначный PIN владельца. Откройте IP в браузере на том же Wi-Fi, введите PIN, HTTPS-адрес backend и одноразовый код активации заказа. Долгое нажатие на лицо сбрасывает Wi-Fi и запускает настройку заново.</p></section>
-    <section class="step"><div class="number">04 · ГОТОВО</div><h2>Проверьте работу</h2><p>Устройство сохранит токен в NVS. Микрофоны отправляют аудио только на сервер для распознавания; ответы ИИ управляют мимикой и невербальными реакциями.</p></section>
+
+  <section class="panel">
+    <div class="eyebrow">02 · USB Serial</div>
+    <div class="row">
+      <h2 style="margin-right:auto">Подключение и настройки</h2>
+      <button id="connect" class="primary">Подключить по USB</button>
+      <button id="disconnect" disabled>Отключить</button>
+    </div>
+    <div id="status" class="status" role="status" aria-live="polite">Устройство не подключено</div>
+    <div id="controls" hidden>
+      <div class="fields">
+        <div>
+          <label for="name">Имя компаньона</label>
+          <input id="name" maxlength="40" value="Milo">
+        </div>
+        <div>
+          <label for="version">Версия прошивки</label>
+          <input id="version" readonly value="—">
+        </div>
+        <div>
+          <label for="temperament">Темперамент</label>
+          <select id="temperament">
+            <option value="0">Сбалансированный</option>
+            <option value="1">Спокойный</option>
+            <option value="2">Энергичный</option>
+            <option value="3">Застенчивый</option>
+            <option value="4">Мечтательный</option>
+          </select>
+        </div>
+        <div>
+          <label for="initiative">Инициативность</label>
+          <select id="initiative">
+            <option value="0">Средняя</option>
+            <option value="1">Высокая</option>
+            <option value="2">Низкая</option>
+          </select>
+        </div>
+        <div>
+          <label for="quirk">Особенность характера</label>
+          <select id="quirk">
+            <option value="0">Нет</option>
+            <option value="1">Соня</option>
+            <option value="2">Любопытный</option>
+            <option value="3">Озорной</option>
+            <option value="4">Застенчивый</option>
+          </select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button id="save" class="primary">Сохранить настройки</button>
+        <span id="saved" class="muted"></span>
+      </div>
+      <div class="actions">
+        <button data-command="pet">Погладить</button>
+        <button data-command="play">Поиграть</button>
+        <button data-command="sleep">Усыпить</button>
+        <button data-command="wake">Разбудить</button>
+        <button data-command="wifi-reset">Сбросить Wi-Fi</button>
+      </div>
+      <p class="muted">Настройки записываются во внутреннюю память устройства. Команды отправляются по USB и работают без облачного ИИ.</p>
+    </div>
+  </section>
+
+  <div class="grid" style="margin-top:18px">
+    <section class="step"><div class="number">03 · WI-FI</div><h3>Подключить к сети</h3><p>При первом запуске экран покажет имя и пароль временной Wi-Fi сети, а также PIN. Подключите устройство к домашней сети через приложение ESP SoftAP Provisioning.</p></section>
+    <section class="step"><div class="number">04 · АКТИВАЦИЯ</div><h3>Привязать устройство</h3><p>После подключения к домашнему Wi-Fi экран покажет IP и PIN локальной панели. Откройте IP на телефоне или компьютере в той же сети и введите одноразовый код активации.</p></section>
+    <section class="step"><div class="number">05 · AI</div><h3>Проверить общение</h3><p>После активации компаньон распознаёт обращённую к нему речь, определяет намерение и отвечает выражением лица и короткими невербальными звуками. Голосовой речи у него нет.</p></section>
   </div>
-  <p class="warning">Важно: публичный бинарный релиз появится после успешной сборки и публикации тега firmware-v*. До появления первого релиза кнопка установки не сможет загрузить прошивку. Аппаратные функции необходимо проверить на реальной плате перед продажей.</p>
-  <p><a href="https://github.com/MillerWhite/AI-Companion">Исходный код проекта</a> · <a href="https://docs.waveshare.com/ESP32-S3-Touch-AMOLED-1.75C">Документация платы</a></p>
-</main></body></html>
+  <p class="warning">Кнопка установки использует последний опубликованный firmware release. Пока сборка не прошла CI и релиз не опубликован, прошивать устройство с этой страницы нельзя. Работу микрофонов, динамика, экрана и датчиков необходимо подтвердить на физической плате.</p>
+  <p><a href="https://github.com/MillerWhite/AI-Companion">Исходный код AI Companion</a> · <a href="https://docs.waveshare.com/ESP32-S3-Touch-AMOLED-1.75C">Документация Waveshare</a></p>
+</main>
+
+<script>
+(() => {
+  const $ = (selector) => document.querySelector(selector);
+  const connect = $("#connect"), disconnect = $("#disconnect"), status = $("#status");
+  const controls = $("#controls");
+  if (!("serial" in navigator)) {
+    connect.disabled = true;
+    status.textContent = "Web Serial недоступен. Откройте страницу в Chrome или Edge на компьютере.";
+  }
+
+  let port = null, reader = null, writer = null, buffer = "";
+  const encoder = new TextEncoder(), decoder = new TextDecoder();
+
+  function setStatus(message) { status.textContent = message; }
+
+  function applyConfig(config) {
+    $("#name").value = config.name || "Milo";
+    $("#version").value = config.version || "—";
+    $("#temperament").value = String(config.temperament ?? 0);
+    $("#initiative").value = String(config.initiative ?? 0);
+    $("#quirk").value = String(config.quirk ?? 0);
+    controls.hidden = false;
+    setStatus("Компаньон подключён · прошивка " + (config.version || "неизвестна"));
+  }
+
+  function onLine(line) {
+    if (line.startsWith("@C ")) {
+      try { applyConfig(JSON.parse(line.slice(3))); }
+      catch (_) { setStatus("Получена повреждённая конфигурация USB"); }
+    } else if (line.startsWith("@S ")) {
+      try {
+        const state = JSON.parse(line.slice(3));
+        if (state.usb) disconnect.disabled = false;
+      } catch (_) {}
+    } else if (line.startsWith("@E ")) {
+      setStatus("Ошибка устройства: " + line.slice(3));
+    }
+  }
+
+  async function send(command) {
+    if (!port || !port.writable) throw new Error("USB-порт не подключён");
+    writer = port.writable.getWriter();
+    try { await writer.write(encoder.encode(command + "\n")); }
+    finally { writer.releaseLock(); writer = null; }
+  }
+
+  async function readLoop() {
+    const activePort = port;
+    try {
+      while (activePort && activePort.readable && port === activePort) {
+        reader = activePort.readable.getReader();
+        try {
+          while (port === activePort) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            let index;
+            while ((index = buffer.indexOf("\n")) >= 0) {
+              const line = buffer.slice(0, index).replace(/\r$/, "");
+              buffer = buffer.slice(index + 1);
+              onLine(line);
+            }
+          }
+        } finally {
+          reader.releaseLock();
+          reader = null;
+        }
+      }
+    } catch (error) {
+      if (port === activePort) setStatus("USB-соединение прервано: " + error.message);
+    }
+  }
+
+  connect.addEventListener("click", async () => {
+    try {
+      connect.disabled = true;
+      setStatus("Выберите USB Serial/JTAG порт устройства…");
+      port = await navigator.serial.requestPort({ filters: [{ usbVendorId: 0x303a }] });
+      await port.open({ baudRate: 115200 });
+      disconnect.disabled = false;
+      setStatus("USB подключён. Запрашиваю настройки…");
+      readLoop();
+      await new Promise(resolve => setTimeout(resolve, 250));
+      await send("config");
+      await send("status");
+    } catch (error) {
+      if (error.name !== "NotFoundError") setStatus("Не удалось подключиться: " + error.message);
+      if (port) { try { await port.close(); } catch (_) {} }
+      port = null;
+      disconnect.disabled = true;
+    } finally {
+      connect.disabled = false;
+    }
+  });
+
+  disconnect.addEventListener("click", async () => {
+    const activePort = port;
+    port = null;
+    try { if (reader) await reader.cancel(); } catch (_) {}
+    try { if (activePort) await activePort.close(); } catch (_) {}
+    controls.hidden = true;
+    disconnect.disabled = true;
+    setStatus("USB отключён");
+  });
+
+  $("#save").addEventListener("click", async () => {
+    const name = $("#name").value.trim();
+    if (!name || name.length > 40 || /[\r\n]/.test(name)) {
+      setStatus("Имя должно содержать от 1 до 40 символов");
+      return;
+    }
+    try {
+      await send("name " + name);
+      await send("temperament " + $("#temperament").value);
+      await send("initiative " + $("#initiative").value);
+      await send("quirk " + $("#quirk").value);
+      $("#saved").textContent = "Настройки отправлены";
+      await send("config");
+    } catch (error) { setStatus("Не удалось сохранить: " + error.message); }
+  });
+
+  document.querySelectorAll("[data-command]").forEach(button => {
+    button.addEventListener("click", async () => {
+      try { await send(button.dataset.command); setStatus("Команда отправлена: " + button.textContent); }
+      catch (error) { setStatus("Ошибка: " + error.message); }
+    });
+  });
+
+  navigator.serial?.addEventListener("disconnect", () => {
+    port = null;
+    controls.hidden = true;
+    disconnect.disabled = true;
+    setStatus("Устройство отключено от USB");
+  });
+})();
+</script>
+</body>
+</html>
