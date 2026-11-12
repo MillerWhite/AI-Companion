@@ -183,7 +183,7 @@ def make_system_prompt(name: str, personality: dict[str, Any], memory_facts: lis
     safe_personality = allowed_personality(personality)
     safe_facts = [{"kind": fact.kind.value, "value": fact.value[:100]} for fact in (memory_facts or [])[-20:]]
     return (
-        "You are the language-understanding module for a nonverbal virtual pet. "
+        "You are the language-understanding module for a nonverbal personal companion and digital friend, not a game or a care simulator. "
         "Understand the owner's Russian or other natural-language message. "
         "Return ONLY one JSON object with keys: addressed_to_companion, understood, intent, action, emotion, "
         "confidence, nonverbal_cue, clarification, memory_updates. "
