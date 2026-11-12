@@ -32,7 +32,7 @@ static esp_err_t root_handler(httpd_req_t *req)
         "<label>Инициативность</label><select id='initiative'><option value='medium'>Средняя</option><option value='high'>Высокая</option><option value='low'>Низкая</option></select>"
         "<button id='profile'>Сохранить характер</button><button id='memory'>Посмотреть память</button><button id='reset'>Сбросить серверную память</button><pre id='memoryData' style='white-space:pre-wrap;color:#aab2c0;font-size:12px'></pre></section>"
         "<small>Не отправляйте код активации другим людям. Устройство хранит секрет авторизации в защищённом NVS, браузер его не получает.</small></main>"
-        "<script>const $=s=>document.querySelector(s);fetch('/device-info').then(r=>r.json()).then(d=>{$('#serial').value=d.serial;$('#status').textContent='Устройство онлайн · '+d.ip+(d.claimed?' · уже активировано':' · ожидает активации');if(d.claimed)$('#owner').hidden=false}).catch(()=>{});"
+        "<script>const $=s=>document.querySelector(s);fetch('/device-info').then(r=>r.json()).then(d=>{$('#serial').value=d.serial;$('#status').textContent='Устройство онлайн · '+d.ip+(d.claimed?' · уже активировано':' · ожидает активации');if(d.claimed){$('#owner').hidden=false;$('#name').value=d.companion_name||'Milo';$('#temper').value=d.temperament||'balanced';$('#initiative').value=d.initiative||'medium'}}).catch(()=>{});"
         "$('#claim').onclick=async()=>{let b=$('#claim'),s=$('#status');b.disabled=true;s.textContent='Активируем…';try{let r=await fetch('/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({api_base:$('#api').value.trim(),serial:$('#serial').value,companion_name:$('#name').value.trim(),enrollment_grant:$('#grant').value.trim()})});let d=await r.json();if(!r.ok)throw Error(d.message||d.detail?.message||'Ошибка активации');s.textContent='Готово. Устройство активировано.';$('#grant').value='';$('#owner').hidden=false;}catch(e){s.textContent='Не удалось активировать: '+e.message;}finally{b.disabled=false}};"
         "$('#profile').onclick=async()=>{let r=await fetch('/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({companion_name:$('#name').value.trim(),personality:{temperament:$('#temper').value,initiative:$('#initiative').value}})});$('#status').textContent=r.ok?'Характер сохранён':'Не удалось сохранить характер'};"
         "$('#memory').onclick=async()=>{let r=await fetch('/memory'),d=await r.json();$('#memoryData').textContent=JSON.stringify(d,null,2)};"
@@ -61,11 +61,26 @@ static esp_err_t device_info_handler(httpd_req_t *req)
         nvs_close(nvs);
     }
     cJSON *json = cJSON_CreateObject();
+    if (!json) return ESP_ERR_NO_MEM;
     cJSON_AddStringToObject(json, "serial", serial);
     cJSON_AddStringToObject(json, "ip", ip_text);
     cJSON_AddBoolToObject(json, "claimed", claimed);
+    if (nvs_open("companion", NVS_READONLY, &nvs) == ESP_OK) {
+        char companion_name[48] = "Milo"; size_t name_size = sizeof(companion_name);
+        if (nvs_get_str(nvs, "companion_name", companion_name, &name_size) == ESP_OK)
+            cJSON_AddStringToObject(json, "companion_name", companion_name);
+        uint8_t temperament = 0, initiative = 0;
+        nvs_get_u8(nvs, "temperament", &temperament);
+        nvs_get_u8(nvs, "initiative", &initiative);
+        static const char *temper_names[] = {"balanced", "calm", "energetic", "shy", "dreamy"};
+        static const char *initiative_names[] = {"medium", "high", "low"};
+        cJSON_AddStringToObject(json, "temperament", temper_names[temperament <= 4 ? temperament : 0]);
+        cJSON_AddStringToObject(json, "initiative", initiative_names[initiative <= 2 ? initiative : 0]);
+        nvs_close(nvs);
+    }
     char *body = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
+    if (!body) return ESP_ERR_NO_MEM;
     httpd_resp_set_type(req, "application/json");
     esp_err_t err = httpd_resp_send(req, body, HTTPD_RESP_USE_STRLEN);
     cJSON_free(body);
@@ -79,12 +94,16 @@ static esp_err_t claim_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
     char body[4097] = {0};
-    int received = httpd_req_recv(req, body, req->content_len);
-    if (received <= 0) {
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Request body missing");
-        return ESP_FAIL;
+    size_t total = 0;
+    while (total < (size_t)req->content_len) {
+        int received = httpd_req_recv(req, body + total, req->content_len - total);
+        if (received <= 0) {
+            httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Request body incomplete");
+            return ESP_FAIL;
+        }
+        total += (size_t)received;
     }
-    cJSON *json = cJSON_ParseWithLength(body, (size_t)received);
+    cJSON *json = cJSON_ParseWithLength(body, total);
     if (!json) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
         return ESP_FAIL;
@@ -107,6 +126,7 @@ static esp_err_t claim_handler(httpd_req_t *req)
                                           device_id, sizeof(device_id));
     cJSON_Delete(json);
     cJSON *response = cJSON_CreateObject();
+    if (!response) return ESP_ERR_NO_MEM;
     if (err == ESP_OK) {
         cJSON_AddBoolToObject(response, "ok", true);
         cJSON_AddStringToObject(response, "device_id", device_id);
@@ -116,6 +136,7 @@ static esp_err_t claim_handler(httpd_req_t *req)
     }
     char *output = cJSON_PrintUnformatted(response);
     cJSON_Delete(response);
+    if (!output) return ESP_ERR_NO_MEM;
     httpd_resp_set_type(req, "application/json");
     httpd_resp_set_status(req, err == ESP_OK ? "200 OK" : "400 Bad Request");
     esp_err_t send_err = httpd_resp_send(req, output, HTTPD_RESP_USE_STRLEN);
@@ -141,7 +162,7 @@ static esp_err_t owner_memory_reset_handler(httpd_req_t *req)
     char response[1024] = {0};
     esp_err_t err = companion_cloud_owner_request(HTTP_METHOD_DELETE, "/api/device/memory", NULL, response, sizeof(response));
     if (err != ESP_OK) {
-        httpd_resp_send_err(req, HTTPD_503_SERVICE_UNAVAILABLE, "Memory reset failed");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory reset failed");
         return err;
     }
     httpd_resp_set_type(req, "application/json");
@@ -199,7 +220,7 @@ static esp_err_t owner_profile_handler(httpd_req_t *req)
     esp_err_t err = companion_cloud_owner_request(HTTP_METHOD_PATCH, "/api/device/profile", payload, response, sizeof(response));
     cJSON_free(payload);
     if (err != ESP_OK) {
-        httpd_resp_send_err(req, HTTPD_503_SERVICE_UNAVAILABLE, "Profile update failed");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Profile update failed");
         return err;
     }
     httpd_resp_set_type(req, "application/json");
