@@ -30,6 +30,7 @@
 #include "companion_power.h"
 #include "companion_voice.h"
 #include "esp_timer.h"
+#include "qrcodegen.h"
 
 static const char *TAG = "ai_companion";
 static lv_obj_t *eyes[2], *mouth, *status_label, *brows[2], *tears[2], *setup_label, *screen_face;
@@ -47,6 +48,11 @@ static bool audio_available;
 static bool imu_available;
 static char setup_info[128];
 static char owner_setup_pin[16];
+static lv_obj_t *qr_view, *qr_title_label, *qr_count_label, *qr_button;
+static bool qr_mode;
+static uint8_t qr_index;
+static char qr_titles[4][40], qr_urls[4][180];
+static uint8_t qr_temp[qrcodegen_BUFFER_LEN_MAX], qr_code[qrcodegen_BUFFER_LEN_MAX];
 
 static const char *emotion_label(companion_emotion_t emotion)
 {
@@ -421,6 +427,123 @@ static void on_usb_command(const char *command)
     }
 }
 
+
+static void qr_load_slots(void)
+{
+    memset(qr_titles, 0, sizeof(qr_titles));
+    memset(qr_urls, 0, sizeof(qr_urls));
+    nvs_handle_t handle;
+    if (nvs_open("companion", NVS_READONLY, &handle) != ESP_OK) return;
+    const char *keys[4] = {"qr0", "qr1", "qr2", "qr3"};
+    for (int i = 0; i < 4; ++i) {
+        char value[220] = {0};
+        size_t length = sizeof(value);
+        if (nvs_get_str(handle, keys[i], value, &length) != ESP_OK) continue;
+        char *separator = strchr(value, '|');
+        if (separator) {
+            *separator++ = '\0';
+            snprintf(qr_titles[i], sizeof(qr_titles[i]), "%s", value);
+            snprintf(qr_urls[i], sizeof(qr_urls[i]), "%s", separator);
+        } else if (value[0]) {
+            snprintf(qr_urls[i], sizeof(qr_urls[i]), "%s", value);
+            snprintf(qr_titles[i], sizeof(qr_titles[i]), "QR %d", i + 1);
+        }
+    }
+    nvs_close(handle);
+}
+
+static bool qr_prepare(void)
+{
+    if (!qr_urls[qr_index][0]) return false;
+    return qrcodegen_encodeText(qr_urls[qr_index], qr_temp, qr_code,
+        qrcodegen_Ecc_MEDIUM, 1, 10, qrcodegen_Mask_AUTO, true);
+}
+
+static void qr_draw_event(lv_event_t *event)
+{
+    if (lv_event_get_code(event) != LV_EVENT_DRAW_MAIN) return;
+    lv_obj_t *obj = lv_event_get_target(event);
+    lv_layer_t *layer = lv_event_get_layer(event);
+    lv_area_t bounds;
+    lv_obj_get_coords(obj, &bounds);
+    lv_draw_rect_dsc_t rect;
+    lv_draw_rect_dsc_init(&rect);
+    rect.bg_opa = LV_OPA_COVER;
+    rect.bg_color = lv_color_white();
+    rect.radius = 8;
+    lv_draw_rect(layer, &rect, &bounds);
+    if (!qr_prepare()) return;
+    const int size = qrcodegen_getSize(qr_code);
+    const int module = 5;
+    const int total = (size + 8) * module;
+    const int left = bounds.x1 + (lv_area_get_width(&bounds) - total) / 2 + 4 * module;
+    const int top = bounds.y1 + (lv_area_get_height(&bounds) - total) / 2 + 4 * module;
+    rect.bg_color = lv_color_black();
+    rect.radius = 0;
+    for (int y = 0; y < size; ++y) {
+        for (int x = 0; x < size; ++x) {
+            if (!qrcodegen_getModule(qr_code, x, y)) continue;
+            lv_area_t cell = {
+                .x1 = left + x * module, .y1 = top + y * module,
+                .x2 = left + (x + 1) * module - 1, .y2 = top + (y + 1) * module - 1
+            };
+            lv_draw_rect(layer, &rect, &cell);
+        }
+    }
+}
+
+static void qr_refresh(void)
+{
+    if (!qr_mode || !qr_view) return;
+    lv_label_set_text(qr_title_label, qr_titles[qr_index][0] ? qr_titles[qr_index] :
+                      (qr_urls[qr_index][0] ? "Quick QR" : "Нет сохранённой ссылки"));
+    char count[24];
+    snprintf(count, sizeof(count), "%u / 4", (unsigned)(qr_index + 1));
+    lv_label_set_text(qr_count_label, count);
+    lv_obj_invalidate(qr_view);
+}
+
+static void qr_show(bool show)
+{
+    if (!qr_view || !screen_face) return;
+    qr_mode = show;
+    if (show) {
+        qr_load_slots();
+        lv_obj_add_flag(screen_face, LV_OBJ_FLAG_HIDDEN);
+        if (status_label) lv_obj_add_flag(status_label, LV_OBJ_FLAG_HIDDEN);
+        if (setup_label) lv_obj_add_flag(setup_label, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(qr_view, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(qr_title_label, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(qr_count_label, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(qr_button, "CLOSE");
+        qr_refresh();
+    } else {
+        lv_obj_add_flag(qr_view, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(qr_title_label, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(qr_count_label, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(screen_face, LV_OBJ_FLAG_HIDDEN);
+        if (status_label) lv_obj_clear_flag(status_label, LV_OBJ_FLAG_HIDDEN);
+        if (setup_label) lv_obj_clear_flag(setup_label, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(qr_button, "QR");
+        render_emotion(current_emotion);
+    }
+}
+
+static void qr_button_event(lv_event_t *event)
+{
+    if (lv_event_get_code(event) == LV_EVENT_CLICKED) qr_show(!qr_mode);
+}
+
+static void qr_gesture_event(lv_event_t *event)
+{
+    if (lv_event_get_code(event) != LV_EVENT_GESTURE || !qr_mode) return;
+    const lv_dir_t direction = lv_indev_get_gesture_dir(lv_indev_active());
+    if (direction == LV_DIR_LEFT) qr_index = (uint8_t)((qr_index + 1U) % 4U);
+    else if (direction == LV_DIR_RIGHT) qr_index = (uint8_t)((qr_index + 3U) % 4U);
+    else return;
+    qr_refresh();
+}
+
 static void on_face_long_press(lv_event_t *event)
 {
     (void)event;
@@ -431,6 +554,7 @@ static void on_face_long_press(lv_event_t *event)
 static void on_face_tap(lv_event_t *event)
 {
     (void)event;
+    if (qr_mode) return;
     if (sleeping) sleeping = false;
     manual_sleep = false;
     last_activity_us = esp_timer_get_time();
@@ -701,6 +825,30 @@ void app_main(void)
     setup_label = lv_label_create(screen);
     lv_obj_set_style_text_color(setup_label, lv_color_hex(0x7F91A5), 0);
     lv_obj_align(setup_label, LV_ALIGN_BOTTOM_MID, 0, -18);
+
+    qr_view = lv_obj_create(screen);
+    lv_obj_remove_style_all(qr_view);
+    lv_obj_set_size(qr_view, 360, 360);
+    lv_obj_center(qr_view);
+    lv_obj_add_flag(qr_view, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_event_cb(qr_view, qr_draw_event, LV_EVENT_DRAW_MAIN, NULL);
+    lv_obj_add_event_cb(qr_view, qr_gesture_event, LV_EVENT_GESTURE, NULL);
+    lv_obj_add_flag(qr_view, LV_OBJ_FLAG_GESTURE_BUBBLE);
+
+    qr_title_label = lv_label_create(screen);
+    lv_obj_set_style_text_color(qr_title_label, lv_color_hex(0xEAF4FF), 0);
+    lv_obj_align(qr_title_label, LV_ALIGN_TOP_MID, 0, 18);
+    lv_obj_add_flag(qr_title_label, LV_OBJ_FLAG_HIDDEN);
+    qr_count_label = lv_label_create(screen);
+    lv_obj_set_style_text_color(qr_count_label, lv_color_hex(0x91A6BB), 0);
+    lv_obj_align(qr_count_label, LV_ALIGN_BOTTOM_MID, 0, -48);
+    lv_obj_add_flag(qr_count_label, LV_OBJ_FLAG_HIDDEN);
+    qr_button = lv_label_create(screen);
+    lv_label_set_text(qr_button, "QR");
+    lv_obj_set_style_text_color(qr_button, lv_color_hex(0xA8D9FF), 0);
+    lv_obj_align(qr_button, LV_ALIGN_BOTTOM_RIGHT, -18, -18);
+    lv_obj_add_flag(qr_button, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(qr_button, qr_button_event, LV_EVENT_CLICKED, NULL);
 
     render_emotion(COMPANION_CALM);
     lv_timer_create(autonomous_timer, 8000, NULL);
