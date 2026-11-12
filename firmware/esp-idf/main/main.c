@@ -419,7 +419,7 @@ void app_main(void)
 
     err = companion_wifi_start(setup_info, sizeof(setup_info));
     if (err == ESP_OK && setup_info[0]) {
-        ESP_LOGI(TAG, "Secure Wi-Fi setup code: %s", setup_code);
+        ESP_LOGI(TAG, "Secure Wi-Fi setup code: %s", setup_info);
         if (bsp_display_lock(pdMS_TO_TICKS(1000)) == ESP_OK) {
             char line[64];
             snprintf(line, sizeof(line), "%s", setup_info);
