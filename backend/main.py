@@ -650,7 +650,9 @@ def enroll_device(
                 "VALUES (?, ?, ?, ?, ?, ?)",
                 (device_id, serial, _token_hash(device_token), name, json.dumps(personality, ensure_ascii=False), int(time.time())),
             )
-    except sqlite3.IntegrityError:
+    except Exception as error:
+        if not _is_unique_violation(error):
+            raise
         raise HTTPException(status_code=409, detail={"code": "device_already_enrolled", "message": "This device serial is already enrolled"})
     return {"device_id": device_id, "device_token": device_token, "message": "Save the token securely; it is returned only once."}
 
