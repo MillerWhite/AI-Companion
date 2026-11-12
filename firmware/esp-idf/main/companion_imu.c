@@ -10,7 +10,7 @@
 static const char *TAG = "companion_imu";
 static qmi8658_dev_t *imu;
 static float filtered_x, filtered_y, filtered_z;
-static bool ready;
+static bool ready;\nstatic bool filter_initialized;
 
 esp_err_t companion_imu_init(void)
 {
@@ -35,9 +35,14 @@ static bool read_motion(float *x, float *y, float *z)
     bool data_ready = false;
     if (qmi8658_is_data_ready(imu, &data_ready) != ESP_OK || !data_ready) return false;
     if (qmi8658_read_sensor_data(imu, &data) != ESP_OK) return false;
-    filtered_x = filtered_x * 0.78f + data.accelX * 0.22f;
-    filtered_y = filtered_y * 0.78f + data.accelY * 0.22f;
-    filtered_z = filtered_z * 0.78f + data.accelZ * 0.22f;
+    if (!filter_initialized) {
+        filtered_x = data.accelX; filtered_y = data.accelY; filtered_z = data.accelZ;
+        filter_initialized = true;
+    } else {
+        filtered_x = filtered_x * 0.78f + data.accelX * 0.22f;
+        filtered_y = filtered_y * 0.78f + data.accelY * 0.22f;
+        filtered_z = filtered_z * 0.78f + data.accelZ * 0.22f;
+    }
     *x = filtered_x; *y = filtered_y; *z = filtered_z;
     return true;
 }
@@ -52,7 +57,6 @@ bool companion_imu_motion_event(void)
 
 bool companion_imu_tilt_event(void)
 {
-    float x, y, z;
-    if (!read_motion(&x, &y, &z)) return false;
-    return fabsf(x) > 6.0f || fabsf(y) > 6.0f;
+    if (!filter_initialized) return false;
+    return fabsf(filtered_x) > 6.0f || fabsf(filtered_y) > 6.0f;
 }
