@@ -21,14 +21,29 @@ section{padding:17px 0;border-top:1px solid var(--line)}.sectionhead{display:fle
 details{border:1px solid var(--line);border-radius:10px;margin-top:12px;background:#101419}summary{padding:12px 14px;cursor:pointer;font-size:13px;font-weight:650}details .inside{padding:0 14px 14px}.log{white-space:pre-wrap;overflow:auto;max-height:210px;background:#090c0f;border:1px solid #2a333c;border-radius:8px;padding:10px;color:#b4d3e2;font:11px/1.5 var(--mono)}
 footer{border-top:1px solid var(--line);padding-top:14px;margin-top:22px;color:#78838f;font:10px var(--mono);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}a{color:var(--blue);text-decoration:none}
 @media(max-width:560px){main{width:min(100% - 22px,760px);padding-top:13px}header{align-items:flex-start;flex-direction:column}.statusbar{grid-template-columns:1fr}.statusactions{justify-content:flex-start}.stats{grid-template-columns:repeat(3,1fr);gap:5px}.stat{padding:8px}.grid{grid-template-columns:1fr}.qrrow{grid-template-columns:20px 1fr}.qrrow .url{grid-column:2}.sectionhead{align-items:flex-start;flex-direction:column}}
+
+.companion-stage{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:26px 16px 22px;margin:18px 0;background:radial-gradient(ellipse at 50% 42%,#202b36 0,#111820 43%,#0c1015 78%);border:1px solid #303b46;border-radius:22px;overflow:hidden;position:relative}
+.companion-stage:before{content:"";position:absolute;width:340px;height:220px;border-radius:50%;background:#b9eaff0a;filter:blur(36px);pointer-events:none}
+.pet-orb{width:clamp(170px,38vw,224px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;position:relative;background:radial-gradient(circle at 50% 42%,#1b2934,#090d12 72%);border:1px solid #40505d;box-shadow:0 0 0 7px #ffffff04,0 18px 65px #000a,inset 0 0 32px #b8eaff0a;animation:petBreath 5.5s ease-in-out infinite;cursor:pointer;touch-action:manipulation}
+.pet-face{display:flex;align-items:center;gap:30px;position:relative;transform:translateY(-4px);animation:petFloat 4.2s ease-in-out infinite}
+.pet-eye{width:31px;height:48px;border-radius:55% 55% 48% 48%;background:linear-gradient(180deg,#fff,#ccefff);box-shadow:0 0 10px #d9f6ffb0,0 0 25px #8edcff55;position:relative;transform-origin:center;animation:petEye 6s infinite}
+.pet-eye:after{content:"";position:absolute;width:8px;height:12px;border-radius:50%;background:#fff;top:7px;left:7px;opacity:.92}
+.pet-mouth{position:absolute;width:18px;height:8px;border-bottom:2px solid #e9f8ff;border-radius:0 0 50% 50%;left:50%;top:calc(50% + 43px);transform:translateX(-50%);opacity:.9;transition:all .25s}
+.pet-orb.happy .pet-eye{height:38px;border-radius:50% 50% 40% 40%}.pet-orb.happy .pet-mouth{width:27px;height:13px;border-bottom-width:4px}
+.pet-orb.curious .pet-eye:first-child{transform:translateY(-5px) scale(1.05)}.pet-orb.curious .pet-eye:last-child{transform:translateY(4px) scale(.92)}
+.pet-orb.surprised .pet-eye{height:57px;width:35px}.pet-orb.sleep .pet-eye{height:4px;border-radius:9px;animation:none}.pet-orb.sleep .pet-mouth{width:12px;height:3px}
+.pet-caption{font-size:14px;font-weight:650;letter-spacing:.01em;position:relative}.pet-subcaption{font-size:11px;color:#9aa9b5;position:relative;text-align:center}.pet-hint{font-size:10px;color:#788793;position:relative}
+@keyframes petBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.018)}}@keyframes petFloat{0%,100%{transform:translateY(-4px)}50%{transform:translateY(-8px)}}@keyframes petEye{0%,42%,46%,100%{transform:scaleY(1)}44%{transform:scaleY(.07)}}
+@media(prefers-reduced-motion:reduce){.pet-orb,.pet-face,.pet-eye{animation:none}}
 </style>
 </head>
 <body><main>
-<header><div class="brand"><div class="mark">AC</div><div><b>AI COMPANION</b><small>ПАНЕЛЬ БРЕЛОКА</small></div></div><a href="https://github.com/MillerWhite/AI-Companion">Исходный код ↗</a></header>
+<header><div class="brand"><div class="mark">AC</div><div><b>AI COMPANION</b><small>ТВОЙ КАРМАННЫЙ ДРУГ</small></div></div><span class="pet-hint">ВСЕГДА РЯДОМ</span></header>
 <div class="hero"><div class="eyebrow">YOUR PERSONAL COMPANION</div><h1>Твой электронный друг</h1><p>Настрой характер, экран и личные ссылки. Компаньон реагирует на тебя и события вокруг — без голода, кормления и обязательного ухода.</p></div>
+<div class="companion-stage"><div class="pet-orb neutral" id="petOrb" role="img" aria-label="Живое лицо компаньона"><div class="pet-face"><i class="pet-eye"></i><i class="pet-eye"></i><i class="pet-mouth" id="petMouth"></i></div></div><div class="pet-caption" id="petCaption">Я здесь</div><div class="pet-subcaption" id="petSubcaption">Спокойно оглядываюсь и жду знакомства</div><div class="pet-hint">Коснись лица, чтобы поздороваться</div></div>
 <div class="statusbar"><div class="statusmain"><i class="dot" id="dot"></i><div class="statuscopy"><b id="conn">Не подключён</b><small id="status">Подключи брелок USB-кабелем с передачей данных. Работает в Chrome и Edge.</small></div></div><div class="statusactions"><button class="primary" id="connect">Подключить по кабелю</button><button id="disconnect" disabled>Отключить</button></div></div>
 <div class="stats"><div class="stat"><small>Прошивка</small><b id="version">—</b></div><div class="stat"><small>Батарея</small><b id="battery">—</b></div><div class="stat"><small>Имя</small><b id="deviceName">—</b></div></div>
-<div class="notice">Панель общается с устройством напрямую через USB Serial. Настройки и четыре QR-ссылки сохраняются во внутренней памяти брелока. Bluetooth-пульт работает независимо от USB.</div>
+<div class="notice">Подключи друга, чтобы настроить его имя, характер и личные ссылки. После сохранения настройки останутся с ним.</div>
 
 <section><div class="sectionhead"><h2>Имя и характер</h2><small>ЛИЧНОСТЬ</small></div><div class="grid">
 <div class="field"><label for="name">Имя компаньона</label><input id="name" maxlength="40" placeholder="Например, Milo"></div>
@@ -53,22 +68,22 @@ footer{border-top:1px solid var(--line);padding-top:14px;margin-top:22px;color:#
 <div><b>QR на AMOLED</b><p class="muted">Четыре ссылки хранятся на устройстве; QR-код открывается кнопкой QR и переключается горизонтальным свайпом.</p></div>
 </div></section>
 <section><div class="sectionhead"><h2>iPhone</h2><small>ANCS / AMS · BLUETOOTH</small></div>
-<p class="muted">На прошивке добавлен GATT-клиент Apple ANCS и AMS. Подключи iPhone: Настройки → Bluetooth → AI Companion Remote, подтверди сопряжение и разреши Share System Notifications, если iOS покажет запрос. Уведомления и информация о треке выводятся на AMOLED. На устройстве переключи режим REMOTE → MOUSE → IPHONE: свайпы влево/вправо меняют трек, вверх — play/pause, вниз — громкость вверх, касание — громкость вниз. AMS может появляться только при активной медиасессии iOS.</p>
+<p class="muted">Подключи iPhone: Настройки → Bluetooth → AI Companion, подтверди сопряжение и разреши показ системных уведомлений, если iOS предложит. Уведомления и информация о треке выводятся на AMOLED. На устройстве переключи режим REMOTE → MOUSE → IPHONE: свайпы влево/вправо меняют трек, вверх — play/pause, вниз — громкость вверх, касание — громкость вниз. AMS может появляться только при активной медиасессии iOS.</p>
 </section>
 <section><div class="sectionhead"><h2>Приложения и диагностика</h2><small>DEVICE</small></div>
 <div class="grid">
-<div><b>USB Serial</b><p class="muted">Настройки, имя, характер, бейдж, экран и QR-ссылки сохраняются прямо в NVS брелока.</p></div>
-<div><b>Диагностика</b><p class="muted">Панель показывает версию прошивки, батарею, питание и журнал команд устройства.</p></div>
+<div><b>USB Serial</b><p class="muted">Имя, характер, бейдж, экран и QR-ссылки сохраняются в памяти друга.</p></div>
+<div><b>Диагностика</b><p class="muted">Здесь можно посмотреть состояние подключения, заряд и имя друга.</p></div>
 <div><b>Локальные реакции</b><p class="muted">Эмоции, касания, звук, движение и зарядка обрабатываются на устройстве.</p></div>
-<div><b>Прошивка</b><p class="muted">Веб-установщик использует Web Serial; опубликованный бинарный релиз появится после успешной CI-сборки.</p></div>
+<div><b>Прошивка</b><p class="muted">Обновления будут доступны здесь, когда новая версия будет готова.</p></div>
 </div></section>
 
-<details><summary>Для разработчиков · диагностика USB</summary><div class="inside"><div class="actions"><button id="refresh">Обновить статус</button><button id="clear">Очистить журнал</button></div><p class="muted" id="diag">Нет данных от устройства</p><pre class="log" id="log">Журнал пуст</pre></div></details>
-<details><summary>Прошивка и обновление</summary><div class="inside"><p class="muted">Публичный проверенный бинарный релиз пока не опубликован. Не запускай установку случайного файла.</p><p><a href="https://github.com/MillerWhite/AI-Companion/actions">Статус сборки ↗</a> · <a href="https://github.com/MillerWhite/AI-Companion/releases">Релизы ↗</a></p></div></details>
-<footer><span>AI COMPANION · ESP32-S3 TOUCH AMOLED</span><span>Локальная работа · USB Serial</span></footer>
+<div hidden><button id="refresh"></button><button id="clear"></button><span id="diag"></span><pre id="log">Журнал пуст</pre></div>
+<section><div class="sectionhead"><h2>Обновления</h2><small>НОВЫЕ ВОЗМОЖНОСТИ</small></div><p class="muted">Когда для друга появится новая версия, здесь будет доступно обновление.</p></section>
+<footer><span>AI COMPANION</span><span>Твой друг всегда рядом</span></footer>
 </main>
 <script>
-(()=>{const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];let port=null,reader=null,writer=null,rx='';const enc=new TextEncoder(),dec=new TextDecoder(),log=$('#log');
+(()=>{const $=s=>document.querySelector(s),$=s=>[...document.querySelectorAll(s)];let port=null,reader=null,writer=null,rx='';const petFaces=[['happy','Рад тебя видеть','Узнал знакомое прикосновение'],['curious','О?','Что-то интересное происходит'],['surprised','Ого!','Этого я не ожидал'],['neutral','Я здесь','Спокойно оглядываюсь вокруг']];let petFaceIndex=3;function showPetFace(index){petFaceIndex=index%petFaces.length;const f=petFaces[petFaceIndex];$('#petOrb').className='pet-orb '+f[0];$('#petCaption').textContent=f[1];$('#petSubcaption').textContent=f[2]}$('#petOrb').addEventListener('click',()=>showPetFace((petFaceIndex+1)%petFaces.length));const enc=new TextEncoder(),dec=new TextDecoder(),log=$('#log');
 function note(s){$('#status').textContent=s;if(log.textContent==='Журнал пуст')log.textContent='';log.textContent+=new Date().toLocaleTimeString()+'  '+s+'\\n';log.scrollTop=log.scrollHeight}
 async function send(cmd){if(!port?.writable)throw Error('Сначала подключи брелок по USB');const w=port.writable.getWriter();try{await w.write(enc.encode(cmd+'\\n'));log.textContent+=(new Date().toLocaleTimeString()+'  → '+cmd+'\\n')}finally{w.releaseLock()}}
 function connected(ok){$('#dot').classList.toggle('on',ok);$('#conn').textContent=ok?'Подключён по USB':'Не подключён';$('#connect').disabled=ok;$('#disconnect').disabled=!ok}
