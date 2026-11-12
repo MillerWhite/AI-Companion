@@ -1,74 +1,58 @@
-# AI Companion — реализационный план и критерии готовности
+# AI Companion — implementation status 2.1
 
-Этот документ отделяет готовый программный код от прототипов, внешних зависимостей и функций, которые нельзя подтвердить без физической платы.
+This is a code-level status, not a claim of hardware or production acceptance. A feature is not release-ready until its CI and physical acceptance checks pass.
 
-## Продуктовые принципы
+## Product invariants
 
-- Компаньон невербальный: никаких TTS, голосовых реплик или имитации человеческой речи.
-- Локальный движок отвечает за экран, эмоции, анимации, звук, касания, IMU и автономность.
-- Облачный ИИ только интерпретирует текст и возвращает ограниченное намерение. Он не получает произвольный контроль над устройством.
-- При потере сети устройство продолжает локальную работу.
-- Секреты провайдера существуют только на сервере. В браузере и firmware нет Yandex API key.
-- Облачная отправка речи должна быть явной, отключаемой и объяснённой владельцу.
+- Nonverbal companion only: no TTS and no spoken assistant responses.
+- Local firmware owns animation, needs, touch, sensor reactions and offline behavior.
+- Cloud model returns constrained intent data; firmware validates before applying it.
+- API keys stay on the backend.
+- Audio is uploaded only for transcription, is not persisted by this application, and is subject to daily quotas.
+- Memory is bounded, owner-visible and owner-deletable.
 
-## Матрица реализации
+## Requested work items
 
-| Область | Текущий уровень | Критерий готовности |
+| Task | Code status | Remaining acceptance gate |
 |---|---|---|
-| Browser Emotional Engine | Прототип | Автоматические сценарии, тесты переходов и восстановление состояния |
-| Персональность | Прототип | Версионированная схема профиля, уникальное поведение, экспорт/импорт |
-| Долговременная память | Начальная серверная история | Срок хранения, сброс/удаление и UI управления |
-| Звуки | Процедурный browser prototype | Проверка на динамике платы, лимиты громкости и частоты |
-| ASR | Web Speech API в браузере | ASR для устройства, тест русского языка и шумной среды |
-| Backend AI | Каркас с тестируемым контрактом | Реальный smoke test выбранной модели |
-| Device auth | Прототип | Одноразовые enrollment grants, отзыв, ротация, общий rate limiter |
-| ESP-IDF | Начальный каркас | Сборка с закреплёнными версиями и тест на Waveshare |
-| Wi-Fi provisioning | Не готово | BLE/SoftAP настройка, сохранение сети, reset и reconnect |
-| Audio hardware | Не готово | Проверенные драйверы ES8311/ES7210, воспроизведение и захват |
-| IMU | Не готово | Калибровка QMI8658 и фильтрация событий |
-| Web flasher | Не готово | Проверка модели, контрольной суммы и recovery |
-| Store enrollment | Не готово | Проверка оплаченного заказа и одноразовый grant |
-| Production hosting | Не готово | HTTPS, PostgreSQL, Redis, backups, monitoring, budget alerts |
+| Full emotional transitions and facial expressions | Implemented in firmware/browser code: ten moods, animated eye/mouth geometry, sadness brows/tears, blink and need-driven transitions | ESP-IDF build; physical display smoothness and emotional clarity test |
+| Unique personality and long-term development | Implemented foundation: temperament, initiative, needs, trust/playfulness, persistent local state and safe durable preference facts | Broader traits/quirks, multi-month progression tuning and owner data export review |
+| Physical speaker sound system | Implemented driver path: ES8311 BSP handle, soft procedural motifs, low gain and cooldown | Board test, audio calibration, echo/feedback and listening-quality review |
+| Microphone speech recognition | Implemented pipeline: ES7210 BSP capture, VAD, mono 16 kHz PCM, backend SpeechKit route | Board microphone slot mapping, Russian/noise tests, live SpeechKit credentials and quota test |
+| Wi-Fi and automatic reconnect | Implemented: SoftAP Security 1 provisioning, NVS credential persistence, exponential reconnect | First-boot test with actual router and recovery/reset test |
+| Cloud intent → firmware behavior | Implemented: voice → SpeechKit → intent → allowlist validation → emotion/action application | Live Yandex model smoke test and real device integration test |
+| ES8311, ES7210, QMI8658 drivers | BSP codec handles and QMI8658 managed driver are wired into service modules | Verify actual BSP component resolution, build and physical register/data test |
+| Owner server-memory controls | Implemented: bounded context, safe fact categories, 90-day expiry, export/delete/profile APIs and PIN-protected local portal | Privacy review, retention job/backup review and owner usability test |
+| Automatic website firmware flashing | Implemented: ESP Web Tools page, manifest and tagged release workflow | Successful firmware CI build and published release asset; browser/USB test |
+| Registration after purchase | Implemented generic flow: HMAC-signed paid event → hashed single-use grant → serial claim → NVS token | Connect and verify an actual payment provider, refunds/chargebacks and order/account system |
+| Production backend and cost protection | Implemented deployment foundation: PostgreSQL, Redis, daily AI/audio caps, Caddy TLS, production config checks | Real host/DNS/secrets, backup/restore, spend alerts, monitoring, load/security tests and deployment |
 
-## Этапы
+## Backend safeguards
 
-### A. Качество прототипа
-1. Синхронизировать JSON-контракт ИИ и тесты.
-2. Запускать тесты backend через GitHub Actions.
-3. Проверять адресацию, неизвестные действия и эмоции, границы контекста.
-4. Синхронизировать документацию с текущим UI.
-5. Проверить Yandex API по актуальной документации и выполнить live smoke test с новым секретом.
+- SQLite development mode; PostgreSQL production mode.
+- Redis shared device rate limit, daily model request cap and per-device daily audio cap.
+- Body size limits before buffering audio and payment events.
+- Server-only secrets and exact production CORS/host allowlists.
+- Device token hashes at rest; one-time activation grants hashed at rest.
+- Memory context limited to eight turns; up to twenty non-sensitive facts from four allowlisted categories; default retention 90 days.
+- Memory export/reset and profile update require device authentication.
+- Production startup refuses to run without PostgreSQL, Redis, server secrets, provider keys, CORS and host configuration.
 
-### B. Характер и память
-1. Версионированная схема личности.
-2. Разделить устойчивые черты, текущее настроение, потребности и историю.
-3. Ограничивать контекст, не хранить бесконечную расшифровку речи.
-4. Добавить владельцу сброс/экспорт/удаление памяти.
-5. Проверить, что инициатива зависит от характера, отношений, энергии и времени суток, а не от неконтролируемого random.
-6. Звуковую идентичность тестировать на реальном динамике с ограничением громкости и частоты событий.
+## Release blockers
 
-### C. Hardware
-1. Закрепить ESP-IDF и Waveshare BSP.
-2. Wi-Fi provisioning, хранение сети в NVS.
-3. Безопасное хранение device token, отзыв и перепривязка.
-4. ASR, аудиозахват и вывод звука через проверенные драйверы.
-5. Разбор backend JSON по allowlist.
-6. Автономный fallback.
-7. IMU с калибровкой и фильтрацией.
+1. Run GitHub Actions backend tests and ESP-IDF build; fix all failures.
+2. Validate Yandex AI Studio endpoint/model/auth against current account docs using a new key. Revoke any key previously disclosed in project chat.
+3. Validate SpeechKit account permissions, folder scope, Russian recognition quality and actual quotas.
+4. Purchase and test the exact Waveshare ESP32-S3-Touch-AMOLED-1.75C board.
+5. Verify display, touch, codec sample rate/channel routing, VAD threshold, sound level, QMI sensor and Wi-Fi provisioning on hardware.
+6. Connect a real payment provider adapter; the generic HMAC event is not a checkout integration.
+7. Deploy to a real host with DNS, managed secrets, database backups, restore drill, monitoring and provider spend alerts.
+8. Publish a tagged firmware release; until then the web installer manifest has no downloadable release binary.
 
-### D. Сайт и выпуск
-1. Web flasher с проверкой платы, версии и checksum.
-2. Восстановление при прерывании прошивки.
-3. Enrollment grant только после проверки заказа.
-4. Привязка устройства к аккаунту владельца.
-5. Production deploy: HTTPS, PostgreSQL, Redis, резервные копии и мониторинг.
+## Explicitly not claimed
 
-## Ограничения и контрольные точки
-
-- У Yandex AI endpoint/model/header configuration пока нет успешного live smoke test.
-- Browser Web Speech API не является ASR на ESP32.
-- BSP, аудио и датчики нельзя считать проверенными без сборки и физической платы.
-- Наличие cloud client файла не означает готовый цикл поведения.
-- Enrollment с общим секретом не является магазинной оплатой.
-- CI не заменяет аппаратные тесты.
-- Серверная память в текущем прототипе хранит ограниченные последние текстовые turns; интерфейс управления памятью и политика удаления ещё не готовы.
+- No successful firmware build or physical board test has been observed yet.
+- No public production backend has been deployed.
+- No actual payment provider has been connected.
+- No Yandex AI or SpeechKit live request has been verified with a rotated secret.
+- No production monitoring, backups or restore test is configured by this repository alone.
