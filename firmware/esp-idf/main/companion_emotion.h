@@ -12,6 +12,7 @@ typedef enum {
     COMPANION_AFFECTIONATE,
     COMPANION_EXCITED,
     COMPANION_SURPRISED,
+    COMPANION_SCARED,
     COMPANION_CONCERNED,
     COMPANION_SHY,
     COMPANION_DIZZY,
@@ -21,6 +22,7 @@ typedef enum {
 
 typedef struct {
     float energy;
+    float hunger;
     float comfort;
     float social;
     float curiosity;
