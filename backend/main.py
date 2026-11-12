@@ -106,6 +106,7 @@ class DeviceInterpretRequest(BaseModel):
 
 
 class InterpretResult(BaseModel):
+    addressed_to_companion: bool
     understood: bool
     intent: str
     action: Action
@@ -138,8 +139,17 @@ def make_system_prompt(name: str, personality: dict[str, Any]) -> str:
     return (
         "You are the language-understanding module for a nonverbal virtual pet. "
         "Understand the owner's Russian or other natural-language message. "
-        "Return ONLY one JSON object with keys: understood, intent, action, emotion, "
+        "Return ONLY one JSON object with keys: addressed_to_companion, understood, intent, action, emotion, "
         "confidence, nonverbal_cue, clarification. "
+        "Determine whether the owner is actually addressing this companion. "
+        "The configured name may be spoken with another accent, transliteration, phonetic spelling, "
+        "shortened form, affectionate nickname, diminutive, or natural Russian vocative form. "
+        "Infer likely variants from the configured name yourself; never require a manually entered alias list "
+        "and do not invent unrelated names. Use the whole utterance and recent context to distinguish "
+        "direct address from merely mentioning the name while talking about someone else. "
+        "If the utterance is not addressed to the companion, set addressed_to_companion=false, "
+        "understood=false, action=idle, emotion=neutral, and do not ask a clarification. "
+        "If it is addressed to the companion, set addressed_to_companion=true and interpret the request. "
         "Allowed action values: " + ", ".join(item.value for item in Action) + ". "
         "Allowed emotion values: " + ", ".join(item.value for item in Emotion) + ". "
         "Never generate speech, TTS, spoken dialogue, code, sound commands, hardware commands, "
