@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Companion — Emotional Engine v0.2</title>
+<style>
+:root{color-scheme:dark;--bg:#080b12;--panel:#111927;--line:#2b3b52;--text:#edf5ff;--muted:#91a0b7;--cyan:#9ceaff;--violet:#c8b5ff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% 0,#1a2c42 0,#0a101a 42%,#06080d 100%);color:var(--text);font:15px/1.45 system-ui,Arial,sans-serif}
+main{max-width:1120px;margin:auto;padding:26px 18px 48px}.head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}.brand{font-size:11px;letter-spacing:.18em;font-weight:800;color:#c5d7ec}.version{font-size:11px;border:1px solid #354761;border-radius:30px;padding:6px 10px;color:#b7c9df}
+h1{font-size:clamp(27px,4vw,42px);line-height:1.04;letter-spacing:-.045em;margin:0 0 9px}.intro{color:var(--muted);max-width:720px;margin:0 0 22px}
+.grid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}.panel{border:1px solid var(--line);border-radius:21px;background:linear-gradient(145deg,#141e2dF2,#0c121dF5);padding:18px;box-shadow:0 18px 50px #0005}
+.stage{min-height:365px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden}.orb{width:min(270px,68vw);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;position:relative;background:radial-gradient(circle at 32% 25%,#314c68,#142236 58%,#080f1a);border:1px solid #4c6684;box-shadow:inset 0 0 45px #8be4ff16,0 0 65px #64cfff19;transition:transform .35s,filter .35s}.orb:before{content:"";position:absolute;inset:12px;border:1px solid #a5e8ff16;border-radius:50%}
+.face{display:flex;gap:29px;align-items:center;position:relative;transition:.2s}.eye{width:58px;height:78px;border-radius:50%;background:linear-gradient(145deg,#f4ffff,#8be5ff 58%,#48a9d8);box-shadow:0 0 18px #8ce7ffb0,0 0 48px #55caff44;position:relative;transition:all .22s}.eye:after{content:"";position:absolute;top:12px;left:13px;width:15px;height:15px;border-radius:50%;background:white;opacity:.92}
+.mouth{position:absolute;top:calc(50% + 66px);left:50%;transform:translateX(-50%);width:20px;height:7px;border-bottom:2px solid #9beaff88;border-radius:0 0 50% 50%}
+.orb.blink .eye{transform:scaleY(.07)}.orb.sleep .eye{height:7px;border-radius:9px}.orb.happy .eye{height:52px;border-radius:50% 50% 44% 44%}.orb.excited .eye{height:94px;width:67px}.orb.sad .eye{transform:rotate(9deg);filter:hue-rotate(24deg)}.orb.surprised .eye{height:101px;width:68px}.orb.shy .eye{height:58px;transform:scaleY(.83)}.orb.curious .eye:first-child{transform:translateY(-8px) scale(.93)}.orb.curious .eye:last-child{transform:translateY(5px) scale(1.05)}.orb.angry .eye{height:45px;transform:rotate(-12deg);filter:hue-rotate(330deg)}.orb.love .eye{filter:hue-rotate(305deg);border-radius:42% 58% 48% 52%}
+.status{margin-top:18px;color:#d4e8f8;font-size:13px}.substatus{font-size:11px;color:var(--muted);margin-top:4px}.controls{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:14px}
+button,select,input{font:inherit}button{background:#1b293b;color:#edf7ff;border:1px solid #3a506b;padding:9px 12px;border-radius:11px;cursor:pointer;transition:.15s}button:hover{border-color:var(--cyan);background:#243a50}button:active{transform:scale(.97)}button.main{background:#b6efff;color:#08131d;border-color:#b6efff;font-weight:800}button.sound{border-color:#6d5a9b;background:#29203d}
+h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display:block;font-size:11px;color:#b8c8db;margin-bottom:5px}.field select,.field input{width:100%;background:#0a111c;border:1px solid #304158;border-radius:10px;padding:10px;color:#eff7ff;outline:none}.field input[type=range]{padding:0;accent-color:#9ceaff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.stat{background:#0a111c;border:1px solid #293a50;border-radius:12px;padding:10px}.stat b{display:block;font-size:19px;color:#c4efff}.stat span{font-size:10px;color:var(--muted)}
+.profile{background:#0a111c;border:1px solid #293a50;border-radius:13px;padding:12px;margin-top:12px}.profile strong{font-size:13px}.profile p{font-size:12px;color:#afbed2;margin:6px 0 0}.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.chip{font-size:10px;padding:4px 7px;border-radius:20px;border:1px solid #38546c;color:#c5edff;background:#132537}
+.soundgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.soundgrid button{font-size:12px;padding:10px 6px}.soundnote{font-size:11px;color:var(--muted);margin:9px 0 0}.log{border-top:1px solid #2a394e;margin-top:14px;padding-top:10px}.logtop{display:flex;justify-content:space-between;font-size:11px;color:#aebed2}.logbody{height:85px;overflow:auto;font-size:11px;color:#8799b1}.logbody div{padding:4px 0;border-bottom:1px solid #ffffff08}
+@media(max-width:780px){.grid{grid-template-columns:1fr}.panel{padding:15px}.stage{min-height:350px}}
+</style>
+</head>
+<body><main>
+<div class="head"><div class="brand">NIFORTT LABS · COMPANION SYSTEMS</div><div class="version">EMOTIONAL ENGINE v0.4</div></div>
+<h1>Лаборатория<br>эмоций и звуков</h1>
+<p class="intro">Комбинационный движок состояний, индивидуальный профиль и более мягкие звуковые реакции. Звуки приглушены, автоматические звуковые инициативы редкие. Это браузерный симулятор для проектирования поведения до покупки платы.</p>
+<div class="grid">
+<section class="panel">
+<div class="stage">
+<div class="orb" id="orb"><div class="face"><div class="eye"></div><div class="eye"></div><div class="mouth"></div></div></div>
+<div class="status" id="status">спокойно наблюдает</div><div class="substatus" id="substatus">нейтральное состояние · интенсивность 2/10</div>
+<div class="controls">
+<button onclick="trigger('happy')">Погладить</button><button onclick="trigger('curious')">Позвать</button><button onclick="trigger('surprised')">Удивить</button><button onclick="trigger('sleep')">Сон</button><button onclick="trigger('neutral')">Пробудить</button>
+<button class="main" onclick="randomEmotion()">Случайная эмоция</button>
+</div></div>
+<div class="stats">
+<div class="stat"><b id="emotionCount">30+</b><span>базовых состояний</span></div>
+<div class="stat"><b id="comboCount">1 134 000</b><span>комбинаций параметров*</span></div>
+<div class="stat"><b id="soundCount">18</b><span>звуковых жестов</span></div>
+</div>
+<div class="log"><div class="logtop"><span>ЖУРНАЛ ПОВЕДЕНИЯ</span><span id="count">0 событий</span></div><div class="logbody" id="log"><div>Система запущена. Нажми на звуковую пробу или вызови эмоцию.</div></div></div>
+<p class="soundnote">* Число комбинаций — расчётное пространство вариантов, а не тысячи вручную нарисованных кадров. Визуальный рендерер пока демонстрационный.</p>
+</section>
+<section class="panel">
+<h2>Личность компаньона</h2>
+<div class="field"><label>Имя</label><input id="name" value="Milo" maxlength="20"></div>
+<div class="two">
+<div class="field"><label>Темперамент</label><select id="temper"><option value="calm">Спокойный</option><option value="playful" selected>Игривый</option><option value="shy">Стеснительный</option><option value="energetic">Энергичный</option><option value="dreamy">Мечтательный</option></select></div>
+<div class="field"><label>Инициативность</label><select id="initiative"><option value="low">Низкая</option><option value="medium" selected>Средняя</option><option value="high">Высокая</option></select></div>
+</div>
+<div class="two">
+<div class="field"><label>Привязанность</label><select id="bond"><option value="gentle">Ласковый</option><option value="friendly" selected>Дружелюбный</option><option value="independent">Независимый</option><option value="mischief">Озорной</option></select></div>
+<div class="field"><label>Особенность</label><select id="quirk"><option value="curious">Любопытный</option><option value="sleepy">Соня</option><option value="dramatic">Драматичный</option><option value="bouncy">Непоседа</option><option value="shy">Смущается</option></select></div>
+</div>
+<div class="field"><label>Интенсивность реакций: <b id="intensityLabel">6/10</b></label><input id="intensity" type="range" min="1" max="10" value="6"></div>
+<button class="main" style="width:100%" onclick="makeProfile()">Сгенерировать личность</button>
+<div class="profile" id="profile"><strong>Milo · личность</strong><p>Игривый, дружелюбный, любопытный. Иногда сам инициирует контакт и внимательно наблюдает за владельцем.</p><div class="chips"><span class="chip">игривый</span><span class="chip">дружелюбный</span><span class="chip">любопытный</span></div></div>
+<h2 style="margin-top:18px">Звуковая лаборатория</h2>
+<div class="soundgrid">
+<button class="sound" onclick="playSound('greeting')">♡ Приветствие</button><button class="sound" onclick="playSound('happy')">✧ Радость</button><button class="sound" onclick="playSound('curious')">? Любопытство</button>
+<button class="sound" onclick="playSound('surprise')">! Удивление</button><button class="sound" onclick="playSound('shy')">◌ Смущение</button><button class="sound" onclick="playSound('sleep')">z Сон</button>
+<button class="sound" onclick="playSound('attention')">♡ Внимание</button><button class="sound" onclick="playSound('giggle')">♪ Хихиканье</button><button class="sound" onclick="playSound('purr')">≈ Довольство</button>
+<button class="sound" onclick="playSound('boop')">● Буп</button><button class="sound" onclick="playSound('sad')">☁ Грусть</button><button class="sound" onclick="playSound('nope')">⊘ Недовольство</button>
+<button class="sound" onclick="playSound('trill')">〰 Трель</button><button class="sound" onclick="playSound('bubble')">◉ Пузырёк</button><button class="sound" onclick="playSound('whistle')">♬ Свист</button>
+<button class="sound" onclick="playSound('squeak')">⌁ Писк</button><button class="sound" onclick="playSound('coo')">♡ Нежность</button><button class="sound" onclick="playSound('wonder')">✧ Восхищение</button>
+</div>
+<p class="soundnote">Нажми любую пробу — звук воспроизведётся через динамики или наушники компьютера. Браузер может запросить разрешение на звук после первого нажатия.</p>
+</section></div></main>
+<script>
+const $=id=>document.getElementById(id),orb=$('orb');let soundEnabled=true,events=0,current='neutral',intensity=6,lastSoundAt=0,profile={temper:'playful',initiative:'medium',bond:'friendly',quirk:'curious'};
+const moods=[
+['joy','радость','happy'],['delight','восторг','excited'],['content','довольство','happy'],['curiosity','любопытство','curious'],['wonder','изумление','surprised'],['surprise','удивление','surprised'],['shyness','смущение','shy'],['affection','нежность','love'],['calm','спокойствие','neutral'],['sleepiness','сонливость','sleep'],['sleep','сон','sleep'],['sadness','грусть','sad'],['disappointment','разочарование','sad'],['annoyance','досада','angry'],['playfulness','озорство','happy'],['mischief','хитрость','curious'],['excitement','возбуждение','excited'],['anticipation','ожидание','curious'],['loneliness','скука','sad'],['relief','облегчение','happy'],['pride','гордость','happy'],['confusion','замешательство','surprised'],['embarrassment','неловкость','shy'],['tenderness','ласка','love'],['alertness','внимание','curious'],['fear','испуг','surprised'],['jealousy','ревность','angry'],['boredom','скука','sleep'],['gratitude','благодарность','love'],['trust','доверие','happy'],['hope','надежда','curious'],['frustration','раздражение','angry'],['curiosity2','пристальный интерес','curious'],['serenity','умиротворение','neutral'],['mischievousJoy','шалость','happy']];
+const moodSound={happy:'happy',excited:'trill',curious:'curious',surprised:'surprise',shy:'shy',love:'coo',neutral:'bubble',sleep:'sleep',sad:'sad',angry:'nope'};
+function log(s){let d=document.createElement('div');d.textContent=new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})+' · '+s;$('log').prepend(d);events++;$('count').textContent=events+' событий';if($('log').children.length>18)$('log').lastChild.remove()}
+function audio(){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;let c=audio.ctx||(audio.ctx=new C());if(c.state==='suspended')c.resume();return c}
+function tone(c,t,f,dur,wave='sine',vol=.045,endF=null){let o=c.createOscillator(),g=c.createGain(),filter=c.createBiquadFilter();o.type=wave;o.frequency.setValueAtTime(f,t);if(endF)o.frequency.exponentialRampToValueAtTime(Math.max(30,endF),t+dur);filter.type='lowpass';filter.frequency.value=1700;filter.Q.value=.35;o.connect(filter);filter.connect(g);g.connect(c.destination);const v=vol*.30;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.035);g.gain.setTargetAtTime(.0001,t+Math.min(.07,dur*.45),Math.max(.05,dur*.25));o.start(t);o.stop(t+dur+.06)}
+function noise(c,t,dur,vol=.018,filterFreq=1800){
+ const n=Math.max(1,Math.floor(c.sampleRate*dur)),b=c.createBuffer(1,n,c.sampleRate),a=b.getChannelData(0);
+ for(let i=0;i<n;i++)a[i]=(Math.random()*2-1)*(1-i/n);
+ const src=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();src.buffer=b;f.type='bandpass';f.frequency.value=filterFreq;f.Q.value=.8;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol*.22,t+.02);g.gain.setTargetAtTime(.0001,t+.03,Math.max(.05,dur*.25));src.connect(f);f.connect(g);g.connect(c.destination);src.start(t);src.stop(t+dur+.01);
+}
+function playSound(type){
+ const c=audio();if(!c){log('Web Audio API недоступен');return}const t=c.currentTime, r=()=>.94+Math.random()*.12;
+ const patterns={
+ greeting:{wave:'sine',notes:[[510,0,.13,700],[760,.16,.13,920],[880,.34,.2,690]]},
+ happy:{wave:'triangle',notes:[[650,0,.09,900],[850,.105,.09,1120],[1040,.22,.1,880],[920,.34,.16,1180]]},
+ curious:{wave:'sine',notes:[[430,0,.16,500],[590,.21,.18,760],[720,.45,.22,850]]},
+ surprise:{wave:'sawtooth',notes:[[390,0,.055,1050],[1050,.075,.18,590]],noise:true},
+ shy:{wave:'sine',notes:[[690,0,.13,570],[560,.17,.17,470],[470,.4,.14,420]]},
+ sleep:{wave:'sine',notes:[[360,0,.28,310],[300,.32,.3,250],[240,.68,.42,190]]},
+ attention:{wave:'triangle',notes:[[780,0,.09,850],[620,.22,.09,700],[880,.45,.16,980]]},
+ giggle:{wave:'triangle',notes:[[720,0,.07,900],[850,.1,.07,680],[760,.2,.07,980],[940,.3,.08,760],[820,.42,.12,1050]]},
+ purr:{wave:'sine',notes:[[150,0,.28,185],[185,.29,.28,155],[160,.58,.3,205],[175,.89,.28,145]]},
+ boop:{wave:'sine',notes:[[540,0,.075,230]],noise:true},
+ sad:{wave:'sine',notes:[[420,0,.24,360],[350,.29,.28,290],[290,.62,.34,240]]},
+ nope:{wave:'square',notes:[[250,0,.09,190],[205,.14,.13,155]],noise:true},
+ trill:{wave:'triangle',notes:[[620,0,.055,850],[900,.07,.055,680],[650,.14,.055,940],[980,.21,.06,720],[720,.29,.08,1100],[1040,.4,.13,820]]},
+ bubble:{wave:'sine',notes:[[330,0,.11,520],[520,.13,.12,390],[390,.28,.11,620],[620,.42,.16,480]],noise:true},
+ whistle:{wave:'sine',notes:[[1050,0,.22,1450],[1450,.25,.24,980],[980,.55,.2,1250]]},
+ squeak:{wave:'square',notes:[[1250,0,.045,1650],[1500,.09,.05,1100],[1320,.19,.055,1750]]},
+ coo:{wave:'sine',notes:[[520,0,.22,640],[640,.26,.28,490]]},
+ wonder:{wave:'sine',notes:[[390,0,.2,560],[560,.24,.22,790],[790,.5,.25,1120],[1120,.78,.32,1320]],noise:true}
+ };
+ const p=patterns[type]||patterns.boop;
+ p.notes.forEach(([f,dt,d,e])=>tone(c,t+dt,f*r(),d*r(),p.wave,type==='purr'?.020:.027,e*r()));
+ if(p.noise)noise(c,t+(type==='surprise'?.07:.015),type==='wonder'?.22:.07,type==='wonder'?.006:.004,type==='bubble'?900:2200);
+ log('Звуковая проба: '+type);
+}
+function setMood(key,why='реакция компаньона',sound=true){current=key;const map={happy:'радуется',excited:'в восторге',curious:'с любопытством наблюдает',surprised:'удивлён',shy:'смущается',love:'проявляет нежность',neutral:'спокойно наблюдает',sleep:'засыпает',sad:'немного грустит',angry:'недоволен'};
+orb.className='orb '+(key==='neutral'?'':key);$('status').textContent=map[key]||key;$('substatus').textContent=why+' · интенсивность '+intensity+'/10';if(sound)playSound(moodSound[key]||'boop');log(($('name').value||'Компаньон')+': '+(map[key]||key))}
+function trigger(key){if(key==='sleep'){setMood('sleep','переходит в режим отдыха');return}if(key==='neutral'){setMood('neutral','проснулся и огляделся',false);return}setMood(key,key==='happy'?'приятное прикосновение':key==='curious'?'заметил внимание владельца':'неожиданное событие');setTimeout(()=>{if(current===key)setMood('neutral','возвращается к спокойному состоянию',false)},2400)}
+function randomEmotion(){let candidates=moods.filter(x=>!['sleep','sleepiness','fear','jealousy'].includes(x[0]));let m=candidates[Math.floor(Math.random()*candidates.length)];let key=m[2];intensity=+$('intensity').value;setMood(key,'смешанная эмоция: '+m[1]+' · '+m[0]);}
+function makeProfile(){profile={temper:$('temper').value,initiative:$('initiative').value,bond:$('bond').value,quirk:$('quirk').value};let n=$('name').value.trim()||'Milo';let dict={temper:{calm:'спокойный',playful:'игривый',shy:'стеснительный',energetic:'энергичный',dreamy:'мечтательный'},initiative:{low:'редко проявляет инициативу',medium:'иногда проявляет инициативу',high:'часто ищет контакт'},bond:{gentle:'ласковый',friendly:'дружелюбный',independent:'независимый',mischief:'озорной'},quirk:{curious:'любит всё разглядывать',sleepy:'часто сонный',dramatic:'ярко выражает эмоции',bouncy:'непоседливый',shy:'смущается от внимания'}};
+let desc=`${dict.temper[profile.temper]}, ${dict.bond[profile.bond]}; ${dict.initiative[profile.initiative]}. Особенность: ${dict.quirk[profile.quirk]}.`;
+$('profile').innerHTML='<strong></strong><p></p><div class="chips"></div>';$('profile').querySelector('strong').textContent=n+' · личность';$('profile').querySelector('p').textContent=desc;[dict.temper[profile.temper],dict.bond[profile.bond],dict.quirk[profile.quirk]].forEach(v=>{let s=document.createElement('span');s.className='chip';s.textContent=v;$('profile').querySelector('.chips').append(s)});log('Сгенерирован индивидуальный профиль '+n);trigger('happy')}
+$('intensity').addEventListener('input',e=>{intensity=+e.target.value;$('intensityLabel').textContent=intensity+'/10'});
+function blink(){if(current==='sleep')return;orb.classList.add('blink');setTimeout(()=>orb.classList.remove('blink'),130)}
+setInterval(()=>{if(current!=='sleep'&&Math.random()<.72)blink()},2500);
+setInterval(()=>{if(current==='sleep')return;let p=profile.initiative==='high'?.30:profile.initiative==='low'?.07:.16;if(Math.random()<p){let pool=profile.temper==='calm'?['curious','neutral']:profile.temper==='energetic'?['happy','excited','curious']:profile.temper==='shy'?['shy','curious']:['curious','happy','shy'];let m=pool[Math.floor(Math.random()*pool.length)];setMood(m,'самостоятельная инициатива',Math.random()<.18);setTimeout(()=>{if(current===m)setMood('neutral','снова наблюдает',false)},2100)}},10500);
+$('orb').addEventListener('click',()=>trigger(profile.bond==='mischief'?'surprised':'happy'));
+$('comboCount').textContent=(35*10*9*12*5*6).toLocaleString('ru-RU');
+log('Emotional Engine v0.4 готов. Звуки приглушены; автоматические звуковые реакции ограничены.');
+</script></body></html>
