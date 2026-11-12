@@ -54,10 +54,11 @@ class DeviceLifecycleTests(unittest.TestCase):
         token = result["device_token"]
         auth = "Bearer " + token
         updated = main.update_device_profile(
-            main.ProfileUpdateRequest(companion_name="Milo", personality={"temperament": "dreamy", "initiative": "low"}),
+            main.ProfileUpdateRequest(companion_name="Milo", personality={"temperament": "dreamy", "initiative": "low", "quirks": "playful"}),
             authorization=auth,
         )
         self.assertEqual(updated["personality"]["temperament"], "dreamy")
+        self.assertEqual(updated["personality"]["quirks"], "playful")
         with main._device_db() as connection:
             connection.execute(
                 "UPDATE devices SET memory_json = ? WHERE device_id = ?",
