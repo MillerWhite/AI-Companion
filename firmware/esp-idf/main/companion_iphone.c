@@ -21,7 +21,9 @@ static const char *TAG = "companion_iphone";
 static uint16_t s_conn = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t s_ancs_end, s_ancs_ns, s_ancs_cp, s_ancs_ds;
 static uint16_t s_ams_end, s_ams_remote, s_ams_entity_update, s_ams_entity_attr;
-static bool s_ancs_ready, s_ams_ready, s_pairing;
+static bool s_ancs_ready, s_ams_ready, s_pairing, s_ams_started;
+static uint8_t s_ancs_desc_pending;
+static uint8_t s_pending_entity, s_pending_attribute;
 static uint8_t s_data[512];
 static size_t s_data_len;
 static uint8_t s_data_attr_mask;
@@ -52,7 +54,8 @@ static void reset_handles(void)
 {
     s_ancs_end = s_ancs_ns = s_ancs_cp = s_ancs_ds = 0;
     s_ams_end = s_ams_remote = s_ams_entity_update = s_ams_entity_attr = 0;
-    s_ancs_ready = s_ams_ready = false;
+    s_ancs_ready = s_ams_ready = s_ams_started = false;
+    s_ancs_desc_pending = 0;
     s_data_len = 0;
     s_data_attr_mask = 0;
 }
@@ -92,7 +95,13 @@ static int dsc_cb(uint16_t conn, const struct ble_gatt_error *error,
                   uint16_t chr_val_handle, const struct ble_gatt_dsc *dsc, void *arg)
 {
     (void)arg;
-    if (error->status == BLE_HS_EDONE) return 0;
+    if (error->status == BLE_HS_EDONE) {
+        if ((uintptr_t)arg == 1 && s_ancs_desc_pending) {
+            s_ancs_desc_pending--;
+            if (s_ancs_desc_pending == 0) start_ams_discovery(conn);
+        }
+        return 0;
+    }
     if (error->status) return error->status;
     if (ble_uuid_cmp(&dsc->uuid.u, BLE_UUID16_DECLARE(BLE_GATT_DSC_CLT_CFG_UUID16)) == 0) {
         const uint8_t enable[2] = {1,0};
@@ -108,9 +117,11 @@ static int discover_ancs_chr(uint16_t conn, const struct ble_gatt_error *error,
 {
     (void)arg;
     if (error->status == BLE_HS_EDONE) {
-        if (s_ancs_ns) (void)ble_gattc_disc_all_dscs(conn, s_ancs_ns, s_ancs_end, dsc_cb, NULL);
-        if (s_ancs_ds) (void)ble_gattc_disc_all_dscs(conn, s_ancs_ds, s_ancs_end, dsc_cb, NULL);
         s_ancs_ready = s_ancs_ns && s_ancs_cp && s_ancs_ds;
+        s_ancs_desc_pending = (s_ancs_ns ? 1 : 0) + (s_ancs_ds ? 1 : 0);
+        if (s_ancs_ns && ble_gattc_disc_all_dscs(conn, s_ancs_ns, s_ancs_end, dsc_cb, (void *)1) != 0) s_ancs_desc_pending--;
+        if (s_ancs_ds && ble_gattc_disc_all_dscs(conn, s_ancs_ds, s_ancs_end, dsc_cb, (void *)1) != 0) s_ancs_desc_pending--;
+        if (!s_ancs_desc_pending) start_ams_discovery(conn);
         ESP_LOGI(TAG, "ANCS discovery %s", s_ancs_ready ? "complete" : "incomplete");
         return 0;
     }
@@ -126,7 +137,10 @@ static int discover_ancs(uint16_t conn, const struct ble_gatt_error *error,
 {
     (void)arg;
     if (error->status == BLE_HS_EDONE) {
-        if (!s_ancs_end) ESP_LOGI(TAG, "iPhone ANCS service not exposed on this connection");
+        if (!s_ancs_end) {
+            ESP_LOGI(TAG, "iPhone ANCS service not exposed on this connection");
+            start_ams_discovery(conn);
+        }
         return 0;
     }
     if (error->status) return error->status;
@@ -165,6 +179,14 @@ static int discover_ams(uint16_t conn, const struct ble_gatt_error *error,
     if (!svc) return BLE_HS_EUNKNOWN;
     s_ams_end = svc->end_handle;
     return ble_gattc_disc_all_chrs(conn, svc->start_handle, svc->end_handle, discover_ams_chr, NULL);
+}
+
+static void start_ams_discovery(uint16_t conn)
+{
+    if (s_ams_started) return;
+    s_ams_started = true;
+    int rc = ble_gattc_disc_svc_by_uuid(conn, &UUID_AMS.u, discover_ams, NULL);
+    if (rc) ESP_LOGW(TAG, "AMS service discovery could not start: %d", rc);
 }
 
 static void ancs_request_attributes(uint16_t conn, uint32_t uid)
@@ -244,7 +266,6 @@ static int iphone_gap_event(struct ble_gap_event *event, void *arg)
             s_pairing = false;
             ESP_LOGI(TAG, "Encrypted link ready; discovering ANCS and AMS");
             (void)ble_gattc_disc_svc_by_uuid(s_conn, &UUID_ANCS.u, discover_ancs, NULL);
-            (void)ble_gattc_disc_svc_by_uuid(s_conn, &UUID_AMS.u, discover_ams, NULL);
         }
         return 0;
     case BLE_GAP_EVENT_NOTIFY_RX:
