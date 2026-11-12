@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdint.h>
 #include "esp_err.h"
 
 esp_err_t companion_cloud_interpret(const char *utterance,
