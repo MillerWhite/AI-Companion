@@ -15,6 +15,7 @@ idf_component_register(
         esp_wifi
         esp_event
         esp_netif
+        esp_timer
         wifi_provisioning
         nvs_flash
         json
