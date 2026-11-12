@@ -30,8 +30,8 @@
     </esp-web-install-button>
   </section>
   <div class="steps">
-    <section class="step"><div class="number">02 · WI-FI</div><h2>Подключите к сети</h2><p>При первом запуске компаньон покажет код защищённой SoftAP-настройки. Используйте официальное приложение Espressif ESP SoftAP Provisioning для Android/iOS.</p></section>
-    <section class="step"><div class="number">03 · АКТИВАЦИЯ</div><h2>Привяжите устройство</h2><p>После подключения к Wi-Fi экран покажет IP-адрес. Откройте его в браузере на том же Wi-Fi, введите адрес backend и одноразовый код активации заказа.</p></section>
+    <section class="step"><div class="number">02 · WI-FI</div><h2>Подключите к сети</h2><p>При первом запуске компаньон покажет SSID, пароль и PIN защищённой SoftAP-сети. Используйте <a href="https://play.google.com/store/apps/details?id=com.espressif.provsoftap" target="_blank" rel="noopener">официальное Android-приложение</a> или <a href="https://apps.apple.com/us/app/esp-softap-provisioning/id1474040630" target="_blank" rel="noopener">iOS-приложение</a> Espressif и передайте устройству данные домашней сети.</p></section>
+    <section class="step"><div class="number">03 · АКТИВАЦИЯ</div><h2>Привяжите устройство</h2><p>После подключения к Wi-Fi экран покажет локальный IP и восьмизначный PIN владельца. Откройте IP в браузере на том же Wi-Fi, введите PIN, HTTPS-адрес backend и одноразовый код активации заказа. Долгое нажатие на лицо сбрасывает Wi-Fi и запускает настройку заново.</p></section>
     <section class="step"><div class="number">04 · ГОТОВО</div><h2>Проверьте работу</h2><p>Устройство сохранит токен в NVS. Микрофоны отправляют аудио только на сервер для распознавания; ответы ИИ управляют мимикой и невербальными реакциями.</p></section>
   </div>
   <p class="warning">Важно: публичный бинарный релиз появится после успешной сборки и публикации тега firmware-v*. До появления первого релиза кнопка установки не сможет загрузить прошивку. Аппаратные функции необходимо проверить на реальной плате перед продажей.</p>
