@@ -379,7 +379,9 @@ static void on_usb_command(const char *command)
     if (!command) return;
     last_activity_us = esp_timer_get_time();
     if (screen_asleep) set_screen_sleep(false);
-    if (!strcmp(command, "profile")) {
+    if (!strcmp(command, "mood")) {
+        companion_usb_emit_emotion(emotion_label(current_emotion));
+    } else if (!strcmp(command, "profile")) {
         refresh_personality();
         load_display_settings();
         apply_display_settings();
