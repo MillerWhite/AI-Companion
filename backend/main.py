@@ -536,17 +536,51 @@ def revoke_device(
     return {"device_id": device_id, "status": "revoked"}
 
 
+
+@app.get("/api/device/memory")
+def get_device_memory(authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    device = _authenticated_device(authorization)
+    return {"device_id": device["device_id"], "memory": device["memory"], "retention_days": MEMORY_RETENTION_DAYS}
+
+
+@app.delete("/api/device/memory")
+def reset_device_memory(authorization: str | None = Header(default=None)) -> dict[str, str]:
+    device = _authenticated_device(authorization)
+    with _device_db() as connection:
+        connection.execute("UPDATE devices SET memory_json = '{}' WHERE device_id = ?", (device["device_id"],))
+    return {"status": "memory_reset", "device_id": device["device_id"]}
+
+
+@app.patch("/api/device/profile")
+def update_device_profile(payload: ProfileUpdateRequest, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    device = _authenticated_device(authorization)
+    name = device["companion_name"] if payload.companion_name is None else " ".join(payload.companion_name.split())
+    personality = device["personality"] if payload.personality is None else allowed_personality(payload.personality)
+    with _device_db() as connection:
+        connection.execute(
+            "UPDATE devices SET companion_name = ?, personality_json = ? WHERE device_id = ? AND revoked_at IS NULL",
+            (name, json.dumps(personality, ensure_ascii=False), device["device_id"]),
+        )
+    return {"device_id": device["device_id"], "companion_name": name, "personality": personality}
+
+
+@app.post("/api/device/transcribe")
+async def transcribe_device_audio(request: Request, authorization: str | None = Header(default=None)) -> dict[str, str]:
+    device = _authenticated_device(authorization)
+    _check_device_rate_limit(device["device_id"])
+    pcm = await request.body()
+    # SpeechKit synchronous LPCM API: mono 16-bit PCM, up to 1 MB and 30 seconds.
+    if len(pcm) < 3200 or len(pcm) > 1_000_000 or len(pcm) % 2:
+        raise HTTPException(status_code=413, detail={"code": "invalid_audio_size", "message": "Audio must be 0.1–30 seconds of 16-bit mono PCM and no larger than 1 MB"})
+    return {"text": _speechkit_transcribe(pcm)}
+
+
 @app.post("/api/device/interpret", response_model=InterpretResult)
 def interpret_for_device(
     payload: DeviceInterpretRequest,
     authorization: str | None = Header(default=None),
 ) -> InterpretResult:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail={"code": "device_auth_required", "message": "Device token required"})
-    token = authorization[7:].strip()
-    device = _get_device(token)
-    if not device:
-        raise HTTPException(status_code=401, detail={"code": "invalid_device_token", "message": "Device token is invalid or revoked"})
+    device = _authenticated_device(authorization)
     _check_device_rate_limit(device["device_id"])
     request_payload = InterpretRequest(
         utterance=payload.utterance,
