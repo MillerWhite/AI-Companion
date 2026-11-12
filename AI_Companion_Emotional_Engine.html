@@ -48,7 +48,7 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 </section>
 <section class="panel">
 <h2>Личность компаньона</h2>
-<div class="field"><label>Имя</label><input id="name" value="Milo" maxlength="20"></div>
+<div class="field"><label>Имя</label><input id="name" value="Milo" maxlength="20"></div><div class="field"><label>Другие варианты произношения имени (через запятую)</label><input id="nameAliases" placeholder="например: Майло, Мило" maxlength="100"></div>
 <div class="two">
 <div class="field"><label>Темперамент</label><select id="temper"><option value="calm">Спокойный</option><option value="playful" selected>Игривый</option><option value="shy">Стеснительный</option><option value="energetic">Энергичный</option><option value="dreamy">Мечтательный</option></select></div>
 <div class="field"><label>Инициативность</label><select id="initiative"><option value="low">Низкая</option><option value="medium" selected>Средняя</option><option value="high">Высокая</option></select></div>
@@ -102,31 +102,53 @@ $('soundEmotion')?.addEventListener('change',updateSoundInfo);
 
 function getDayPeriod(){const h=new Date().getHours();return h>=5&&h<11?'утро':h>=11&&h<17?'день':h>=17&&h<22?'вечер':'ночь'}
 function updateDayPeriod(){const p=getDayPeriod(),el=$('daypart');if(el)el.textContent='Режим дня: '+p+' · локальное время устройства';}
-let recognition=null,voiceEnabled=false,awaitingFollowupUntil=0;
+let recognition=null,voiceEnabled=false,awaitingFollowupUntil=0,pendingVoiceAction=null,lastVoiceIntent='';
 function setVoiceState(message,active=false){const el=$('voiceState');if(el){el.textContent=message;el.classList.toggle('active',active)}}
 function normalizeSpeech(s){return String(s||'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/gi,' ').trim()}
 function editDistance(a,b){const row=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let prev=row[0];row[0]=i;for(let j=1;j<=b.length;j++){const old=row[j];row[j]=Math.min(row[j]+1,row[j-1]+1,prev+(a[i-1]===b[j-1]?0:1));prev=old;}}return row[b.length]}
-function nameVariants(){const raw=normalizeSpeech($('name').value||'Milo');const translit=raw.replace(/shch/g,'щ').replace(/yo/g,'ё').replace(/zh/g,'ж').replace(/kh/g,'х').replace(/ts/g,'ц').replace(/ch/g,'ч').replace(/sh/g,'ш').replace(/yu/g,'ю').replace(/ya/g,'я').replace(/a/g,'а').replace(/b/g,'б').replace(/v/g,'в').replace(/g/g,'г').replace(/d/g,'д').replace(/e/g,'е').replace(/z/g,'з').replace(/i/g,'и').replace(/j/g,'й').replace(/k/g,'к').replace(/l/g,'л').replace(/m/g,'м').replace(/n/g,'н').replace(/o/g,'о').replace(/p/g,'п').replace(/r/g,'р').replace(/s/g,'с').replace(/t/g,'т').replace(/u/g,'у').replace(/f/g,'ф').replace(/h/g,'х').replace(/c/g,'к').replace(/w/g,'в').replace(/x/g,'кс').replace(/y/g,'й');return [...new Set([raw,translit].filter(Boolean))]}
+function transliterateName(raw){return raw.replace(/shch/g,'щ').replace(/yo/g,'ё').replace(/zh/g,'ж').replace(/kh/g,'х').replace(/ts/g,'ц').replace(/ch/g,'ч').replace(/sh/g,'ш').replace(/yu/g,'ю').replace(/ya/g,'я').replace(/a/g,'а').replace(/b/g,'б').replace(/v/g,'в').replace(/g/g,'г').replace(/d/g,'д').replace(/e/g,'е').replace(/z/g,'з').replace(/i/g,'и').replace(/j/g,'й').replace(/k/g,'к').replace(/l/g,'л').replace(/m/g,'м').replace(/n/g,'н').replace(/o/g,'о').replace(/p/g,'п').replace(/r/g,'р').replace(/s/g,'с').replace(/t/g,'т').replace(/u/g,'у').replace(/f/g,'ф').replace(/h/g,'х').replace(/c/g,'к').replace(/w/g,'в').replace(/x/g,'кс').replace(/y/g,'й')}
+function nameVariants(){const raw=[$('name').value||'Milo',...String($('nameAliases')?.value||'').split(',')].map(normalizeSpeech).filter(Boolean);return [...new Set(raw.flatMap(v=>[v,transliterateName(v)]))]}
 function nameWasCalled(text){const words=normalizeSpeech(text).split(' ');return nameVariants().some(name=>{if(normalizeSpeech(text).includes(name))return true;return name.split(' ').some(part=>words.some(w=>w===part||(part.length>=4&&editDistance(w,part)<=1)))})}
 function removeSpokenName(text){const parts=normalizeSpeech(text).split(' ');const variants=nameVariants().flatMap(v=>v.split(' '));return parts.filter(w=>!variants.some(v=>w===v||(v.length>=4&&editDistance(w,v)<=1))).join(' ')}
 function voiceAcknowledge(){needs.social=Math.max(0,needs.social-2);needs.comfort=Math.min(100,needs.comfort+2);setMood('curious','услышал своё имя и повернулся к владельцу',true,'acknowledge',2600);orb.classList.remove('gaze-left','gaze-right','gaze-up','gaze-down');orb.classList.add('gaze-center');}
-function understandVoiceCommand(raw){const t=normalizeSpeech(raw);if(!t)return false;
- const has=(...words)=>words.some(w=>t.includes(w));
- if(has('спать','иди спать','ложись','пора спать','отдыхай')){trigger('sleep');return true}
- if(has('проснись','вставай','подъем','поднимайся','доброе утро')){trigger('neutral');return true}
- if(has('поиграй','играть','игра','развлечемся','развлечемся')){trigger('play');return true}
- if(has('погладить','поглажу','ласка','обниму','люблю тебя','молодец')){trigger('happy');return true}
- if(has('удиви','удивить','испугай','бу')){trigger('surprised');return true}
- if(has('посмотри','сюда','внимание','смотри')){recordAction('call',1);orb.classList.remove('gaze-left','gaze-right','gaze-up','gaze-down');orb.classList.add('gaze-center');setMood('curious','сфокусировал взгляд на владельце',true,'attention',2400);return true}
- if(has('иди сюда','отзовись','ты здесь','ау')){trigger('curious');return true}
- if(has('грустно','мне плохо','мне грустно','поддержи','утешь')){recordAction('comfort',1);needs.comfort=Math.min(100,needs.comfort+8);setMood('love','чувствует, что владельцу нужна поддержка',true,'comfort',3500);return true}
- if(has('привет','здравствуй','добрый день','добрый вечер')){trigger('neutral');return true}
- if(has('как дела','как ты','что делаешь')){voiceAcknowledge();setVoiceState('Он узнал обращение и эмоционально откликнулся — речевого ответа у него нет',true);return true}
- if(has('случайная эмоция','покажи эмоцию','удиви меня')){randomEmotion();return true}
- setMood('curious','услышал обращение, но пока не распознал просьбу',true,'confusion',2200);setVoiceState('Имя узнал, но смысл просьбы пока не распознал',true);return false;
+function runVoiceIntent(intent){
+ lastVoiceIntent=intent;
+ if(intent==='sleep'){trigger('sleep');return true}
+ if(intent==='wake'){trigger('neutral');return true}
+ if(intent==='play'){trigger('play');return true}
+ if(intent==='pet'){trigger('happy');return true}
+ if(intent==='surprise'){trigger('surprised');return true}
+ if(intent==='attention'){recordAction('call',1);orb.classList.remove('gaze-left','gaze-right','gaze-up','gaze-down');orb.classList.add('gaze-center');setMood('curious','повернулся и сосредоточил взгляд на владельце',true,'attention',2600);return true}
+ if(intent==='call'){trigger('curious');return true}
+ if(intent==='comfort'){recordAction('comfort',1);needs.comfort=Math.min(100,needs.comfort+8);setMood('love','заметил, что владельцу нужна поддержка',true,'comfort',3500);return true}
+ if(intent==='greeting'){trigger('neutral');return true}
+ if(intent==='joy'){needs.comfort=Math.min(100,needs.comfort+3);setMood('happy','разделяет хорошее настроение владельца',true,'joy',2800);return true}
+ if(intent==='curiosity'){setMood('curious','заинтересовался словами владельца',true,'curiosity',2600);return true}
+ return false;
+}
+function askVoiceClarification(question){pendingVoiceAction=null;awaitingFollowupUntil=Date.now()+12000;setMood('curious','пытается уточнить просьбу',true,'confusion',1800);setVoiceState(question,true);log('Нужно уточнить голосовую просьбу');}
+function understandVoiceCommand(raw){
+ const t=normalizeSpeech(raw);if(!t)return false;
+ const has=(...phrases)=>phrases.some(p=>t.includes(normalizeSpeech(p)));
+ if(has('что ты умеешь','что можешь','какие команды','что ты понимаешь','помоги мне')){setVoiceState('Я могу играть, отдыхать, просыпаться, откликаться на имя, смотреть на тебя и реагировать на настроение. Скажи, например: «поиграй со мной» или «мне грустно».',true);setMood('curious','слушает вопрос владельца',true,'curiosity',2600);return true;}
+ if(has('повтори','что ты услышал','повтори просьбу')){setVoiceState(lastVoiceIntent?'Последняя распознанная реакция: '+lastVoiceIntent:'Пока ещё не было распознанных просьб',true);return true;}
+ if(has('спасибо','благодарю')){setMood('love','почувствовал благодарность',true,'gratitude',2200);return true;}
+ if(has('спать','иди спать','ложись','пора спать','отдыхай','можешь поспать','пора отдыхать','закрывай глазки','время спать','давай отдохнем','давай отдохнём'))return runVoiceIntent('sleep');
+ if(has('проснись','вставай','подъем','подъём','поднимайся','доброе утро','хватит спать','пора вставать','просыпайся уже'))return runVoiceIntent('wake');
+ if(has('поиграй','поиграем','давай играть','давай поиграем','играть со мной','мне скучно','развлечемся','развлечёмся','хочу играть','поиграй со мной'))return runVoiceIntent('play');
+ if(has('погладить','поглажу','ласка','обниму','люблю тебя','молодец','ты хороший','ты хороший мальчик','ты милашка','ты милый'))return runVoiceIntent('pet');
+ if(has('удиви','удивить','испугай','бу','сделай что нибудь неожиданное'))return runVoiceIntent('surprise');
+ if(has('посмотри','сюда','внимание','смотри','глянь на меня','повернись ко мне','посмотри на меня','смотри на меня'))return runVoiceIntent('attention');
+ if(has('иди сюда','отзовись','ты здесь','ау','откликнись','подойди','где ты'))return runVoiceIntent('call');
+ if(has('грустно','мне плохо','мне грустно','поддержи','утешь','утешь меня','тяжелый день','тяжёлый день','я расстроен','я расстроена','мне одиноко','мне тяжело'))return runVoiceIntent('comfort');
+ if(has('привет','здравствуй','добрый день','добрый вечер','доброе утро'))return runVoiceIntent('greeting');
+ if(has('я рад','я рада','хорошие новости','у меня получилось','я счастлив','я счастлива','я доволен','я довольна'))return runVoiceIntent('joy');
+ if(has('интересно','смотри что','послушай','представляешь'))return runVoiceIntent('curiosity');
+ if(has('давай','сделай что нибудь','чем займемся','чем займёмся','погнали')){askVoiceClarification('Хочешь поиграть, отдохнуть или просто пообщаться? Назови один вариант.');return false;}
+ setMood('curious','услышал речь, но не уверен в её смысле',true,'confusion',2100);setVoiceState('Я услышал тебя, но пока не понял просьбу. Попробуй сказать короче или использовать «что ты умеешь».',true);return false;
 }
 function handleSpeech(text){const cleaned=normalizeSpeech(text);if(!cleaned)return;const called=nameWasCalled(cleaned);let command=cleaned;if(called){command=removeSpokenName(cleaned);if(!command){awaitingFollowupUntil=Date.now()+12000;voiceAcknowledge();setVoiceState('Узнал своё имя. Слушаю тебя…',true);log('Откликнулся на имя владельца');return;}awaitingFollowupUntil=Date.now()+12000;voiceAcknowledge();}else if(Date.now()>awaitingFollowupUntil){setVoiceState('Ожидаю имя «'+($('name').value||'Milo')+'»',true);return;}
- const ok=understandVoiceCommand(command);log('Речь распознана: «'+text+'»'+(ok?' · действие определено':' · нужна более точная команда'));if(ok)setVoiceState('Понял обращение и выполнил реакцию',true);
+ const ok=understandVoiceCommand(command);log('Речь распознана: «'+text+'»'+(ok?' · обработано':' · не удалось однозначно понять'));if(ok)awaitingFollowupUntil=Date.now()+12000;
 }
 function startVoice(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){setVoiceState('В этом браузере нет Web Speech API. Попробуйте актуальный Chrome или Edge.');return}
  if(!recognition){recognition=new SR();recognition.lang='ru-RU';recognition.continuous=true;recognition.interimResults=false;recognition.maxAlternatives=3;recognition.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal){const variants=Array.from(e.results[i]).map(v=>v.transcript);handleSpeech(variants[0]||'');}}};recognition.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){voiceEnabled=false;$('voiceButton').textContent='Включить голос';setVoiceState('Нет доступа к микрофону. Разрешите его в браузере и нажмите кнопку снова.');}else setVoiceState('Ошибка распознавания: '+e.error)};recognition.onend=()=>{if(voiceEnabled){try{recognition.start()}catch(e){}}else setVoiceState('Голосовое управление выключено');}}
@@ -162,9 +184,13 @@ setInterval(()=>{if(current==='sleep')return;const eyes=orb.querySelectorAll('.e
 setInterval(()=>{if(current==='sleep')return;const gaze=['gaze-center','gaze-left','gaze-right','gaze-up','gaze-down'];orb.classList.remove(...gaze);orb.classList.add(gaze[Math.floor(Math.random()*gaze.length)]);},3100);
 setInterval(()=>{if(current==='sleep'){needs.energy=Math.min(100,needs.energy+2.8);needs.social=Math.min(100,needs.social+.15);if(autoSleeping&&!manualSleep&&needs.energy>=65){autoSleeping=false;setMood('neutral','сам проснулся после отдыха',true,'greeting',2100);}}else{needs.energy=Math.max(0,needs.energy-.22);needs.curiosity=Math.min(100,needs.curiosity+.32);needs.social=Math.min(100,needs.social+.25);needs.comfort=Math.max(0,needs.comfort-.08);}updateNeeds();},8000);
 setInterval(()=>{if(current==='sleep')return;const chance=profile.initiative==='high'?.24:profile.initiative==='low'?.055:.12;if(Math.random()>chance)return;let face='curious',emotion='curiosity',reason='заметил что-то интересное';if(needs.energy<18){face='sleep';emotion='sleepiness';reason='устал и хочет отдохнуть';autoSleeping=true;manualSleep=false;}else if(needs.social>78){face=profile.temper==='shy'?'shy':'love';emotion=profile.temper==='shy'?'shyness':'affection';reason='соскучился по общению';}else if(needs.curiosity>76){face='curious';emotion='curiosity2';reason='исследует окружающий мир';needs.curiosity=Math.max(25,needs.curiosity-18);}else if(needs.comfort<30){face='sad';emotion='loneliness';reason='ищет спокойствия';}else{const pool=profile.temper==='calm'?[['curious','curiosity'],['neutral','serenity']]:profile.temper==='energetic'?[['excited','excitement'],['happy','playfulness']]:profile.temper==='shy'?[['shy','shyness'],['curious','curiosity']]:[['curious','curiosity'],['happy','joy'],['shy','shyness']];[face,emotion]=pool[Math.floor(Math.random()*pool.length)];}const traits=memory.traits||{};if((traits.playfulness||0)>62&&needs.energy>35&&Math.random()<.42){face='excited';emotion='playfulness';reason='привычка чаще приглашать владельца к игре';}else if((traits.trust||0)>62&&needs.social>60&&Math.random()<.38){face='love';emotion='affection';reason='привык к владельцу и ищет близости';}else if((traits.responsiveness||0)>55&&needs.social>55&&Math.random()<.35){face='curious';emotion='alertness';reason='привычно прислушивается к владельцу';}const period=getDayPeriod();if(period==='утро'&&Math.random()<.18){face='happy';emotion='hope';reason='утреннее оживление';}if(period==='ночь'&&needs.energy<45&&Math.random()<.55){face='sleep';emotion='sleepiness';reason='ночью естественно клонит в сон';autoSleeping=true;manualSleep=false;}setMood(face,reason,Math.random()<.12,emotion,2400);},12000);
-$('orb').addEventListener('click',()=>trigger(profile.bond==='mischief'?'surprised':'happy'));
+let touchStartAt=0;
+$('orb').addEventListener('pointerdown',()=>{touchStartAt=Date.now();});
+$('orb').addEventListener('pointerup',()=>{if(!touchStartAt)return;const held=Date.now()-touchStartAt;touchStartAt=0;if(held>650){recordAction('longPet',2);needs.comfort=Math.min(100,needs.comfort+13);needs.social=Math.max(0,needs.social-8);setMood('love','долгое нежное прикосновение',true,'comfort',3300);log('Долгое прикосновение распознано');}else trigger(profile.bond==='mischief'?'surprised':'happy');});
+$('orb').addEventListener('pointercancel',()=>{touchStartAt=0});
 $('name').addEventListener('change',()=>{const n=$('name').value.trim()||'Milo';$('name').value=n;try{localStorage.setItem('ai-companion-name-v1',n)}catch(e){}});
-try{$('name').value=localStorage.getItem('ai-companion-name-v1')||$('name').value}catch(e){}
+try{$('name').value=localStorage.getItem('ai-companion-name-v1')||$('name').value;$('nameAliases').value=localStorage.getItem('ai-companion-aliases-v1')||''}catch(e){}
+$('nameAliases').addEventListener('change',()=>{try{localStorage.setItem('ai-companion-aliases-v1',$('nameAliases').value)}catch(e){}});
 $('comboCount').textContent=(35*10*9*12*5*6).toLocaleString('ru-RU');$('soundCount').textContent=(soundCategories.length*50).toLocaleString('ru-RU');
 updateNeeds();updateDayPeriod();setInterval(updateDayPeriod,60000);log('Emotional Core v0.9 запущен. Локальная память отношений и поведенческие привычки активны.');
 </script></body></html>
