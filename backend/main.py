@@ -20,13 +20,13 @@ from typing import Any
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 
 load_dotenv(dotenv_path=Path(__file__).resolve().with_name(".env"), override=False)
 
-APP_VERSION = "1.9.0"
+APP_VERSION = "2.0.0"
 APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
 DEVICE_ENROLLMENT_SECRET = os.getenv("DEVICE_ENROLLMENT_SECRET", "").strip()
 DEVICE_DB_PATH = os.getenv("DEVICE_DB_PATH", "backend/devices.sqlite3")
@@ -38,6 +38,11 @@ _DEFAULT_BASE_URL = "https://ai.api.cloud.yandex.net/v1" if AI_PROVIDER == "yand
 AI_API_BASE_URL = os.getenv("AI_API_BASE_URL", _DEFAULT_BASE_URL).rstrip("/")
 AI_MODEL = os.getenv("AI_MODEL", "aliceai-llm-flash" if AI_PROVIDER == "yandex" else "gemini-3.6-flash").strip()
 AI_TIMEOUT_SECONDS = float(os.getenv("AI_TIMEOUT_SECONDS", "20"))
+SPEECHKIT_API_KEY = os.getenv("SPEECHKIT_API_KEY", AI_API_KEY).strip()
+SPEECHKIT_FOLDER_ID = os.getenv("SPEECHKIT_FOLDER_ID", AI_FOLDER_ID).strip()
+SPEECHKIT_SAMPLE_RATE = int(os.getenv("SPEECHKIT_SAMPLE_RATE", "24000"))
+STORE_WEBHOOK_SECRET = os.getenv("STORE_WEBHOOK_SECRET", "").strip()
+MEMORY_RETENTION_DAYS = int(os.getenv("MEMORY_RETENTION_DAYS", "90"))
 
 
 class Action(str, Enum):
@@ -104,6 +109,23 @@ class DeviceEnrollRequest(BaseModel):
 class DeviceInterpretRequest(BaseModel):
     utterance: str = Field(min_length=1, max_length=1200)
     recent_context: list[ContextTurn] = Field(default_factory=list, max_length=8)
+
+
+class DeviceClaimRequest(BaseModel):
+    enrollment_grant: str = Field(min_length=24, max_length=160)
+    serial: str = Field(min_length=4, max_length=80, pattern=r"^[A-Za-z0-9._:-]+$")
+    companion_name: str = Field(default="Companion", min_length=1, max_length=40)
+    personality: dict[str, Any] = Field(default_factory=dict)
+
+
+class EnrollmentGrantRequest(BaseModel):
+    order_id: str = Field(min_length=3, max_length=120)
+    ttl_hours: int = Field(default=24, ge=1, le=168)
+
+
+class ProfileUpdateRequest(BaseModel):
+    companion_name: str | None = Field(default=None, min_length=1, max_length=40)
+    personality: dict[str, Any] | None = None
 
 
 class InterpretResult(BaseModel):
@@ -242,6 +264,22 @@ def _device_db() -> sqlite3.Connection:
             memory_json TEXT NOT NULL DEFAULT '{}',
             created_at INTEGER NOT NULL,
             revoked_at INTEGER
+        )
+    """)
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS enrollment_grants (
+            grant_hash TEXT PRIMARY KEY,
+            order_id TEXT NOT NULL UNIQUE,
+            created_at INTEGER NOT NULL,
+            expires_at INTEGER NOT NULL,
+            used_at INTEGER
+        )
+    """)
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS store_orders (
+            order_id TEXT PRIMARY KEY,
+            event_id TEXT NOT NULL UNIQUE,
+            created_at INTEGER NOT NULL
         )
     """)
     columns = {row[1] for row in connection.execute("PRAGMA table_info(devices)").fetchall()}
