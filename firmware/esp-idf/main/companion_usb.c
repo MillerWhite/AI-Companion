@@ -77,7 +77,7 @@ static void send_config(void)
     cJSON_Delete(json);
     if (!payload) return;
 
-    char line[512];
+    char line[1200];
     int written = snprintf(line, sizeof(line), "@C %s\n", payload);
     cJSON_free(payload);
     if (written > 0 && (size_t)written < sizeof(line)) usb_write_line(line);
@@ -170,6 +170,25 @@ static void process_command(char *line)
     } else if (!strncmp(line, "quirk ", 6)) {
         if (!save_u8("quirk", line + 6, 4)) { usb_write_line("@E invalid_quirk\n"); return; }
         profile_changed = true;
+        } else if (!strncmp(line, "brightness ", 11)) {
+        if (!save_u8("brightness", line + 11, 100)) { usb_write_line("@E invalid_brightness\\n"); return; }
+        profile_changed = true;
+    } else if (!strncmp(line, "theme ", 6)) {
+        if (!save_u8("theme", line + 6, 4)) { usb_write_line("@E invalid_theme\\n"); return; }
+        profile_changed = true;
+    } else if (!strncmp(line, "sleep-timeout ", 14)) {
+        if (!save_u8("sleep_timeout", line + 14, 300)) { usb_write_line("@E invalid_sleep_timeout\\n"); return; }
+        profile_changed = true;
+    } else if (!strncmp(line, "owner ", 6)) {
+        if (!save_profile_string("owner_name", line + 6, 40)) { usb_write_line("@E invalid_owner\\n"); return; }
+        profile_changed = true;
+    } else if (!strncmp(line, "badge ", 6)) {
+        if (!save_profile_string("owner_badge", line + 6, 56)) { usb_write_line("@E invalid_badge\\n"); return; }
+        profile_changed = true;
+    } else if (!strncmp(line, "qr", 2) && line[2] >= '0' && line[2] <= '3' && line[3] == ' ') {
+        char key[4] = {'q', 'r', line[2], 0};
+        if (!save_profile_string(key, line + 4, 170)) { usb_write_line("@E invalid_qr\\n"); return; }
+        profile_changed = true;
     }
 
     if (profile_changed) {
@@ -180,6 +199,7 @@ static void process_command(char *line)
 
     if (!strcmp(line, "sleep") || !strcmp(line, "wake") ||
         !strcmp(line, "pet") || !strcmp(line, "play") ||
+        !strcmp(line, "feed") || !strcmp(line, "call") || !strcmp(line, "clean") ||
         !strcmp(line, "wifi-reset") || !strncmp(line, "emotion ", 8) ||
         !strncmp(line, "sound ", 6)) {
         if (command_handler) command_handler(line);
