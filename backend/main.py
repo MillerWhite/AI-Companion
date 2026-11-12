@@ -329,6 +329,26 @@ def enroll_device(
     return {"device_id": device_id, "device_token": device_token, "message": "Save the token securely; it is returned only once."}
 
 
+@app.delete("/api/devices/{device_id}")
+def revoke_device(
+    device_id: str,
+    x_enrollment_secret: str | None = Header(default=None, alias="X-Enrollment-Secret"),
+) -> dict[str, str]:
+    """Revoke a device token from a trusted admin/store backend."""
+    if not DEVICE_ENROLLMENT_SECRET:
+        raise HTTPException(status_code=503, detail={"code": "enrollment_not_configured", "message": "Device administration is not configured"})
+    if not x_enrollment_secret or not hmac.compare_digest(x_enrollment_secret, DEVICE_ENROLLMENT_SECRET):
+        raise HTTPException(status_code=401, detail={"code": "invalid_admin_grant", "message": "Device administration authorization failed"})
+    with _device_db() as connection:
+        cursor = connection.execute(
+            "UPDATE devices SET revoked_at = ? WHERE device_id = ? AND revoked_at IS NULL",
+            (int(time.time()), device_id),
+        )
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail={"code": "device_not_found", "message": "Active device not found"})
+    return {"device_id": device_id, "status": "revoked"}
+
+
 @app.post("/api/device/interpret", response_model=InterpretResult)
 def interpret_for_device(
     payload: DeviceInterpretRequest,
