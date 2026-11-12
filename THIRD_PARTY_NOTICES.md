@@ -24,3 +24,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Additional adapted upstream module:
+- Pip-KeyPet `ui/imu.c` and `ui/imu.h`: the pure-C motion classifier in `companion_motion.c` / `companion_motion.h`, with renamed types and event identifiers. Copyright (c) 2026 David Novikov; MIT License (full license text above).
