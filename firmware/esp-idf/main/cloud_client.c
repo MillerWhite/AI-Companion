@@ -199,7 +199,7 @@ esp_err_t companion_cloud_transcribe(const int16_t *mono_pcm,
 {
     if (!mono_pcm || !sample_count || !transcript || transcript_capacity < 2) return ESP_ERR_INVALID_ARG;
     transcript[0] = '\0';
-    if (sample_count > 24000U * 30U) return ESP_ERR_INVALID_SIZE;
+    if (sample_count > 16000U * 30U) return ESP_ERR_INVALID_SIZE;
 
     char api_base[192] = {0}, token[160] = {0}, url[256] = {0}, authorization[192] = {0};
     ESP_RETURN_ON_ERROR(read_nvs_string("api_base", api_base, sizeof(api_base)), TAG, "API base missing");
