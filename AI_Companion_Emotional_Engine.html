@@ -45,7 +45,7 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 <body><main>
 <div class="head"><div class="brand">NIFORTT LABS · COMPANION SYSTEMS</div><div class="version">EXPRESSIVE CORE · CLOUD AI v1.8</div></div>
 <h1>Живой компаньон</h1>
-<p class="intro">Компаньон с собственным настроением, потребностями, памятью отношений и самостоятельным поведением. Он реагирует на взаимодействия, постепенно привыкает к владельцу и иногда проявляет инициативу сам.</p>
+<p class="intro">Компаньон с собственным характером, живыми эмоциями, памятью отношений и самостоятельным поведением. Он реагирует на взаимодействия, запоминает привычки владельца и иногда проявляет инициативу сам.</p>
 <div class="grid">
 <section class="panel">
 <div class="stage">
@@ -78,34 +78,27 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 <button class="main" style="width:100%" onclick="makeProfile()">Сгенерировать личность</button>
  <button class="secondary" style="width:100%;margin-top:8px" onclick="resetCompanionMemory()">Сбросить память и отношения</button>
 <div class="profile" id="profile"><strong>Milo · личность</strong><p>Игривый, дружелюбный, любопытный. Иногда сам инициирует контакт и внимательно наблюдает за владельцем.</p><div class="chips"><span class="chip">игривый</span><span class="chip">дружелюбный</span><span class="chip">любопытный</span></div></div>
-<h2 style="margin-top:18px">Внутреннее состояние</h2>
-<div class="field"><label>Энергия <b id="energyValue">82%</b></label><div class="meter"><i id="energyMeter" style="width:82%"></i></div></div>
-<div class="field"><label>Любопытство <b id="curiosityValue">38%</b></label><div class="meter"><i id="curiosityMeter" style="width:38%"></i></div></div>
-<div class="field"><label>Желание общения <b id="socialValue">45%</b></label><div class="meter"><i id="socialMeter" style="width:45%"></i></div></div>
-<div class="field"><label>Комфорт <b id="comfortValue">72%</b></label><div class="meter"><i id="comfortMeter" style="width:72%"></i></div></div>
+<h2 style="margin-top:18px">Ваша связь</h2>
 <div class="profile" id="bondInfo"><strong>Отношения с владельцем</strong><p>Компаньон только начинает знакомство. Отношения будут меняться от повторяющихся взаимодействий.</p><div class="chips"><span class="chip" id="bondLevel">знакомство</span><span class="chip" id="bondPoints">0 опыта</span></div><p id="habitInsight" style="font-size:11px;color:#aaa;margin:8px 0 0">Привычки формируются из повторяющихся действий владельца.</p></div>
 </section></div></main>
 <script>
 const $=id=>document.getElementById(id),orb=$('orb');let soundEnabled=true,events=0,current='neutral',currentEmotionKey='calm',intensity=6,lastSoundAt=0,returnTimer=null,profile={temper:'playful',initiative:'medium',bond:'friendly',quirk:'curious'};
-const needs={energy:82,curiosity:38,social:45,comfort:72};let manualSleep=false,autoSleeping=false;
 const memory={bond:0,petCount:0,callCount:0,playCount:0,lastAction:'',sessions:0,traits:{trust:25,playfulness:35,calmness:35,responsiveness:30}};
 try{
  const saved=JSON.parse(localStorage.getItem('ai-companion-memory-v1')||'{}');
  Object.assign(memory,saved);
- if(saved.needs)Object.keys(needs).forEach(k=>{if(Number.isFinite(saved.needs[k]))needs[k]=Math.max(0,Math.min(100,saved.needs[k]))});
  if(saved.profile){Object.assign(profile,saved.profile);for(const k of ['temper','initiative','bond','quirk'])if($(k)&&profile[k])$(k).value=profile[k];}
  if(saved.name)$('name').value=String(saved.name).slice(0,20);
 }catch(e){}
 memory.sessions=(memory.sessions||0)+1;memory.actions=memory.actions||{};
 function recordAction(action,bondGain=0){memory.actions[action]=(memory.actions[action]||0)+1;memory.actionTimes=memory.actionTimes||{};memory.actionTimes[action]=Date.now();memory.traits=memory.traits||{trust:25,playfulness:35,calmness:35,responsiveness:30};memory.bond=(memory.bond||0)+bondGain;memory.lastAction=action;if(action==='pet'||action==='longPet'){memory.traits.trust=Math.min(100,memory.traits.trust+(action==='longPet'?3:1.8));memory.traits.calmness=Math.min(100,memory.traits.calmness+(action==='longPet'?1.4:.7))}if(action==='play')memory.traits.playfulness=Math.min(100,memory.traits.playfulness+2.2);if(action==='call')memory.traits.responsiveness=Math.min(100,memory.traits.responsiveness+1.7);if(action==='rest')memory.traits.calmness=Math.min(100,memory.traits.calmness+1.2);saveMemory();updateNeeds();}
-function saveMemory(){try{localStorage.setItem('ai-companion-memory-v1',JSON.stringify({...memory,needs,profile,name:$('name').value.trim()||'Milo'}))}catch(e){}}
+function saveMemory(){try{localStorage.setItem('ai-companion-memory-v1',JSON.stringify({...memory,profile,name:$('name').value.trim()||'Milo'}))}catch(e){}}
 function resetCompanionMemory(){
  if(!confirm('Сбросить накопленные отношения, привычки и внутренние потребности?'))return;
  memory.bond=0;memory.petCount=0;memory.callCount=0;memory.playCount=0;memory.lastAction='';memory.actions={};memory.actionTimes={};memory.traits={trust:25,playfulness:35,calmness:35,responsiveness:30};
- needs.energy=82;needs.curiosity=38;needs.social=45;needs.comfort=72;
  saveMemory();updateNeeds();setMood('neutral','память отношений сброшена',false,'calm',0);log('Память и отношения сброшены владельцем');
 }
-function updateNeeds(){for(const k of Object.keys(needs)){const el=$(k+'Value'),bar=$(k+'Meter');if(el)el.textContent=Math.round(needs[k])+'%';if(bar)bar.style.width=Math.round(needs[k])+'%';}const points=memory.bond||0;$('bondPoints').textContent=points+' опыта';$('bondLevel').textContent=points<5?'знакомство':points<20?'узнаёт тебя':points<50?'привязался':points<100?'близкий компаньон':'особая связь';let insight='Пока только знакомится с тобой.';if((memory.actions.pet||0)>=5)insight='Запоминает ласку и всё спокойнее реагирует на прикосновения.';if((memory.actions.call||0)>=4)insight='Уже начинает узнавать твой зов и чаще откликается.';if((memory.actions.play||0)>=3)insight='Похоже, ему нравится играть с тобой.';if(points>=50)insight='У вас сформировалась устойчивая связь. Он уже узнаёт привычные действия.';$('bondInfo').querySelector('p').textContent=insight;const h=$('habitInsight');if(h){const a=memory.actions||{},parts=[];if((a.pet||0)>=(a.play||0)+2)parts.push('чаще выбирает спокойный контакт');if((a.play||0)>=(a.pet||0)+2)parts.push('становится более игривым');if((a.call||0)>=3)parts.push('быстрее откликается на зов');if((a.rest||0)>=3)parts.push('ценит спокойные периоды отдыха');h.textContent=parts.length?'Привычки: '+parts.join('; ')+'.':'Привычки формируются из повторяющихся действий владельца.';}}
+function updateNeeds(){const points=memory.bond||0;$('bondPoints').textContent=points+' опыта';$('bondLevel').textContent=points<5?'знакомство':points<20?'узнаёт тебя':points<50?'привязался':points<100?'близкий компаньон':'особая связь';let insight='Пока только знакомится с тобой.';if((memory.actions.pet||0)>=5)insight='Запоминает ласку и всё спокойнее реагирует на прикосновения.';if((memory.actions.call||0)>=4)insight='Уже начинает узнавать твой зов и чаще откликается.';if((memory.actions.play||0)>=3)insight='Похоже, ему нравится играть с тобой.';if(points>=50)insight='У вас сформировалась устойчивая связь. Он уже узнаёт привычные действия.';$('bondInfo').querySelector('p').textContent=insight;const h=$('habitInsight');if(h){const a=memory.actions||{},parts=[];if((a.pet||0)>=(a.play||0)+2)parts.push('чаще выбирает спокойный контакт');if((a.play||0)>=(a.pet||0)+2)parts.push('становится более игривым');if((a.call||0)>=3)parts.push('быстрее откликается на зов');if((a.rest||0)>=3)parts.push('ценит спокойные периоды отдыха');h.textContent=parts.length?'Привычки: '+parts.join('; ')+'.':'Привычки формируются из повторяющихся действий владельца.';}}
 const moods=[
 ['joy','радость','happy'],['delight','восторг','excited'],['content','довольство','happy'],['curiosity','любопытство','curious'],['wonder','изумление','surprised'],['surprise','удивление','surprised'],['shyness','смущение','shy'],['affection','нежность','love'],['calm','спокойствие','neutral'],['sleepiness','сонливость','sleep'],['sleep','сон','sleep'],['sadness','грусть','sad'],['disappointment','разочарование','sad'],['annoyance','досада','angry'],['playfulness','озорство','happy'],['mischief','хитрость','curious'],['excitement','возбуждение','excited'],['anticipation','ожидание','curious'],['loneliness','скука','sad'],['relief','облегчение','happy'],['pride','гордость','happy'],['confusion','замешательство','surprised'],['embarrassment','неловкость','shy'],['tenderness','ласка','love'],['alertness','внимание','curious'],['fear','испуг','surprised'],['jealousy','ревность','angry'],['boredom','скука','sleep'],['gratitude','благодарность','love'],['trust','доверие','happy'],['hope','надежда','curious'],['frustration','раздражение','angry'],['curiosity2','пристальный интерес','curious'],['serenity','умиротворение','neutral'],['mischievousJoy','шалость','happy']];
 const soundFamilyByMood={joy:'bright',delight:'bright',content:'warm',curiosity:'curious',wonder:'wonder',surprise:'surprise',shyness:'shy',affection:'tender',calm:'calm',sleepiness:'sleep',sleep:'sleep',sadness:'sad',disappointment:'sad',annoyance:'grumpy',playfulness:'playful',mischief:'curious',excitement:'bright',anticipation:'curious',loneliness:'softSad',relief:'warm',pride:'bright',confusion:'wonder',embarrassment:'shy',tenderness:'tender',alertness:'alert',fear:'surprise',jealousy:'grumpy',boredom:'sleep',gratitude:'tender',trust:'warm',hope:'wonder',frustration:'grumpy',curiosity2:'curious',serenity:'calm',mischievousJoy:'playful'};
@@ -144,7 +137,7 @@ function transliterateName(raw){return raw.replace(/shch/g,'щ').replace(/yo/g,'
 function nameVariants(){const raw=normalizeSpeech($('name').value||'Milo');return [...new Set([raw,transliterateName(raw)].filter(Boolean))]}
 function nameWasCalled(text){const words=normalizeSpeech(text).split(' ');return nameVariants().some(name=>{if(normalizeSpeech(text).includes(name))return true;return name.split(' ').some(part=>words.some(w=>w===part||(part.length>=4&&editDistance(w,part)<=1)))})}
 function removeSpokenName(text){const parts=normalizeSpeech(text).split(' ');const variants=nameVariants().flatMap(v=>v.split(' '));return parts.filter(w=>!variants.some(v=>w===v||(v.length>=4&&editDistance(w,v)<=1))).join(' ')}
-function voiceAcknowledge(){needs.social=Math.max(0,needs.social-2);needs.comfort=Math.min(100,needs.comfort+2);setMood('curious','услышал своё имя и повернулся к владельцу',true,'acknowledge',2600);orb.classList.remove('gaze-left','gaze-right','gaze-up','gaze-down');orb.classList.add('gaze-center');}
+function voiceAcknowledge(){setMood('curious','услышал своё имя и повернулся к владельцу',true,'acknowledge',2600);orb.classList.remove('gaze-left','gaze-right','gaze-up','gaze-down');orb.classList.add('gaze-center');}
 function runVoiceIntent(intent){
  lastVoiceIntent=intent;
  if(intent==='sleep'){trigger('sleep');return true}
@@ -154,9 +147,9 @@ function runVoiceIntent(intent){
  if(intent==='surprise'){trigger('surprised');return true}
  if(intent==='attention'){recordAction('call',1);orb.classList.remove('gaze-left','gaze-right','gaze-up','gaze-down');orb.classList.add('gaze-center');setMood('curious','повернулся и сосредоточил взгляд на владельце',true,'attention',2600);return true}
  if(intent==='call'){trigger('curious');return true}
- if(intent==='comfort'){recordAction('comfort',1);needs.comfort=Math.min(100,needs.comfort+8);setMood('love','заметил, что владельцу нужна поддержка',true,'comfort',3500);return true}
+ if(intent==='comfort'){recordAction('comfort',1);setMood('love','заметил, что владельцу нужна поддержка',true,'comfort',3500);return true}
  if(intent==='greeting'){trigger('neutral');return true}
- if(intent==='joy'){needs.comfort=Math.min(100,needs.comfort+3);setMood('happy','разделяет хорошее настроение владельца',true,'joy',2800);return true}
+ if(intent==='joy'){setMood('happy','разделяет хорошее настроение владельца',true,'joy',2800);return true}
  if(intent==='curiosity'){setMood('curious','заинтересовался словами владельца',true,'curiosity',2600);return true}
  return false;
 }
@@ -283,9 +276,9 @@ function playSound(emotionKey,force=false){
 }
 function setMood(faceKey,why='реакция компаньона',sound=true,soundEmotionKey='calm',duration=2600){current=faceKey;currentEmotionKey=soundEmotionKey;const map={happy:'радуется',excited:'в восторге',curious:'с любопытством наблюдает',surprised:'удивлён',shy:'смущается',love:'проявляет нежность',neutral:'спокойно наблюдает',sleep:'засыпает',sad:'грустит: взгляд опущен, брови домиком, на глазах слёзы и губы скорбно опущены',angry:'недоволен'};
 orb.className='orb '+(faceKey==='neutral'?'':faceKey);const mouth=$('mouth');if(mouth)mouth.className='mouth '+(faceKey==='neutral'?'neutral':faceKey);$('status').textContent=map[faceKey]||why;const moodLabel=soundCategories.find(m=>m.key===soundEmotionKey)?.label||soundEmotionKey;$('substatus').textContent=why+' · состояние: '+moodLabel+' · сила '+intensity+'/10';if(sound)playSound(soundEmotionKey,true);log(($('name').value||'Компаньон')+': '+(map[faceKey]||faceKey));if(returnTimer)clearTimeout(returnTimer);if(duration>0&&faceKey!=='sleep'&&faceKey!=='neutral'){returnTimer=setTimeout(()=>returnToBaseline(),duration);}} 
-function returnToBaseline(){const face=needs.energy<20?'sleep':needs.comfort<22?'sad':'neutral';const mood=face==='sleep'?'sleep':face==='sad'?'sadness':'calm';if(face==='sleep'&&!manualSleep)autoSleeping=true;setMood(face,'возвращается к своему настроению',false,mood,0);}
-function trigger(key){if(key==='sleep'){manualSleep=true;autoSleeping=false;recordAction('rest',0);needs.energy=Math.min(100,needs.energy+2);setMood('sleep','устроился отдыхать',true,'sleep',0);return}if(key==='neutral'){manualSleep=false;autoSleeping=false;recordAction('wake',0);needs.energy=Math.max(18,needs.energy-3);setMood('neutral','просыпается и оглядывается',true,'greeting',2200);return}if(key==='happy'){memory.petCount++;recordAction('pet',2);needs.comfort=Math.min(100,needs.comfort+9);needs.social=Math.max(0,needs.social-7);needs.energy=Math.max(0,needs.energy-1);needs.curiosity=Math.min(100,needs.curiosity+2);setMood('happy','приятное прикосновение',true,'touch',2600);return}if(key==='curious'){memory.callCount++;recordAction('call',1);needs.social=Math.max(0,needs.social-5);needs.curiosity=Math.max(0,needs.curiosity-7);setMood('curious','услышал знакомый зов',true,'acknowledge',2400);return}if(key==='surprised'){recordAction('surprise',0);needs.curiosity=Math.min(100,needs.curiosity+8);setMood('surprised','неожиданное событие',true,'surprise',2100);return}if(key==='play'){memory.playCount=(memory.playCount||0)+1;recordAction('play',2);needs.energy=Math.max(0,needs.energy-5);needs.curiosity=Math.max(0,needs.curiosity-12);needs.social=Math.max(0,needs.social-8);setMood('excited','вовлёкся в игру',true,'playInvite',3200);return}}
-function randomEmotion(){let candidates=moods.filter(x=>!['sleep','sleepiness','fear','jealousy'].includes(x[0]));let m=candidates[Math.floor(Math.random()*candidates.length)];intensity=+$('intensity').value;setMood(m[2],'самостоятельно выбранная эмоция: '+m[1],true,m[0]);needs.curiosity=Math.max(0,needs.curiosity-3);updateNeeds();}
+function returnToBaseline(){setMood('neutral','возвращается к спокойному состоянию',false,'calm',0);}
+function trigger(key){if(key==='sleep'){recordAction('rest',0);setMood('sleep','устроился отдохнуть',true,'sleep',0);return}if(key==='neutral'){recordAction('wake',0);setMood('neutral','просыпается и оглядывается',true,'greeting',2200);return}if(key==='happy'){memory.petCount++;recordAction('pet',2);setMood('happy','приятное прикосновение',true,'touch',2600);return}if(key==='curious'){memory.callCount++;recordAction('call',1);setMood('curious','услышал знакомый зов',true,'acknowledge',2400);return}if(key==='surprised'){recordAction('surprise',0);setMood('surprised','неожиданное событие',true,'surprise',2100);return}if(key==='play'){memory.playCount=(memory.playCount||0)+1;recordAction('play',2);setMood('excited','вовлёкся в игру',true,'playInvite',3200);return}}
+function randomEmotion(){let candidates=moods.filter(x=>!['sleep','sleepiness','fear','jealousy'].includes(x[0]));let m=candidates[Math.floor(Math.random()*candidates.length)];intensity=+$('intensity').value;setMood(m[2],'самостоятельно выбранная эмоция: '+m[1],true,m[0]);}
 function makeProfile(){profile={temper:$('temper').value,initiative:$('initiative').value,bond:$('bond').value,quirk:$('quirk').value};let n=$('name').value.trim()||'Milo';let dict={temper:{calm:'спокойный',playful:'игривый',shy:'стеснительный',energetic:'энергичный',dreamy:'мечтательный'},initiative:{low:'редко проявляет инициативу',medium:'иногда проявляет инициативу',high:'часто ищет контакт'},bond:{gentle:'ласковый',friendly:'дружелюбный',independent:'независимый',mischief:'озорной'},quirk:{curious:'любит всё разглядывать',sleepy:'часто сонный',dramatic:'ярко выражает эмоции',bouncy:'непоседливый',shy:'смущается от внимания'}};
 let desc=`${dict.temper[profile.temper]}, ${dict.bond[profile.bond]}; ${dict.initiative[profile.initiative]}. Особенность: ${dict.quirk[profile.quirk]}.`;
 $('profile').innerHTML='<strong></strong><p></p><div class="chips"></div>';$('profile').querySelector('strong').textContent=n+' · личность';$('profile').querySelector('p').textContent=desc;[dict.temper[profile.temper],dict.bond[profile.bond],dict.quirk[profile.quirk]].forEach(v=>{let s=document.createElement('span');s.className='chip';s.textContent=v;$('profile').querySelector('.chips').append(s)});saveMemory();log('Сгенерирован индивидуальный профиль '+n);trigger('happy')}
@@ -294,48 +287,24 @@ function blink(){if(current==='sleep')return;const eyes=orb.querySelectorAll('.e
 setInterval(()=>{if(current!=='sleep'&&Math.random()<.72)blink()},2500);
 setInterval(()=>{if(current==='sleep')return;const eyes=orb.querySelectorAll('.eye');eyes.forEach((eye,i)=>{eye.style.setProperty('--mx',((Math.random()-.5)*3.5).toFixed(1)+'px');eye.style.setProperty('--my',((Math.random()-.5)*3.5).toFixed(1)+'px');eye.classList.toggle(i?'micro-right':'micro-left',true);});},720);
 setInterval(()=>{if(current==='sleep')return;const gaze=['gaze-center','gaze-left','gaze-right','gaze-up','gaze-down'];orb.classList.remove(...gaze);orb.classList.add(gaze[Math.floor(Math.random()*gaze.length)]);},3100);
-setInterval(()=>{if(current==='sleep'){needs.energy=Math.min(100,needs.energy+2.8);needs.social=Math.min(100,needs.social+.15);if(autoSleeping&&!manualSleep&&needs.energy>=65){autoSleeping=false;setMood('neutral','сам проснулся после отдыха',true,'greeting',2100);}}else{needs.energy=Math.max(0,needs.energy-.22);needs.curiosity=Math.min(100,needs.curiosity+.32);needs.social=Math.min(100,needs.social+.25);needs.comfort=Math.max(0,needs.comfort-.08);}updateNeeds();saveMemory();},8000);
 let lastAutonomousAt=0,lastAutonomousMood='';
 function runAutonomousDecision(){
  if(current==='sleep')return;
  const now=Date.now(),gap=profile.initiative==='high'?26000:profile.initiative==='low'?72000:44000;
  if(now-lastAutonomousAt<gap)return;
- const urgent=needs.energy<16||needs.comfort<22||needs.social>88||needs.curiosity>88;
- if(!urgent&&Math.random()>(profile.initiative==='high'?.72:profile.initiative==='low'?.24:.46))return;
- let face='neutral',emotion='calm',reason='спокойно наблюдает за окружающим миром';
- if(needs.energy<16){face='sleep';emotion='sleepiness';reason='устал и самостоятельно устраивается отдохнуть';autoSleeping=true;manualSleep=false;}
- else if(needs.comfort<22){face='sad';emotion='loneliness';reason='чувствует нехватку спокойствия и ищет мягкого контакта';}
- else if(needs.social>88){face=profile.temper==='shy'?'shy':'love';emotion=profile.temper==='shy'?'shyness':'affection';reason='соскучился и осторожно ищет внимания';}
- else if(needs.curiosity>88){face='curious';emotion='curiosity2';reason='заметил что-то интересное и внимательно исследует';needs.curiosity=Math.max(35,needs.curiosity-20);}
- else{
-  const period=getDayPeriod();
-  let pool=profile.temper==='calm'?[['neutral','serenity',5],['curious','curiosity',2],['happy','content',1]]:
-   profile.temper==='energetic'?[['excited','excitement',4],['happy','playfulness',4],['curious','curiosity',1]]:
-   profile.temper==='shy'?[['shy','shyness',4],['curious','curiosity',3],['neutral','calm',2]]:
-   profile.temper==='dreamy'?[['neutral','serenity',3],['curious','wonder',3],['sleep','sleepiness',1]]:
-   [['curious','curiosity',3],['happy','joy',3],['shy','shyness',1],['neutral','calm',2]];
-  if(profile.quirk==='sleepy'&&needs.energy<55)pool.push(['sleep','sleepiness',3]);
-  if(profile.quirk==='dramatic')pool.push(['surprised','wonder',2]);
-  if(profile.quirk==='bouncy'&&needs.energy>45)pool.push(['excited','playfulness',3]);
-  if(profile.quirk==='shy')pool.push(['shy','embarrassment',3]);
-  const traits=memory.traits||{};
-  if((traits.playfulness||0)>62&&needs.energy>35)pool.push(['excited','mischievousJoy',3]);
-  if((traits.trust||0)>62&&needs.social>55)pool.push(['love','tenderness',3]);
-  if(period==='утро')pool.push(['happy','hope',2]);
-  if(period==='ночь'&&needs.energy<48)pool.push(['sleep','sleepiness',4]);
-  let total=pool.reduce((sum,item)=>sum+item[2],0),roll=Math.random()*total,chosen=pool[0];
-  for(const item of pool){roll-=item[2];if(roll<=0){chosen=item;break;}}
-  [face,emotion]=chosen;
-  reason=profile.quirk==='curious'?'с любопытством изучает всё вокруг':'проявляет свой характер и привычки';
- }
- if(face===lastAutonomousMood&&face!=='sleep'){face='neutral';emotion='calm';reason='делает паузу и спокойно наблюдает';}
- lastAutonomousMood=face;lastAutonomousAt=now;
- setMood(face,reason,Math.random()<.08,emotion,face==='sleep'?0:2600);
+ if(Math.random()>(profile.initiative==='high'?.68:profile.initiative==='low'?.20:.42))return;
+ const period=getDayPeriod();
+ let pool=profile.temper==='calm'?[['neutral','serenity',5],['curious','curiosity',2],['happy','content',1]]:profile.temper==='energetic'?[['excited','excitement',4],['happy','playfulness',4],['curious','curiosity',1]]:profile.temper==='shy'?[['shy','shyness',4],['curious','curiosity',3],['neutral','calm',2]]:profile.temper==='dreamy'?[['neutral','serenity',3],['curious','wonder',3],['happy','hope',1]]:[['curious','curiosity',3],['happy','joy',3],['shy','shyness',1],['neutral','calm',2]];
+ if(profile.quirk==='dramatic')pool.push(['surprised','wonder',2]);if(profile.quirk==='bouncy')pool.push(['excited','playfulness',3]);if(profile.quirk==='shy')pool.push(['shy','embarrassment',3]);
+ const traits=memory.traits||{};if((traits.playfulness||0)>62)pool.push(['excited','mischievousJoy',3]);if((traits.trust||0)>62)pool.push(['love','tenderness',3]);if(period==='утро')pool.push(['happy','hope',2]);
+ let total=pool.reduce((sum,item)=>sum+item[2],0),roll=Math.random()*total,chosen=pool[0];for(const item of pool){roll-=item[2];if(roll<=0){chosen=item;break;}}
+ let [face,emotion]=chosen,reason=profile.quirk==='curious'?'с любопытством изучает всё вокруг':'проявляет свой характер и привычки';if(face===lastAutonomousMood){face='neutral';emotion='calm';reason='делает паузу и спокойно наблюдает';}
+ lastAutonomousMood=face;lastAutonomousAt=now;setMood(face,reason,Math.random()<.08,emotion,2600);
 }
 setInterval(runAutonomousDecision,10000);
 let touchStartAt=0;
 $('orb').addEventListener('pointerdown',()=>{touchStartAt=Date.now();});
-$('orb').addEventListener('pointerup',()=>{if(!touchStartAt)return;const held=Date.now()-touchStartAt;touchStartAt=0;if(held>650){recordAction('longPet',2);needs.comfort=Math.min(100,needs.comfort+13);needs.social=Math.max(0,needs.social-8);setMood('love','долгое нежное прикосновение',true,'comfort',3300);log('Долгое прикосновение распознано');}else trigger(profile.bond==='mischief'?'surprised':'happy');});
+$('orb').addEventListener('pointerup',()=>{if(!touchStartAt)return;const held=Date.now()-touchStartAt;touchStartAt=0;if(held>650){recordAction('longPet',2);setMood('love','долгое нежное прикосновение',true,'comfort',3300);log('Долгое прикосновение распознано');}else trigger(profile.bond==='mischief'?'surprised':'happy');});
 $('orb').addEventListener('pointercancel',()=>{touchStartAt=0});
 $('name').addEventListener('change',()=>{const n=$('name').value.trim()||'Milo';$('name').value=n;try{localStorage.setItem('ai-companion-name-v1',n)}catch(e){}saveMemory();});
 try{$('name').value=localStorage.getItem('ai-companion-name-v1')||$('name').value}catch(e){}
