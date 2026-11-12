@@ -1,52 +1,78 @@
 # AI Companion
 
-Виртуальный невербальный компаньон. Текущий этап: **v1.8 — cloud diagnostics + ESP-IDF firmware foundation**.
+Невербальный виртуальный компаньон для **Waveshare ESP32-S3-Touch-AMOLED-1.75C**. Проект разделяет локальное поведение устройства и облачную интерпретацию естественной речи. Компаньон не разговаривает и не использует TTS.
 
-## Запуск симулятора
+## Текущее состояние
 
-1. Скачайте и распакуйте репозиторий.
-2. Откройте `AI_Companion_Emotional_Engine.html` напрямую в Chrome или Edge — для локальных эмоций и анимаций BAT-файл не нужен.
-3. Облачный ИИ требует отдельного Python backend. В PowerShell, открытом в корне проекта, один раз установите зависимости командой `py -m pip install -r backend\\requirements.txt`, затем запустите сервер командой `py -m uvicorn backend.main:app --host 127.0.0.1 --port 8787`.
-4. Скопируйте `backend/.env.example` в `backend/.env`, добавьте серверный Yandex AI Studio API key и перезапустите backend.
-5. В блоке «Облачный интеллект» нажмите «Проверить соединение». Адрес локального backend: `http://127.0.0.1:8787`.
+Рабочая ветка завершения основы: `feat/companion-completion-foundation`.
 
-API key хранится только в `backend/.env`. Не помещайте его в HTML, прошивку или GitHub. Не используйте раскрытый ранее ключ — отзовите его и создайте новый.
+### Что есть в репозитории
+- Браузерный симулятор с лицом, анимациями, эмоциями, потребностями, инициативой и локальной памятью.
+- Голосовое управление браузерного прототипа через Web Speech API (зависит от браузера и сети).
+- FastAPI backend с ограниченным JSON-контрактом действий и эмоций.
+- Регистрация устройств с уникальным Bearer token; хранятся только хеши токенов.
+- Ограниченный контекст последних текстовых обращений на сервере для физических устройств.
+- ESP-IDF каркас для Waveshare и HTTPS-клиент с проверкой allowlist полей cloud response.
+- Unit tests backend и GitHub Actions workflow.
+- Документы статуса реализации и протокола устройства.
 
-## Структура
+### Что НЕ готово
+- Реальное подключение облачного JSON к циклу поведения прошивки.
+- Wi-Fi provisioning, ASR на устройстве, драйверы микрофонов/динамика, звуковые паттерны на плате.
+- QMI8658 IMU integration, калибровка и фильтрация.
+- UI сброса/экспорта/удаления памяти.
+- Веб-прошивальщик, заказ/оплата, одноразовые enrollment grants и привязка к владельцу.
+- Production hosting, PostgreSQL, Redis, backups, мониторинг и бюджетные ограничения.
+- Успешный live smoke test Yandex AI Studio.
+- Сборка ESP-IDF и тест на физической плате.
 
-- `AI_Companion_Emotional_Engine.html` — браузерный симулятор.
-- `backend/` — FastAPI backend, Yandex AI bridge и авторизация устройств.
-- `firmware/esp-idf/` — исходный firmware-проект для Waveshare ESP32-S3-Touch-AMOLED-1.75C.
+См. [матрицу готовности и этапы](docs/IMPLEMENTATION_STATUS.md) и [протокол устройства](docs/DEVICE_PROTOCOL.md).
 
-## Реализовано
+## Запуск браузерного симулятора
 
-- Локальная модель поведения, эмоции, автономные инициативы, потребности и память отношений в браузере.
-- Голосовое управление браузерного прототипа через Web Speech API; без TTS и человеческой речи компаньона.
-- Облачная интерпретация незнакомых фраз через backend. В v1.8 добавлены health-check, диагностика подключения и более понятные ошибки.
-- Backend v1.8: device enrollment, уникальные Bearer-токены устройств, хранение токенов в БД только в виде хешей, отзыв токенов, лимит запросов.
-- Начальный ESP-IDF проект для точной платы Waveshare: официальный BSP, LVGL, локальные эмоции, касание экрана и автономное поведение.
-- HTTPS-клиент прошивки для авторизованного endpoint `/api/device/interpret`, читающий device token из NVS. Yandex API key остаётся на backend.
+Откройте `AI_Companion_Emotional_Engine.html` напрямую в Chrome или Edge. Локальные эмоции и анимации не требуют backend. Облачный интеллект из локального `file://` режима не работает.
 
-## Ошибка «Failed to fetch»
+Для локальной разработки backend из корня репозитория:
 
-Теперь симулятор отдельно проверяет `GET /health`. Если backend не запущен, проверьте, что backend запущен командой `py -m uvicorn backend.main:app --host 127.0.0.1 --port 8787`, и что в поле адреса стоит `http://127.0.0.1:8787`. Если backend доступен, но нет API-ключа, интерфейс отдельно покажет, что сервер найден, но AI не настроен. CORS разрешает локальный origin `null` для запуска HTML-файла и локальные адреса разработки.
+```powershell
+py -m pip install -r backend\requirements.txt
+Copy-Item backend\.env.example backend\.env
+py -m uvicorn backend.main:app --host 127.0.0.1 --port 8787
+```
 
-## Аппаратная цель и ограничения
+Проверка: `http://127.0.0.1:8787/health`.
 
-Плата: **Waveshare ESP32-S3-Touch-AMOLED-1.75C**, экран CO5300 466×466, touch CST9217, IMU QMI8658, PMU AXP2101, аудиокодеки ES8311/ES7210.
+Симулятор использует development-only `POST /api/interpret`. В production этот неавторизованный маршрут намеренно выключен; нельзя просто включать его на публичном сервере. Для production нужен отдельный защищённый simulator session flow или авторизованный аккаунт.
 
-Firmware находится на начальном этапе. Wi-Fi provisioning, ASR, аудиовывод, синхронизация личности и памяти, реальная обработка облачного JSON-ответа, enrollment из магазина и сайт для прошивки ещё не готовы. Плата пока не приобретена; ESP-IDF сборка и физические тесты не выполнялись. Исходники не являются готовым бинарным firmware.
+## Секреты
 
-## Важные ограничения
+- Не помещайте Yandex API key в HTML, JavaScript, firmware или GitHub.
+- Не используйте ранее раскрытый в переписке ключ: отзовите его и создайте новый.
+- Указывайте новый ключ только в секретах backend-хостинга или локальном `backend/.env`.
+- `AI_FOLDER_ID` — идентификатор каталога, не секрет.
+- `DEVICE_ENROLLMENT_SECRET` — серверный секрет, никогда не передавать в браузер/прошивку.
 
-- Публичного облачного API с гарантированно безлимитным бесплатным использованием нет.
-- Локальная работа интерфейса не должна зависеть от облака.
-- Текущий браузерный ASR зависит от Chrome/Edge и их Web Speech API; это не автономное офлайн-распознавание.
-- Для production нужны размещённый HTTPS backend, PostgreSQL, общий rate limiter, проверка заказа перед enrollment, управление расходами и мониторинг.
+## Backend tests
 
-## Документация
+```powershell
+py -m pip install -r backend\requirements.txt
+py -m unittest discover -s backend/tests -v
+```
 
-- Backend: `backend/README.md`
-- Firmware: `firmware/esp-idf/README.md`
-- Официальная документация платы: https://docs.waveshare.com/ESP32-S3-Touch-AMOLED-1.75C
-- Официальный BSP и примеры: https://github.com/waveshareteam/ESP32-S3-Touch-AMOLED-1.75C
+GitHub Actions запускает тот же набор тестов на push и pull request.
+
+## Hardware target
+
+Waveshare ESP32-S3-Touch-AMOLED-1.75C: CO5300 AMOLED 466×466, CST9217 touch, QMI8658 IMU, AXP2101 PMU, ES8311/ES7210 audio. Firmware исходники находятся в `firmware/esp-idf/`.
+
+**Важно:** плата пока не приобретена. Сборка, прошивка, звук, микрофоны, IMU, энергопотребление и тепловые характеристики не проверялись на реальном устройстве. Код не является готовым бинарным релизом.
+
+## Стоимость AI
+
+Не существует гарантированного безлимитного бесплатного публичного облачного API. Проверьте актуальные тарифы и квоты Yandex Cloud. В production обязательны лимиты по устройствам и бюджету.
+
+## Официальные ресурсы
+
+- [Waveshare docs](https://docs.waveshare.com/ESP32-S3-Touch-AMOLED-1.75C)
+- [Waveshare BSP](https://github.com/waveshareteam/ESP32-S3-Touch-AMOLED-1.75C)
+- [Yandex AI Studio](https://aistudio.yandex.ru/)
