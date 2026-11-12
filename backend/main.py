@@ -49,6 +49,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 REDIS_URL = os.getenv("REDIS_URL", "").strip()
 AI_DAILY_REQUEST_LIMIT = int(os.getenv("AI_DAILY_REQUEST_LIMIT", "250"))
 SPEECHKIT_DAILY_SECONDS_LIMIT = int(os.getenv("SPEECHKIT_DAILY_SECONDS_LIMIT", "120"))
+SPEECHKIT_DAILY_TOTAL_SECONDS_LIMIT = int(os.getenv("SPEECHKIT_DAILY_TOTAL_SECONDS_LIMIT", "3600"))
 
 
 class Action(str, Enum):
@@ -544,19 +545,27 @@ def _check_ai_daily_budget() -> None:
 
 def _check_audio_daily_budget(device_id: str, duration_seconds: int) -> None:
     day = _utc_day()
+    seconds = max(1, duration_seconds)
     redis_client = _redis()
     if redis_client:
-        key = f"ai-companion:audio-daily:{device_id}:{day}"
-        total = redis_client.incrby(key, max(1, duration_seconds))
-        if total == max(1, duration_seconds):
-            redis_client.expire(key, 172800)
+        device_key = f"ai-companion:audio-daily:{device_id}:{day}"
+        global_key = f"ai-companion:audio-total-daily:{day}"
+        device_total = redis_client.incrby(device_key, seconds)
+        global_total = redis_client.incrby(global_key, seconds)
+        if device_total == seconds:
+            redis_client.expire(device_key, 172800)
+        if global_total == seconds:
+            redis_client.expire(global_key, 172800)
     else:
         if APP_ENV == "production":
             raise HTTPException(status_code=503, detail={"code": "redis_required", "message": "Production requires Redis for audio quotas"})
-        key = f"{device_id}:{day}"
-        total = _local_audio_daily.get(key, 0) + max(1, duration_seconds)
-        _local_audio_daily[key] = total
-    if total > SPEECHKIT_DAILY_SECONDS_LIMIT:
+        device_key = f"{device_id}:{day}"
+        global_key = f"global:{day}"
+        device_total = _local_audio_daily.get(device_key, 0) + seconds
+        global_total = _local_audio_daily.get(global_key, 0) + seconds
+        _local_audio_daily[device_key] = device_total
+        _local_audio_daily[global_key] = global_total
+    if device_total > SPEECHKIT_DAILY_SECONDS_LIMIT or global_total > SPEECHKIT_DAILY_TOTAL_SECONDS_LIMIT:
         raise HTTPException(status_code=429, detail={"code": "audio_daily_budget_reached", "message": "Daily speech recognition budget reached"})
 
 
@@ -586,7 +595,7 @@ def validate_production_configuration() -> None:
         "SPEECHKIT_SAMPLE_RATE=16000": SPEECHKIT_SAMPLE_RATE == 16000,
         "AI_ALLOWED_ORIGINS": bool(production_origins) and "*" not in production_origins and all(origin.startswith("https://") for origin in production_origins),
         "ALLOWED_HOSTS": bool(production_hosts) and "*" not in production_hosts,
-        "positive request/audio budgets": DEVICE_REQUESTS_PER_MINUTE > 0 and AI_DAILY_REQUEST_LIMIT > 0 and SPEECHKIT_DAILY_SECONDS_LIMIT > 0,
+        "positive request/audio budgets": DEVICE_REQUESTS_PER_MINUTE > 0 and AI_DAILY_REQUEST_LIMIT > 0 and SPEECHKIT_DAILY_SECONDS_LIMIT > 0 and SPEECHKIT_DAILY_TOTAL_SECONDS_LIMIT > 0,
         "MEMORY_RETENTION_DAYS (1..3650)": 1 <= MEMORY_RETENTION_DAYS <= 3650,
     }
     missing = [key for key, ready in required.items() if not ready]
