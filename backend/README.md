@@ -1,112 +1,87 @@
-# AI Companion — Cloud Language Backend v1.8
+# AI Companion backend 2.1
 
-Основной облачный провайдер — **Yandex AI Studio**, доступный в российской инфраструктуре. Backend использует OpenAI-совместимый Chat Completions API. Для проекта выбрана модель Alice AI LLM Flash; модель и провайдер можно заменить настройками окружения. API-ключ и ID каталога хранятся только на сервере.
+FastAPI service for natural-language intent interpretation, SpeechKit transcription, device enrollment and owner controls. The backend returns constrained data; it never directly drives hardware.
 
-## Подключение Yandex AI Studio
+## Implemented routes
 
-1. Откройте [Yandex AI Studio](https://aistudio.yandex.ru/).
-2. Создайте или выберите каталог Yandex Cloud.
-3. Создайте сервисный аккаунт и выдайте ему роль для работы с языковыми моделями AI Studio.
-4. Создайте API-ключ с нужными правами.
-5. Скопируйте секретное значение API-ключа и ID каталога.
-6. Укажите их в переменных окружения backend. Не отправляйте ключ в чат и не добавляйте его в HTML, JavaScript, прошивку или GitHub.
+| Route | Purpose | Authorization |
+|---|---|---|
+| `GET /health` | Health and configuration status | Public |
+| `POST /api/interpret` | Browser simulator development route | Disabled in production |
+| `POST /api/devices/claim` | Consume a one-time enrollment grant | Grant bearer in body |
+| `POST /api/device/transcribe` | 16 kHz, mono, 16-bit LPCM → Yandex SpeechKit | Device Bearer token |
+| `POST /api/device/interpret` | Speech text → validated nonverbal intent | Device Bearer token |
+| `GET /api/device/memory` | Export bounded memory JSON | Device Bearer token |
+| `DELETE /api/device/memory` | Delete all saved context and facts | Device Bearer token |
+| `PATCH /api/device/profile` | Update companion name/personality | Device Bearer token |
+| `POST /api/admin/enrollment-grants` | Create one-time activation grant | Server-only enrollment secret |
+| `POST /api/store/webhook` | HMAC-signed paid-order event → one-time grant | Store webhook signature |
+| `POST /api/devices/enroll` | Legacy trusted admin enrollment | Server-only enrollment secret |
+| `DELETE /api/devices/{device_id}` | Revoke device | Server-only enrollment secret |
 
-Официальные инструкции:
-- [Быстрый старт Yandex AI Studio](https://aistudio.yandex.ru/ru/docs/ai-studio/quickstart/)
-- [Аутентификация](https://aistudio.yandex.ru/ru/docs/ai-studio/api-ref/authentication)
-- [Доступные модели](https://aistudio.yandex.ru/ru/docs/ai-studio/concepts/generation/models)
-- [Тарифы](https://aistudio.yandex.ru/ru/docs/ai-studio/pricing)
+## Speech pipeline
 
-## Конфигурация
+Firmware sends mono signed 16-bit LPCM at 16 kHz over HTTPS. The backend limits request size/duration, applies per-device daily audio quotas, and forwards audio to the synchronous Yandex SpeechKit recognition endpoint. Raw audio is not stored. Transcribed text is passed separately to the language model. Unaddressed ambient speech is not retained in the device conversation context; only speech the model identifies as addressed to the companion is saved.
 
-Скопируйте `backend/.env.example` в `backend/.env` и заполните:
+Configure a dedicated `SPEECHKIT_API_KEY` with the SpeechKit STT role and `SPEECHKIT_SAMPLE_RATE=16000`. For a service-account API key, leave `SPEECHKIT_FOLDER_ID` empty (the folder is derived from the service account); set it only when authenticating as a user account. Confirm current account quotas before enabling the device microphone.
 
-- `AI_PROVIDER=yandex`
-- `AI_API_KEY` — секретная часть API-ключа Yandex AI Studio.
-- `AI_FOLDER_ID` — ID каталога, в котором создан сервисный аккаунт.
-- `AI_API_BASE_URL=https://ai.api.cloud.yandex.net/v1`
-- `AI_MODEL=aliceai-llm-flash`
+## Memory
 
-Backend загружает настройки именно из `backend/.env` независимо от текущей рабочей папки. Backend автоматически формирует URI модели вида `gpt://<folder_id>/aliceai-llm-flash`, отправляет ключ с префиксом `Api-Key` и передаёт ID каталога в заголовке `OpenAI-Project`.
+Each device stores:
+- At most eight recent owner/companion context turns.
+- Up to twenty non-sensitive preference facts in four allowlisted categories.
+- A retention window controlled by `MEMORY_RETENTION_DAYS` (default 90 days).
 
-### Другой провайдер
+Memory writes require the model to mark the utterance as addressed to the companion and return an allowlisted memory category with confidence >= 0.85. The prompt forbids sensitive information, credentials and inferred personal facts. Owners can export or delete memory using the authenticated routes; the on-device local owner portal proxies these actions after its physical setup PIN is supplied.
 
-Для необязательного переключения на Gemini укажите `AI_PROVIDER=gemini`, соответствующие `AI_API_KEY`, `AI_API_BASE_URL` и `AI_MODEL`. Для эксплуатации в России основной рекомендуемый профиль — Yandex AI Studio; доступность сторонних провайдеров может зависеть от региона и условий самого поставщика.
+This is a bounded companion memory feature, not a general-purpose personal data store. Review the categories and retention policy before commercial release.
 
-## Стоимость и квоты
+## Enrollment and payments
 
-Не считаем API безлимитным или гарантированно бесплатным. Перед запуском проверьте актуальные квоты, цены, способы оплаты и доступность выбранной модели в своём аккаунте Yandex Cloud. Условия провайдера могут меняться.
+- Admins can issue a short-lived, single-use grant after independently verifying a paid order.
+- `POST /api/store/webhook` accepts a generic JSON event signed with HMAC-SHA256 using `STORE_WEBHOOK_SECRET`.
+- The grant is stored hashed and can be redeemed once by a device serial.
+- The device token is returned once and stored in NVS by the firmware.
 
-## Локальный запуск backend для разработки
+**A real payment provider is not connected yet.** The webhook is a provider-neutral adapter contract; the store must verify the provider's signature/payment status and forward a signed event. Do not trust arbitrary client-side `payment_status=paid` claims. Customer accounts, order history, refunds and automated revocation on chargeback are not implemented.
 
-Требуется Python 3.10+.
+## Production controls
 
-```powershell
-py -m venv backend\.venv
-backend\.venv\Scripts\Activate.ps1
-py -m pip install -r backend\requirements.txt
-Copy-Item backend\.env.example backend\.env
-uvicorn backend.main:app --host 127.0.0.1 --port 8787
+- PostgreSQL support via `DATABASE_URL`; SQLite is for local development.
+- Redis-backed per-device rate limits and daily AI/audio request budgets.
+- Production startup refuses to run without PostgreSQL, Redis, strong enrollment/webhook secrets, AI and SpeechKit keys, exact CORS origins and allowed hosts.
+- Docker Compose template includes PostgreSQL, Redis and Caddy automatic HTTPS.
+- API responses include security headers; API responses are not cached.
+- Audio request bodies and store webhooks are size-limited before buffering.
+
+The daily AI limit is a request-count ceiling, not a provider-billing meter. Add provider spend alerts, token accounting, database backups, restore drills, monitoring and incident alerts before production.
+
+## Local development
+
+```bash
+python -m venv .venv
+# Windows: .venv\\Scripts\\activate
+# macOS/Linux: source .venv/bin/activate
+python -m pip install -r backend/requirements.txt
+cp backend/.env.example backend/.env
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8787
+python -m unittest discover -s backend/tests -v
 ```
 
-Проверка: http://127.0.0.1:8787/health
+## Production template
 
-## Подключение браузерного симулятора к облачному ИИ (v1.8)
+From the `backend` directory on a Linux host with a DNS A/AAAA record pointing to it:
 
-1. Скопируйте `backend/.env.example` в `backend/.env` и заполните `AI_API_KEY`. Не помещайте ключ в корневой .env, HTML или GitHub.
-2. Откройте `AI_Companion_Emotional_Engine.html` напрямую в браузере. Сам HTML не может запускать Python-процесс: отдельно запустите backend командой `py -m uvicorn backend.main:app --host 127.0.0.1 --port 8787` из корня репозитория. Перед первым запуском установите зависимости: `py -m pip install -r backend\\requirements.txt`.
-3. В блоке «Облачный интеллект» оставьте адрес `http://127.0.0.1:8787`.
-4. Нажмите «Проверить соединение». Интерфейс проверяет `GET /health` и показывает отдельно доступность backend и наличие конфигурации AI.
-5. Включите облачный интеллект, назовите компаньона и произнесите незнакомую локальному парсеру фразу.
-
-Симулятор сначала пробует локальные команды. Только если локальный разбор не справился и переключатель включён, распознанный текст отправляется на `POST /api/interpret`. API key остаётся на backend.
-
-### Если отображается Failed to fetch
-
-- Проверьте, что открыто отдельное окно консоли `AI Companion Backend` и в нём нет traceback.
-- Проверьте адрес `http://127.0.0.1:8787`.
-- Откройте `http://127.0.0.1:8787/health` напрямую в браузере. Если страница не открывается, backend не запущен или порт занят.
-- Если /health открывается, но симулятор сообщает о сетевой ошибке, проверьте разрешение брандмауэра Windows для Python и CORS. Локальный режим с origin null включён по умолчанию для HTML-файла.
-- Если health сообщает `ai_configured=false`, backend доступен, но в `backend/.env` не заполнены AI_API_KEY/AI_FOLDER_ID или сервер не был перезапущен после изменения файла.
-
-В v1.8 backend также разрешает локальные origin `localhost` и `127.0.0.1` с любым портом только в режиме разработки; в production остаётся список точных origin. Загрузчик ждёт до 12 секунд ответа `/health` и предупреждает, если backend не поднялся.
-
-В v1.8 интерфейс отличает недоступный backend от доступного backend без настроенного AI. Ошибка облака не отключает локальные реакции.
-
-Для размещённого сайта замените `AI_ALLOWED_ORIGINS` на точный HTTPS-origin сайта. Не используйте публичный wildcard CORS как замену авторизации. Публичный запуск backend требует отдельной аутентификации устройств/пользователей, лимитов запросов и мониторинга расходов.
-
-## Устройства: серверная регистрация и авторизация (v1.6+)
-
-Добавлены два endpoint для будущего потока прошивки и работы физических устройств:
-
-- `POST /api/devices/enroll` — регистрация платы доверенным сервером магазина. Требует заголовок `X-Enrollment-Secret`, который хранится только в серверных переменных окружения. Возвращает `device_id` и случайный `device_token` один раз.
-- `DELETE /api/devices/{device_id}` — отзыв токена доверенным сервером магазина через тот же `X-Enrollment-Secret`.
-- `POST /api/device/interpret` — интерпретация текста с устройства. Требует `Authorization: Bearer <device_token>`. Профиль характера и имя берутся из серверной записи устройства, а не доверяются данным из прошивки.
-
-Токен устройства хранится в SQLite только в виде SHA-256-хеша. Повторная регистрация того же serial отклоняется. Для локального тестирования добавьте в `.env` длинный случайный `DEVICE_ENROLLMENT_SECRET`, например сгенерированный менеджером паролей. Не передавайте его в браузер и не встраивайте в прошивку.
-
-**Ограничения текущего этапа:** endpoint регистрации пока предназначен для вызова доверенным backend магазина, но интеграции с оплатой/заказами ещё нет. Лимит запросов пока хранится в памяти одного процесса; перед масштабированием на несколько экземпляров его нужно перенести в Redis или общий rate-limit сервис. SQLite подходит для прототипа на одном сервере; для массовой эксплуатации нужна управляемая PostgreSQL и резервное копирование. Панель управления устройствами и привязка enrollment к заказам магазина ещё предстоит добавить.
-
-Для production задайте `APP_ENV=production`: открытый endpoint `/api/interpret`, предназначенный только для браузерного симулятора, будет отключён. Физические устройства используют только авторизованный `/api/device/interpret`.
-
-## Архитектура с Waveshare
-
-ESP32-S3 не запускает языковую модель и не содержит API key. Прошивка локально выполняет отрисовку 466×466, анимации глаз/рта, касания, датчики, аудио и базовые реакции. При согласии владельца устройство отправляет короткий распознанный текст или событие на наш HTTPS backend; backend вызывает Yandex AI Studio и возвращает структурированное JSON-намерение. Прошивка проверяет ответ и применяет его через локальный движок. При отсутствии Wi-Fi или недоступности API устройство продолжает работать автономно.
-
-## Сайт и прошивка
-
-Сайт будет использовать Web Serial/WebUSB для передачи прошивки на плату через USB в поддерживаемом браузере. AI backend — отдельный облачный сервис, а не часть HTML и не часть бинарной прошивки. Конфигурация устройства будет содержать только публичный адрес backend и уникальный идентификатор устройства; секреты провайдера остаются на сервере. Для массового запуска потребуются HTTPS, аутентификация устройств, лимиты на устройство, защита от злоупотреблений и мониторинг расходов.
-
-## Приватность и ограничения
-
-- Передача распознанной речи в облако должна быть отдельной, понятной и отключаемой настройкой владельца.
-- Не храните API key в браузере, прошивке или репозитории.
-- Проверьте актуальные условия обработки данных Yandex Cloud перед запуском.
-- Если API недоступен, устройство использует локальную логику без блокировки экрана, анимаций и звуков.
-- Текущий endpoint принимает текст, а не аудиопоток с микрофонов платы. ASR-пайплайн устройства ещё предстоит реализовать.
-
-## Тесты
-
-```powershell
-py -m unittest backend.tests.test_intents -v
+```bash
+cp .env.production.example .env
+# Fill all secrets, API_DOMAIN, exact origins and database credentials.
+docker compose -f docker-compose.production.yml up -d --build
 ```
+
+Caddy obtains TLS certificates for `API_DOMAIN`. Keep `.env` out of Git and restrict its permissions. Put provider keys in a managed secret store where available. This repository contains deployment templates; no cloud host has been provisioned or deployed by this change.
+
+After deployment, schedule `bash scripts/backup-postgres.sh` daily from the `backend` directory. It creates a checksum-protected local dump and removes local dumps older than 14 days. Copy backups off-host and perform restore drills; a local dump on the same server is not a disaster-recovery plan.
+
+## Provider caveat
+
+The Yandex OpenAI-compatible chat endpoint/model/auth header configuration still needs a live smoke test using a newly created, unexposed key. The key disclosed earlier in the project conversation must be revoked and must not be reused.

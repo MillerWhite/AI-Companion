@@ -1,10 +1,12 @@
 #include "cloud_client.h"
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include "esp_crt_bundle.h"
 #include "esp_http_client.h"
 #include "esp_log.h"
+#include "esp_check.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "cJSON.h"
@@ -114,5 +116,213 @@ esp_err_t companion_cloud_interpret(const char *utterance,
         return ESP_FAIL;
     }
     if (target.length == 0) return ESP_ERR_INVALID_RESPONSE;
+
+    /* Treat cloud JSON as untrusted data. Reject missing or unknown enum values
+       before a future behavior layer can apply the result to the display. */
+    cJSON *result = cJSON_ParseWithLength(response_json, target.length);
+    if (!result) return ESP_ERR_INVALID_RESPONSE;
+    const cJSON *addressed = cJSON_GetObjectItemCaseSensitive(result, "addressed_to_companion");
+    const cJSON *understood = cJSON_GetObjectItemCaseSensitive(result, "understood");
+    const cJSON *action = cJSON_GetObjectItemCaseSensitive(result, "action");
+    const cJSON *emotion = cJSON_GetObjectItemCaseSensitive(result, "emotion");
+    const cJSON *confidence = cJSON_GetObjectItemCaseSensitive(result, "confidence");
+    const bool valid_action = cJSON_IsString(action) &&
+        (strcmp(action->valuestring, "idle") == 0 ||
+         strcmp(action->valuestring, "greet") == 0 ||
+         strcmp(action->valuestring, "acknowledge") == 0 ||
+         strcmp(action->valuestring, "play") == 0 ||
+         strcmp(action->valuestring, "pet") == 0 ||
+         strcmp(action->valuestring, "sleep") == 0 ||
+         strcmp(action->valuestring, "wake") == 0 ||
+         strcmp(action->valuestring, "surprise") == 0 ||
+         strcmp(action->valuestring, "comfort") == 0 ||
+         strcmp(action->valuestring, "attend") == 0 ||
+         strcmp(action->valuestring, "express_joy") == 0 ||
+         strcmp(action->valuestring, "express_curiosity") == 0 ||
+         strcmp(action->valuestring, "thank") == 0 ||
+         strcmp(action->valuestring, "clarify") == 0);
+    const bool valid_emotion = cJSON_IsString(emotion) &&
+        (strcmp(emotion->valuestring, "neutral") == 0 ||
+         strcmp(emotion->valuestring, "happy") == 0 ||
+         strcmp(emotion->valuestring, "curious") == 0 ||
+         strcmp(emotion->valuestring, "affectionate") == 0 ||
+         strcmp(emotion->valuestring, "sleepy") == 0 ||
+         strcmp(emotion->valuestring, "surprised") == 0 ||
+         strcmp(emotion->valuestring, "sad") == 0 ||
+         strcmp(emotion->valuestring, "calm") == 0 ||
+         strcmp(emotion->valuestring, "excited") == 0 ||
+         strcmp(emotion->valuestring, "concerned") == 0);
+    const bool valid = cJSON_IsBool(addressed) && cJSON_IsBool(understood) &&
+        valid_action && valid_emotion && cJSON_IsNumber(confidence) &&
+        confidence->valuedouble >= 0.0 && confidence->valuedouble <= 1.0;
+    cJSON_Delete(result);
+    if (!valid) {
+        response_json[0] = '\0';
+        ESP_LOGW(TAG, "Cloud response did not match the intent allowlist");
+        return ESP_ERR_INVALID_RESPONSE;
+    }
+    return ESP_OK;
+}
+
+
+static esp_err_t post_cloud_payload(const char *url, const char *authorization,
+                                    const char *content_type, const void *body,
+                                    size_t body_size, char *response,
+                                    size_t response_capacity)
+{
+    response_buffer_t target = {.buffer = response, .capacity = response_capacity, .length = 0};
+    esp_http_client_config_t config = {
+        .url = url, .method = HTTP_METHOD_POST, .timeout_ms = CLOUD_TIMEOUT_MS,
+        .event_handler = on_http_event, .user_data = &target,
+        .crt_bundle_attach = esp_crt_bundle_attach
+    };
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    if (!client) return ESP_FAIL;
+    esp_http_client_set_header(client, "Content-Type", content_type);
+    if (authorization && authorization[0]) esp_http_client_set_header(client, "Authorization", authorization);
+    esp_http_client_set_post_field(client, (const char *)body, (int)body_size);
+    esp_err_t err = esp_http_client_perform(client);
+    int status = esp_http_client_get_status_code(client);
+    esp_http_client_cleanup(client);
+    if (err != ESP_OK) return err;
+    if (status != 200) {
+        ESP_LOGW(TAG, "Backend returned HTTP %d", status);
+        return status == 401 ? ESP_ERR_INVALID_STATE : ESP_FAIL;
+    }
+    return target.length ? ESP_OK : ESP_ERR_INVALID_RESPONSE;
+}
+
+esp_err_t companion_cloud_transcribe(const int16_t *mono_pcm,
+                                     size_t sample_count,
+                                     char *transcript,
+                                     size_t transcript_capacity)
+{
+    if (!mono_pcm || !sample_count || !transcript || transcript_capacity < 2) return ESP_ERR_INVALID_ARG;
+    transcript[0] = '\0';
+    if (sample_count > 16000U * 30U) return ESP_ERR_INVALID_SIZE;
+
+    char api_base[192] = {0}, token[160] = {0}, url[256] = {0}, authorization[192] = {0};
+    ESP_RETURN_ON_ERROR(read_nvs_string("api_base", api_base, sizeof(api_base)), TAG, "API base missing");
+    ESP_RETURN_ON_ERROR(read_nvs_string("device_token", token, sizeof(token)), TAG, "device token missing");
+    size_t n = strlen(api_base);
+    while (n && api_base[n - 1] == '/') api_base[--n] = '\0';
+    int len = snprintf(url, sizeof(url), "%s/api/device/transcribe", api_base);
+    if (len < 0 || (size_t)len >= sizeof(url)) return ESP_ERR_INVALID_SIZE;
+    len = snprintf(authorization, sizeof(authorization), "Bearer %s", token);
+    if (len < 0 || (size_t)len >= sizeof(authorization)) return ESP_ERR_INVALID_SIZE;
+
+    char response[2048] = {0};
+    esp_err_t err = post_cloud_payload(url, authorization, "application/octet-stream",
+                                       mono_pcm, sample_count * sizeof(int16_t),
+                                       response, sizeof(response));
+    if (err != ESP_OK) return err;
+    cJSON *json = cJSON_Parse(response);
+    if (!json) return ESP_ERR_INVALID_RESPONSE;
+    const cJSON *text = cJSON_GetObjectItemCaseSensitive(json, "text");
+    if (!cJSON_IsString(text) || !text->valuestring || strlen(text->valuestring) >= transcript_capacity) {
+        cJSON_Delete(json);
+        return ESP_ERR_INVALID_RESPONSE;
+    }
+    strlcpy(transcript, text->valuestring, transcript_capacity);
+    cJSON_Delete(json);
+    return transcript[0] ? ESP_OK : ESP_ERR_NOT_FOUND;
+}
+
+esp_err_t companion_cloud_claim(const char *api_base,
+                                const char *serial,
+                                const char *companion_name,
+                                const char *enrollment_grant,
+                                char *device_id,
+                                size_t device_id_capacity)
+{
+    if (!api_base || !serial || !companion_name || !enrollment_grant ||
+        !device_id || device_id_capacity < 8) return ESP_ERR_INVALID_ARG;
+    device_id[0] = '\0';
+    cJSON *body = cJSON_CreateObject();
+    if (!body) return ESP_ERR_NO_MEM;
+    cJSON_AddStringToObject(body, "serial", serial);
+    cJSON_AddStringToObject(body, "companion_name", companion_name);
+    cJSON_AddStringToObject(body, "enrollment_grant", enrollment_grant);
+    cJSON_AddItemToObject(body, "personality", cJSON_CreateObject());
+    char *body_json = cJSON_PrintUnformatted(body);
+    cJSON_Delete(body);
+    if (!body_json) return ESP_ERR_NO_MEM;
+
+    char base[192], url[256], response[2048] = {0};
+    strlcpy(base, api_base, sizeof(base));
+    size_t n = strlen(base);
+    while (n && base[n - 1] == '/') base[--n] = '\0';
+    int len = snprintf(url, sizeof(url), "%s/api/devices/claim", base);
+    if (len < 0 || (size_t)len >= sizeof(url)) {
+        cJSON_free(body_json);
+        return ESP_ERR_INVALID_SIZE;
+    }
+    esp_err_t err = post_cloud_payload(url, NULL, "application/json", body_json,
+                                       strlen(body_json), response, sizeof(response));
+    cJSON_free(body_json);
+    if (err != ESP_OK) return err;
+
+    cJSON *json = cJSON_Parse(response);
+    if (!json) return ESP_ERR_INVALID_RESPONSE;
+    const cJSON *token = cJSON_GetObjectItemCaseSensitive(json, "device_token");
+    const cJSON *id = cJSON_GetObjectItemCaseSensitive(json, "device_id");
+    if (!cJSON_IsString(token) || !cJSON_IsString(id) ||
+        strlen(token->valuestring) >= 160 || strlen(id->valuestring) >= device_id_capacity) {
+        cJSON_Delete(json);
+        return ESP_ERR_INVALID_RESPONSE;
+    }
+
+    nvs_handle_t handle;
+    err = nvs_open("companion", NVS_READWRITE, &handle);
+    if (err == ESP_OK) {
+        err = nvs_set_str(handle, "api_base", base);
+        if (err == ESP_OK) err = nvs_set_str(handle, "device_token", token->valuestring);
+        if (err == ESP_OK) err = nvs_set_str(handle, "companion_name", companion_name);
+        if (err == ESP_OK) err = nvs_commit(handle);
+        nvs_close(handle);
+    }
+    if (err == ESP_OK) strlcpy(device_id, id->valuestring, device_id_capacity);
+    cJSON_Delete(json);
+    return err;
+}
+
+
+esp_err_t companion_cloud_owner_request(esp_http_client_method_t method,
+                                        const char *path,
+                                        const char *json_body,
+                                        char *response,
+                                        size_t response_capacity)
+{
+    if (!path || path[0] != '/' || !response || response_capacity < 2) return ESP_ERR_INVALID_ARG;
+    response[0] = '\0';
+    char api_base[192] = {0}, token[160] = {0}, url[320] = {0}, authorization[192] = {0};
+    ESP_RETURN_ON_ERROR(read_nvs_string("api_base", api_base, sizeof(api_base)), TAG, "API base missing");
+    ESP_RETURN_ON_ERROR(read_nvs_string("device_token", token, sizeof(token)), TAG, "device token missing");
+    size_t n = strlen(api_base);
+    while (n && api_base[n - 1] == '/') api_base[--n] = '\0';
+    int len = snprintf(url, sizeof(url), "%s%s", api_base, path);
+    if (len < 0 || (size_t)len >= sizeof(url)) return ESP_ERR_INVALID_SIZE;
+    len = snprintf(authorization, sizeof(authorization), "Bearer %s", token);
+    if (len < 0 || (size_t)len >= sizeof(authorization)) return ESP_ERR_INVALID_SIZE;
+
+    response_buffer_t target = {.buffer = response, .capacity = response_capacity, .length = 0};
+    esp_http_client_config_t config = {
+        .url = url, .method = method, .timeout_ms = CLOUD_TIMEOUT_MS,
+        .event_handler = on_http_event, .user_data = &target,
+        .crt_bundle_attach = esp_crt_bundle_attach
+    };
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    if (!client) return ESP_FAIL;
+    esp_http_client_set_header(client, "Authorization", authorization);
+    esp_http_client_set_header(client, "Content-Type", "application/json");
+    if (json_body) esp_http_client_set_post_field(client, json_body, (int)strlen(json_body));
+    esp_err_t err = esp_http_client_perform(client);
+    int status = esp_http_client_get_status_code(client);
+    esp_http_client_cleanup(client);
+    if (err != ESP_OK) return err;
+    if (status < 200 || status >= 300) {
+        ESP_LOGW(TAG, "Owner API returned HTTP %d", status);
+        return status == 401 ? ESP_ERR_INVALID_STATE : ESP_FAIL;
+    }
     return ESP_OK;
 }

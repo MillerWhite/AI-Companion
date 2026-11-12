@@ -1,52 +1,58 @@
 # AI Companion
 
-Виртуальный невербальный компаньон. Текущий этап: **v1.8 — cloud diagnostics + ESP-IDF firmware foundation**.
+Невербальный виртуальный компаньон для **Waveshare ESP32-S3-Touch-AMOLED-1.75C**. Локальная прошивка отвечает за эмоции, мимику, автономное поведение, звук, касания и IMU; облачный backend распознаёт речь и интерпретирует намерения владельца.
 
-## Запуск симулятора
+## Новая рабочая ветка
 
-1. Скачайте и распакуйте репозиторий.
-2. Откройте `AI_Companion_Emotional_Engine.html` напрямую в Chrome или Edge — для локальных эмоций и анимаций BAT-файл не нужен.
-3. Облачный ИИ требует отдельного Python backend. В PowerShell, открытом в корне проекта, один раз установите зависимости командой `py -m pip install -r backend\\requirements.txt`, затем запустите сервер командой `py -m uvicorn backend.main:app --host 127.0.0.1 --port 8787`.
-4. Скопируйте `backend/.env.example` в `backend/.env`, добавьте серверный Yandex AI Studio API key и перезапустите backend.
-5. В блоке «Облачный интеллект» нажмите «Проверить соединение». Адрес локального backend: `http://127.0.0.1:8787`.
+`feat/companion-completion-foundation`
 
-API key хранится только в `backend/.env`. Не помещайте его в HTML, прошивку или GitHub. Не используйте раскрытый ранее ключ — отзовите его и создайте новый.
+Черновик Pull Request: https://github.com/MillerWhite/AI-Companion/pull/1
 
-## Структура
+## Что добавлено в программную основу
 
-- `AI_Companion_Emotional_Engine.html` — браузерный симулятор.
-- `backend/` — FastAPI backend, Yandex AI bridge и авторизация устройств.
-- `firmware/esp-idf/` — исходный firmware-проект для Waveshare ESP32-S3-Touch-AMOLED-1.75C.
-
-## Реализовано
-
-- Локальная модель поведения, эмоции, автономные инициативы, потребности и память отношений в браузере.
-- Голосовое управление браузерного прототипа через Web Speech API; без TTS и человеческой речи компаньона.
-- Облачная интерпретация незнакомых фраз через backend. В v1.8 добавлены health-check, диагностика подключения и более понятные ошибки.
-- Backend v1.8: device enrollment, уникальные Bearer-токены устройств, хранение токенов в БД только в виде хешей, отзыв токенов, лимит запросов.
-- Начальный ESP-IDF проект для точной платы Waveshare: официальный BSP, LVGL, локальные эмоции, касание экрана и автономное поведение.
-- HTTPS-клиент прошивки для авторизованного endpoint `/api/device/interpret`, читающий device token из NVS. Yandex API key остаётся на backend.
-
-## Ошибка «Failed to fetch»
-
-Теперь симулятор отдельно проверяет `GET /health`. Если backend не запущен, проверьте, что backend запущен командой `py -m uvicorn backend.main:app --host 127.0.0.1 --port 8787`, и что в поле адреса стоит `http://127.0.0.1:8787`. Если backend доступен, но нет API-ключа, интерфейс отдельно покажет, что сервер найден, но AI не настроен. CORS разрешает локальный origin `null` для запуска HTML-файла и локальные адреса разработки.
-
-## Аппаратная цель и ограничения
-
-Плата: **Waveshare ESP32-S3-Touch-AMOLED-1.75C**, экран CO5300 466×466, touch CST9217, IMU QMI8658, PMU AXP2101, аудиокодеки ES8311/ES7210.
-
-Firmware находится на начальном этапе. Wi-Fi provisioning, ASR, аудиовывод, синхронизация личности и памяти, реальная обработка облачного JSON-ответа, enrollment из магазина и сайт для прошивки ещё не готовы. Плата пока не приобретена; ESP-IDF сборка и физические тесты не выполнялись. Исходники не являются готовым бинарным firmware.
+- Десять эмоций с анимированной мимикой, отдельным выражением грусти, слезами/бровями и морганием.
+- Потребности, доверие, игривость, темперамент, инициативность и индивидуальные привычки с локальным сохранением.
+- ES8311/ES7210 BSP audio path: мягкие процедурные невербальные звуки, VAD и захват PCM 16 kHz.
+- QMI8658 motion/tilt service with filtering and event cooldowns.
+- SoftAP Wi-Fi provisioning, сохранение credentials и автоматическое переподключение.
+- Полный программный маршрут: microphone → SpeechKit → language model → validated intent → local emotion/action.
+- Ограниченная долговременная память с безопасными категориями фактов, сроком хранения и удалением владельцем.
+- Локальная страница настройки устройства с PIN с экрана, одноразовой активацией, настройкой характера и управлением памятью.
+- Backend с PostgreSQL/Redis adapters, daily AI/audio caps, one-time enrollment grants и generic signed payment webhook.
+- ESP Web Tools installer и CI workflow для сборки/публикации tagged firmware.
 
 ## Важные ограничения
 
-- Публичного облачного API с гарантированно безлимитным бесплатным использованием нет.
-- Локальная работа интерфейса не должна зависеть от облака.
-- Текущий браузерный ASR зависит от Chrome/Edge и их Web Speech API; это не автономное офлайн-распознавание.
-- Для production нужны размещённый HTTPS backend, PostgreSQL, общий rate limiter, проверка заказа перед enrollment, управление расходами и мониторинг.
+Код прошивки ещё не прошёл подтверждённую ESP-IDF сборку или тест на физической плате. Нет live smoke test Yandex AI/SpeechKit. Веб-прошивальщик сможет загрузить образ после успешной сборки и публикации первого firmware release. Generic HMAC webhook ещё не подключён к конкретному платёжному провайдеру. Production deployment template готов, но реальный сервер, домен, секреты, backups и monitoring нужно настроить.
 
-## Документация
+Подробности:
+- [Статус и release gates](docs/IMPLEMENTATION_STATUS.md)
+- [Протокол устройства и backend](docs/DEVICE_PROTOCOL.md)
+- [Backend setup](backend/README.md)
+- [Firmware setup](firmware/esp-idf/README.md)
+- [Web installer](web/installer/index.html)
 
-- Backend: `backend/README.md`
-- Firmware: `firmware/esp-idf/README.md`
-- Официальная документация платы: https://docs.waveshare.com/ESP32-S3-Touch-AMOLED-1.75C
-- Официальный BSP и примеры: https://github.com/waveshareteam/ESP32-S3-Touch-AMOLED-1.75C
+## Browser simulator
+
+Откройте `AI_Companion_Emotional_Engine.html` в Chrome или Edge. Локальные эмоции и анимации работают без backend. Облачные функции из `file://` режима не работают.
+
+## Backend local development
+
+Из корня репозитория:
+
+```bash
+python -m pip install -r backend/requirements.txt
+cp backend/.env.example backend/.env
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8787
+python -m unittest discover -s backend/tests -v
+```
+
+Не помещайте API keys в HTML, firmware или GitHub. Ключ, ранее раскрытый в переписке, необходимо отозвать и заменить новым серверным секретом.
+
+## Firmware installer
+
+Откройте `web/installer/index.html` через GitHub Pages/HTTPS. Для публикации включите GitHub Pages с источником GitHub Actions в Settings → Pages; workflow `.github/workflows/pages-installer.yml` развернёт страницу после merge в `main` (доступность Pages для private repo зависит от плана GitHub). Используйте Chrome или Edge и USB-кабель с передачей данных. Публичный бинарник появится только после успешного workflow и тега `firmware-vX.Y.Z`.
+
+## Hardware
+
+Плата ещё не прошла физическую проверку. До продажи обязательны build, flash, audio, mic, touch, Wi-Fi, IMU, thermal/power and long-run tests. См. [release gates](docs/IMPLEMENTATION_STATUS.md).
