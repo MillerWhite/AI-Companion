@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AI Companion — Emotional Engine v0.6</title>
+<title>AI Companion — Emotional Core v0.7</title>
 <style>
 :root{color-scheme:dark;--bg:#000;--panel:#0b0b0d;--line:#29292d;--text:#f4f4f5;--muted:#92929a;--cyan:#fff;--violet:#d8d8df}
 *{box-sizing:border-box}body{margin:0;background:#000;color:var(--text);font:15px/1.45 system-ui,Arial,sans-serif}
@@ -18,15 +18,15 @@ h1{font-size:clamp(27px,4vw,42px);line-height:1.04;letter-spacing:-.045em;margin
 button,select,input{font:inherit}button{background:#1b293b;color:#edf7ff;border:1px solid #3a506b;padding:9px 12px;border-radius:11px;cursor:pointer;transition:.15s}button:hover{border-color:var(--cyan);background:#243a50}button:active{transform:scale(.97)}button.main{background:#b6efff;color:#08131d;border-color:#b6efff;font-weight:800}button.sound{border-color:#6d5a9b;background:#29203d}
 h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display:block;font-size:11px;color:#b8c8db;margin-bottom:5px}.field select,.field input{width:100%;background:#0a111c;border:1px solid #304158;border-radius:10px;padding:10px;color:#eff7ff;outline:none}.field input[type=range]{padding:0;accent-color:#9ceaff}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.stat{background:#0a111c;border:1px solid #293a50;border-radius:12px;padding:10px}.stat b{display:block;font-size:19px;color:#c4efff}.stat span{font-size:10px;color:var(--muted)}
-.profile{background:#0a111c;border:1px solid #293a50;border-radius:13px;padding:12px;margin-top:12px}.profile strong{font-size:13px}.profile p{font-size:12px;color:#afbed2;margin:6px 0 0}.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.chip{font-size:10px;padding:4px 7px;border-radius:20px;border:1px solid #38546c;color:#c5edff;background:#132537}
+.profile{background:#0a0a0b;border:1px solid #29292d;border-radius:13px;padding:12px;margin-top:12px}.profile strong{font-size:13px}.profile p{font-size:12px;color:#afafb6;margin:6px 0 0}.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.chip{font-size:10px;padding:4px 7px;border-radius:20px;border:1px solid #3b3b42;color:#eee;background:#171719}.meter{height:7px;background:#1a1a1d;border-radius:9px;overflow:hidden}.meter i{display:block;height:100%;background:#f2f2f2;border-radius:9px;transition:width .5s}.field label b{float:right;color:#fff}
 .soundgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.soundgrid button{font-size:12px;padding:10px 6px}.soundnote{font-size:11px;color:var(--muted);margin:9px 0 0}.log{border-top:1px solid #2a394e;margin-top:14px;padding-top:10px}.logtop{display:flex;justify-content:space-between;font-size:11px;color:#aebed2}.logbody{height:85px;overflow:auto;font-size:11px;color:#8799b1}.logbody div{padding:4px 0;border-bottom:1px solid #ffffff08}
 @media(max-width:780px){.grid{grid-template-columns:1fr}.panel{padding:15px}.stage{min-height:350px}}
 </style>
 </head>
 <body><main>
-<div class="head"><div class="brand">NIFORTT LABS · COMPANION SYSTEMS</div><div class="version">EMOTIONAL ENGINE v0.6</div></div>
-<h1>Лаборатория<br>эмоций и звуков</h1>
-<p class="intro">35 эмоциональных состояний и отдельные звуки взаимодействия. Для каждой эмоции и каждого действия предусмотрено по 50 процедурных вариантов. Дисплейная концепция: глубокий чёрный AMOLED-фон и белые выразительные глаза. Это браузерный симулятор поведения до покупки платы.</p>
+<div class="head"><div class="brand">NIFORTT LABS · COMPANION SYSTEMS</div><div class="version">EMOTIONAL CORE v0.7</div></div>
+<h1>Живой компаньон</h1>
+<p class="intro">Компаньон с собственным настроением, потребностями, памятью отношений и самостоятельным поведением. Он реагирует на взаимодействия, постепенно привыкает к владельцу и иногда проявляет инициативу сам.</p>
 <div class="grid">
 <section class="panel">
 <div class="stage">
@@ -39,10 +39,10 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 <div class="stats">
 <div class="stat"><b id="emotionCount">35</b><span>базовых состояний</span></div>
 <div class="stat"><b id="comboCount">1 134 000</b><span>комбинаций параметров*</span></div>
-<div class="stat"><b id="soundCount">2 150</b><span>звуковых вариантов · 43 × 50</span></div>
+<div class="stat"><b id="soundCount">2 150</b><span>вариантов звукового поведения</span></div>
 </div>
-<div class="log"><div class="logtop"><span>ЖУРНАЛ ПОВЕДЕНИЯ</span><span id="count">0 событий</span></div><div class="logbody" id="log"><div>Система запущена. Нажми на звуковую пробу или вызови эмоцию.</div></div></div>
-<p class="soundnote">* Число комбинаций — расчётное пространство вариантов, а не тысячи вручную нарисованных кадров. Визуальный рендерер пока демонстрационный.</p>
+<div class="log"><div class="logtop"><span>ЖУРНАЛ ПОВЕДЕНИЯ</span><span id="count">0 событий</span></div><div class="logbody" id="log"><div>Компаньон проснулся и осматривается.</div></div></div>
+<p class="soundnote">Эмоции и звуки выбираются автоматически внутренней моделью поведения. На этом этапе симуляция работает локально в браузере.</p>
 </section>
 <section class="panel">
 <h2>Личность компаньона</h2>
@@ -58,25 +58,21 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 <div class="field"><label>Интенсивность реакций: <b id="intensityLabel">6/10</b></label><input id="intensity" type="range" min="1" max="10" value="6"></div>
 <button class="main" style="width:100%" onclick="makeProfile()">Сгенерировать личность</button>
 <div class="profile" id="profile"><strong>Milo · личность</strong><p>Игривый, дружелюбный, любопытный. Иногда сам инициирует контакт и внимательно наблюдает за владельцем.</p><div class="chips"><span class="chip">игривый</span><span class="chip">дружелюбный</span><span class="chip">любопытный</span></div></div>
-<h2 style="margin-top:18px">Звуковая лаборатория</h2>
-<div class="field"><label>Эмоция для прослушивания</label><select id="soundEmotion"></select></div>
-<div class="two">
-<div class="field"><label>Вариант из 50</label><select id="soundVariant"></select></div>
-<div class="field"><label>Режим выбора</label><select id="soundMode"><option value="random">Случайный, без недавних повторов</option><option value="ordered">По порядку</option></select></div>
-</div>
-<div class="two">
-<button class="sound" onclick="playSelectedSound()">▶ Прослушать вариант</button>
-<button class="main" onclick="playNextSound()">✧ Следующий уникальный</button>
-</div>
-<div class="controls" style="justify-content:flex-start;margin-top:9px">
-<button onclick="playCategory('greeting')">Приветствие</button><button onclick="playCategory('call')">Позвать</button><button onclick="playCategory('touch')">Прикосновение</button><button onclick="playCategory('attention')">Внимание</button><button onclick="playCategory('farewell')">Прощание</button>
-</div>
-<div class="profile" id="soundInfo"><strong>50 звуков на каждую эмоцию</strong><p>Выбери эмоцию и прослушай её варианты. Система избегает недавних повторов и не использует один и тот же короткий сигнал для всех состояний.</p><div class="chips"><span class="chip">35 эмоций</span><span class="chip">50 вариантов на эмоцию</span><span class="chip">1 750 параметрических вариантов</span></div></div>
-<p class="soundnote">Нажми кнопку, чтобы включить звук. Браузер может запросить разрешение на воспроизведение после первого нажатия. Варианты синтезируются на лету через Web Audio API.</p>
-<p class="soundnote">Нажми любую пробу — звук воспроизведётся через динамики или наушники компьютера. Браузер может запросить разрешение на звук после первого нажатия.</p>
+<h2 style="margin-top:18px">Внутреннее состояние</h2>
+<div class="field"><label>Энергия <b id="energyValue">82%</b></label><div class="meter"><i id="energyMeter" style="width:82%"></i></div></div>
+<div class="field"><label>Любопытство <b id="curiosityValue">38%</b></label><div class="meter"><i id="curiosityMeter" style="width:38%"></i></div></div>
+<div class="field"><label>Желание общения <b id="socialValue">45%</b></label><div class="meter"><i id="socialMeter" style="width:45%"></i></div></div>
+<div class="field"><label>Комфорт <b id="comfortValue">72%</b></label><div class="meter"><i id="comfortMeter" style="width:72%"></i></div></div>
+<div class="profile" id="bondInfo"><strong>Отношения с владельцем</strong><p>Компаньон только начинает знакомство. Отношения будут меняться от повторяющихся взаимодействий.</p><div class="chips"><span class="chip" id="bondLevel">знакомство</span><span class="chip" id="bondPoints">0 опыта</span></div></div>
 </section></div></main>
 <script>
-const $=id=>document.getElementById(id),orb=$('orb');let soundEnabled=true,events=0,current='neutral',intensity=6,lastSoundAt=0,profile={temper:'playful',initiative:'medium',bond:'friendly',quirk:'curious'};
+const $=id=>document.getElementById(id),orb=$('orb');let soundEnabled=true,events=0,current='neutral',currentEmotionKey='calm',intensity=6,lastSoundAt=0,returnTimer=null,profile={temper:'playful',initiative:'medium',bond:'friendly',quirk:'curious'};
+const needs={energy:82,curiosity:38,social:45,comfort:72};
+const memory={bond:0,petCount:0,callCount:0,playCount:0,lastAction:'',sessions:0};
+try{const saved=JSON.parse(localStorage.getItem('ai-companion-memory-v1')||'{}');Object.assign(memory,saved); }catch(e){}
+memory.sessions=(memory.sessions||0)+1;
+function saveMemory(){try{localStorage.setItem('ai-companion-memory-v1',JSON.stringify(memory))}catch(e){}}
+function updateNeeds(){for(const k of Object.keys(needs)){const el=$(k+'Value'),bar=$(k+'Meter');if(el)el.textContent=Math.round(needs[k])+'%';if(bar)bar.style.width=Math.round(needs[k])+'%';}const points=memory.bond||0;$('bondPoints').textContent=points+' опыта';$('bondLevel').textContent=points<5?'знакомство':points<20?'узнаёт тебя':points<50?'привязался':points<100?'близкий компаньон':'особая связь';}
 const moods=[
 ['joy','радость','happy'],['delight','восторг','excited'],['content','довольство','happy'],['curiosity','любопытство','curious'],['wonder','изумление','surprised'],['surprise','удивление','surprised'],['shyness','смущение','shy'],['affection','нежность','love'],['calm','спокойствие','neutral'],['sleepiness','сонливость','sleep'],['sleep','сон','sleep'],['sadness','грусть','sad'],['disappointment','разочарование','sad'],['annoyance','досада','angry'],['playfulness','озорство','happy'],['mischief','хитрость','curious'],['excitement','возбуждение','excited'],['anticipation','ожидание','curious'],['loneliness','скука','sad'],['relief','облегчение','happy'],['pride','гордость','happy'],['confusion','замешательство','surprised'],['embarrassment','неловкость','shy'],['tenderness','ласка','love'],['alertness','внимание','curious'],['fear','испуг','surprised'],['jealousy','ревность','angry'],['boredom','скука','sleep'],['gratitude','благодарность','love'],['trust','доверие','happy'],['hope','надежда','curious'],['frustration','раздражение','angry'],['curiosity2','пристальный интерес','curious'],['serenity','умиротворение','neutral'],['mischievousJoy','шалость','happy']];
 const soundFamilyByMood={joy:'bright',delight:'bright',content:'warm',curiosity:'curious',wonder:'wonder',surprise:'surprise',shyness:'shy',affection:'tender',calm:'calm',sleepiness:'sleep',sleep:'sleep',sadness:'sad',disappointment:'sad',annoyance:'grumpy',playfulness:'playful',mischief:'curious',excitement:'bright',anticipation:'curious',loneliness:'softSad',relief:'warm',pride:'bright',confusion:'wonder',embarrassment:'shy',tenderness:'tender',alertness:'alert',fear:'surprise',jealousy:'grumpy',boredom:'sleep',gratitude:'tender',trust:'warm',hope:'wonder',frustration:'grumpy',curiosity2:'curious',serenity:'calm',mischievousJoy:'playful'};
@@ -108,23 +104,25 @@ function noise(c,t,dur,vol=.018,filterFreq=1800){
  for(let i=0;i<n;i++)a[i]=(Math.random()*2-1)*(1-i/n);
  const src=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();src.buffer=b;f.type='bandpass';f.frequency.value=filterFreq;f.Q.value=.8;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol*.22,t+.02);g.gain.setTargetAtTime(.0001,t+.03,Math.max(.05,dur*.25));src.connect(f);f.connect(g);g.connect(c.destination);src.start(t);src.stop(t+dur+.01);
 }
-function playSound(type,force=false){
- const nowMs=Date.now();if(!force&&nowMs-lastSoundAt<4200){log('Звук пропущен: пауза между реакциями');return}lastSoundAt=nowMs;
- const key=moods.find(m=>m[2]===type)?.[0]||({happy:'joy',excited:'delight',curious:'curiosity',surprised:'surprise',shy:'shyness',love:'affection',neutral:'calm',sleep:'sleep',sad:'sadness',angry:'annoyance'}[type]||'joy');
+function playSound(emotionKey,force=false){
+ const key=emotionSoundLibrary[emotionKey]?emotionKey:'calm';
+ const nowMs=Date.now();if(!force&&nowMs-lastSoundAt<4200){log('Автоматический звук отложен ради тишины');return}lastSoundAt=nowMs;
  const idx=chooseSoundVariant(key);playEmotionSound(key,idx);
 }
-function setMood(key,why='реакция компаньона',sound=true,soundEmotionKey=null){current=key;const map={happy:'радуется',excited:'в восторге',curious:'с любопытством наблюдает',surprised:'удивлён',shy:'смущается',love:'проявляет нежность',neutral:'спокойно наблюдает',sleep:'засыпает',sad:'немного грустит',angry:'недоволен'};
-orb.className='orb '+(key==='neutral'?'':key);$('status').textContent=map[key]||key;$('substatus').textContent=why+' · интенсивность '+intensity+'/10';if(sound)playSound(soundEmotionKey||key);log(($('name').value||'Компаньон')+': '+(map[key]||key))}
-function trigger(key){if(key==='sleep'){setMood('sleep','переходит в режим отдыха');return}if(key==='neutral'){setMood('neutral','проснулся и огляделся',false);return}setMood(key,key==='happy'?'приятное прикосновение':key==='curious'?'заметил внимание владельца':'неожиданное событие');setTimeout(()=>{if(current===key)setMood('neutral','возвращается к спокойному состоянию',false)},2400)}
-function randomEmotion(){let candidates=moods.filter(x=>!['sleep','sleepiness','fear','jealousy'].includes(x[0]));let m=candidates[Math.floor(Math.random()*candidates.length)];let key=m[2];intensity=+$('intensity').value;setMood(key,'смешанная эмоция: '+m[1]+' · '+m[0],true,m[0]);}
+function setMood(faceKey,why='реакция компаньона',sound=true,soundEmotionKey='calm',duration=2600){current=faceKey;currentEmotionKey=soundEmotionKey;const map={happy:'радуется',excited:'в восторге',curious:'с любопытством наблюдает',surprised:'удивлён',shy:'смущается',love:'проявляет нежность',neutral:'спокойно наблюдает',sleep:'засыпает',sad:'немного грустит',angry:'недоволен'};
+orb.className='orb '+(faceKey==='neutral'?'':faceKey);$('status').textContent=map[faceKey]||why;$('substatus').textContent=why+' · настроение: '+moods.find(m=>m[0]===soundEmotionKey)?.[1]+' · сила '+intensity+'/10';if(sound)playSound(soundEmotionKey,true);log(($('name').value||'Компаньон')+': '+(map[faceKey]||faceKey));if(returnTimer)clearTimeout(returnTimer);if(duration>0&&faceKey!=='sleep'&&faceKey!=='neutral'){returnTimer=setTimeout(()=>returnToBaseline(),duration);}} 
+function returnToBaseline(){const face=needs.energy<20?'sleep':needs.comfort<22?'sad':'neutral';const mood=face==='sleep'?'sleep':face==='sad'?'sadness':'calm';setMood(face,'возвращается к своему настроению',false,mood,0);}
+function trigger(key){if(key==='sleep'){needs.energy=Math.min(100,needs.energy+2);setMood('sleep','сам выбирает отдых',true,'sleep',0);return}if(key==='neutral'){needs.energy=Math.max(18,needs.energy-3);setMood('neutral','просыпается и оглядывается',true,'greeting',2200);return}if(key==='happy'){memory.petCount++;memory.bond+=2;needs.comfort=Math.min(100,needs.comfort+9);needs.social=Math.max(0,needs.social-7);needs.energy=Math.max(0,needs.energy-1);needs.curiosity=Math.min(100,needs.curiosity+2);memory.lastAction='погладили';saveMemory();updateNeeds();setMood('happy','приятное прикосновение',true,'touch',2600);return}if(key==='curious'){memory.callCount++;memory.bond+=1;needs.social=Math.max(0,needs.social-5);needs.curiosity=Math.max(0,needs.curiosity-7);memory.lastAction='позвали';saveMemory();updateNeeds();setMood('curious','услышал знакомый зов',true,'acknowledge',2400);return}if(key==='surprised'){needs.curiosity=Math.min(100,needs.curiosity+8);setMood('surprised','неожиданное событие',true,'surprise',2100);return}}
+function randomEmotion(){let candidates=moods.filter(x=>!['sleep','sleepiness','fear','jealousy'].includes(x[0]));let m=candidates[Math.floor(Math.random()*candidates.length)];intensity=+$('intensity').value;setMood(m[2],'самостоятельно выбранная эмоция: '+m[1],true,m[0]);needs.curiosity=Math.max(0,needs.curiosity-3);updateNeeds();}
 function makeProfile(){profile={temper:$('temper').value,initiative:$('initiative').value,bond:$('bond').value,quirk:$('quirk').value};let n=$('name').value.trim()||'Milo';let dict={temper:{calm:'спокойный',playful:'игривый',shy:'стеснительный',energetic:'энергичный',dreamy:'мечтательный'},initiative:{low:'редко проявляет инициативу',medium:'иногда проявляет инициативу',high:'часто ищет контакт'},bond:{gentle:'ласковый',friendly:'дружелюбный',independent:'независимый',mischief:'озорной'},quirk:{curious:'любит всё разглядывать',sleepy:'часто сонный',dramatic:'ярко выражает эмоции',bouncy:'непоседливый',shy:'смущается от внимания'}};
 let desc=`${dict.temper[profile.temper]}, ${dict.bond[profile.bond]}; ${dict.initiative[profile.initiative]}. Особенность: ${dict.quirk[profile.quirk]}.`;
 $('profile').innerHTML='<strong></strong><p></p><div class="chips"></div>';$('profile').querySelector('strong').textContent=n+' · личность';$('profile').querySelector('p').textContent=desc;[dict.temper[profile.temper],dict.bond[profile.bond],dict.quirk[profile.quirk]].forEach(v=>{let s=document.createElement('span');s.className='chip';s.textContent=v;$('profile').querySelector('.chips').append(s)});log('Сгенерирован индивидуальный профиль '+n);trigger('happy')}
 $('intensity').addEventListener('input',e=>{intensity=+e.target.value;$('intensityLabel').textContent=intensity+'/10'});
 function blink(){if(current==='sleep')return;orb.classList.add('blink');setTimeout(()=>orb.classList.remove('blink'),130)}
 setInterval(()=>{if(current!=='sleep'&&Math.random()<.72)blink()},2500);
-setInterval(()=>{if(current==='sleep')return;let p=profile.initiative==='high'?.30:profile.initiative==='low'?.07:.16;if(Math.random()<p){let pool=profile.temper==='calm'?['curious','neutral']:profile.temper==='energetic'?['happy','excited','curious']:profile.temper==='shy'?['shy','curious']:['curious','happy','shy'];let m=pool[Math.floor(Math.random()*pool.length)];setMood(m,'самостоятельная инициатива',Math.random()<.18);setTimeout(()=>{if(current===m)setMood('neutral','снова наблюдает',false)},2100)}},10500);
+setInterval(()=>{if(current==='sleep'){needs.energy=Math.min(100,needs.energy+2.8);needs.social=Math.min(100,needs.social+.15);}else{needs.energy=Math.max(0,needs.energy-.22);needs.curiosity=Math.min(100,needs.curiosity+.32);needs.social=Math.min(100,needs.social+.25);needs.comfort=Math.max(0,needs.comfort-.08);}updateNeeds();},8000);
+setInterval(()=>{if(current==='sleep')return;const chance=profile.initiative==='high'?.24:profile.initiative==='low'?.055:.12;if(Math.random()>chance)return;let face='curious',emotion='curiosity',reason='заметил что-то интересное';if(needs.energy<18){face='sleep';emotion='sleepiness';reason='устал и хочет отдохнуть';}else if(needs.social>78){face=profile.temper==='shy'?'shy':'love';emotion=profile.temper==='shy'?'shyness':'affection';reason='соскучился по общению';}else if(needs.curiosity>76){face='curious';emotion='curiosity2';reason='исследует окружающий мир';needs.curiosity=Math.max(25,needs.curiosity-18);}else if(needs.comfort<30){face='sad';emotion='loneliness';reason='ищет спокойствия';}else{const pool=profile.temper==='calm'?[['curious','curiosity'],['neutral','serenity']]:profile.temper==='energetic'?[['excited','excitement'],['happy','playfulness']]:profile.temper==='shy'?[['shy','shyness'],['curious','curiosity']]:[['curious','curiosity'],['happy','joy'],['shy','shyness']];[face,emotion]=pool[Math.floor(Math.random()*pool.length)];}setMood(face,reason,Math.random()<.12,emotion,2400);},12000);
 $('orb').addEventListener('click',()=>trigger(profile.bond==='mischief'?'surprised':'happy'));
 $('comboCount').textContent=(35*10*9*12*5*6).toLocaleString('ru-RU');$('soundCount').textContent=(soundCategories.length*50).toLocaleString('ru-RU');
-initSoundSelector();log('Emotional Engine v0.6 готов. 43 категории × 50 звуков = 2 150 вариантов.');
+updateNeeds();log('Emotional Core v0.7 запущен. Локальная память отношений активна.');
 </script></body></html>
