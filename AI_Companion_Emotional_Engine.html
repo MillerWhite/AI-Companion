@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AI Companion — Expressive Animation & Cloud AI v1.7</title>
+<title>AI Companion — Expressive Animation & Cloud AI v1.8</title>
 <style>
 :root{color-scheme:dark;--bg:#000;--panel:#0b0b0d;--line:#29292d;--text:#f4f4f5;--muted:#92929a;--cyan:#fff;--violet:#d8d8df}
 *{box-sizing:border-box}body{margin:0;background:#000;color:var(--text);font:15px/1.45 system-ui,Arial,sans-serif}
@@ -43,7 +43,7 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 </style>
 </head>
 <body><main>
-<div class="head"><div class="brand">NIFORTT LABS · COMPANION SYSTEMS</div><div class="version">EXPRESSIVE CORE · CLOUD AI v1.7</div></div>
+<div class="head"><div class="brand">NIFORTT LABS · COMPANION SYSTEMS</div><div class="version">EXPRESSIVE CORE · CLOUD AI v1.8</div></div>
 <h1>Живой компаньон</h1>
 <p class="intro">Компаньон с собственным настроением, потребностями, памятью отношений и самостоятельным поведением. Он реагирует на взаимодействия, постепенно привыкает к владельцу и иногда проявляет инициативу сам.</p>
 <div class="grid">
@@ -195,6 +195,11 @@ function applyCloudIntent(result){
 }
 let lastCloudUtterance='';
 function cloudBaseUrl(){let base=$('cloudApiUrl').value.trim();while(base.endsWith('/'))base=base.slice(0,-1);return base;}
+// On a hosted page, localhost means the visitor's own computer, not our cloud server.
+// If the site and backend share one origin, use that origin automatically.
+if(location.protocol!=='file:'&&!['localhost','127.0.0.1'].includes(location.hostname)){
+ const cloudInput=$('cloudApiUrl');if(cloudInput.value==='http://127.0.0.1:8787')cloudInput.value=location.origin;
+}
 async function checkCloudBackend(force=false){
  const base=cloudBaseUrl();if(!(base.startsWith('http://')||base.startsWith('https://'))){const msg='Неверный адрес backend: укажите полный http:// или https:// адрес.';$('cloudStatus').textContent='неверный адрес';$('cloudHelp').textContent=msg;setVoiceState(msg,true);return false;}
  if(!force&&cloudHealthCache&&Date.now()-cloudHealthCheckedAt<8000)return cloudHealthCache;
@@ -211,7 +216,7 @@ async function checkCloudBackend(force=false){
   cloudHealthCache=null;cloudHealthCheckedAt=0;$('cloudStatus').textContent='нет соединения';
   const raw=String(error.message||error);let hint='Не удалось связаться с backend.';
   if(error.name==='TimeoutError'||error.name==='AbortError')hint='Backend не ответил за 5 секунд. Проверьте, запущен ли сервер.';
-  else if(error instanceof TypeError||/Failed to fetch|Load failed|NetworkError/i.test(raw))hint='Браузер не видит backend. Запустите Запустить_AI_Companion.bat и проверьте адрес. Если сервер уже запущен, проверьте CORS и разрешение брандмауэра для Python.';
+  else if(error instanceof TypeError||/Failed to fetch|Load failed|NetworkError/i.test(raw)){hint='Браузер не может установить соединение с backend. Для локального запуска откройте симулятор через Запустить_AI_Companion.bat и проверьте окно AI Companion Backend. Для опубликованного сайта адрес localhost использовать нельзя: он указывает на компьютер посетителя. Укажите публичный HTTPS-адрес backend и добавьте origin сайта в AI_ALLOWED_ORIGINS. Также проверьте CORS и брандмауэр.';}
   else hint=raw;
   $('cloudHelp').textContent=hint+' Адрес: '+base;
   if(force)setVoiceState(hint+' Локальные реакции работают.',true);
