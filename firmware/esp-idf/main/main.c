@@ -169,6 +169,7 @@ static void set_screen_sleep(bool asleep)
     if (screen_asleep == asleep || !screen_face) return;
     if (bsp_display_lock(pdMS_TO_TICKS(1000)) != ESP_OK) return;
     screen_asleep = asleep;
+    lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(asleep ? 0x000000 : 0x05070B), 0);
     if (asleep) {
         /* The CO5300 AMOLED has no LED backlight: a fully black frame blanks its pixels. */
         lv_obj_add_flag(screen_face, LV_OBJ_FLAG_HIDDEN);
@@ -230,7 +231,8 @@ static companion_emotion_t parse_emotion(const char *value)
     if (!strcmp(value, "excited")) return COMPANION_EXCITED;
     if (!strcmp(value, "surprised")) return COMPANION_SURPRISED;
     if (!strcmp(value, "concerned")) return COMPANION_CONCERNED;
-    if (!strcmp(value, "shy")) return COMPANION_SHY;\n    if (!strcmp(value, "dizzy")) return COMPANION_DIZZY;
+    if (!strcmp(value, "shy")) return COMPANION_SHY;
+    if (!strcmp(value, "dizzy")) return COMPANION_DIZZY;
     return COMPANION_CALM;
 }
 
@@ -423,7 +425,18 @@ static void voice_task(void *arg)
         if (!audio_available) { vTaskDelay(pdMS_TO_TICKS(1000)); continue; }
         size_t samples = 0;
         esp_err_t err = companion_audio_capture_utterance(pcm, max_samples, &samples, 6000);
-        const uint32_t audio_events = companion_audio_take_events();\n        if (audio_events & COMPANION_AUDIO_BLOW) {\n            set_emotion(COMPANION_SURPRISED, false);\n            if (audio_available) companion_audio_play_sound(VOICE_POKE, false);\n            continue;\n        }\n        if (audio_events & COMPANION_AUDIO_CLAP) {\n            set_emotion(COMPANION_SURPRISED, false);\n            if (audio_available) companion_audio_play_sound(VOICE_OH, false);\n            continue;\n        }\n        if (err == ESP_OK && samples > 0) {
+        const uint32_t audio_events = companion_audio_take_events();
+        if (audio_events & COMPANION_AUDIO_BLOW) {
+            set_emotion(COMPANION_SURPRISED, false);
+            if (audio_available) companion_audio_play_sound(VOICE_POKE, false);
+            continue;
+        }
+        if (audio_events & COMPANION_AUDIO_CLAP) {
+            set_emotion(COMPANION_SURPRISED, false);
+            if (audio_available) companion_audio_play_sound(VOICE_OH, false);
+            continue;
+        }
+        if (err == ESP_OK && samples > 0) {
             if (!companion_wifi_is_connected()) {
                 ESP_LOGI(TAG, "Speech detected offline; local touch and emotion engine remain active");
                 continue;
@@ -481,7 +494,33 @@ static void imu_task(void *arg)
     }
 }
 
-static void power_task(void *arg)\n{\n    (void)arg;\n    esp_err_t err = companion_power_init();\n    if (err != ESP_OK) {\n        ESP_LOGW(TAG, "AXP2101 unavailable; charging reactions disabled: %s", esp_err_to_name(err));\n        vTaskDelete(NULL);\n        return;\n    }\n    int64_t last_meal_us = 0;\n    while (true) {\n        const uint32_t events = companion_power_poll();\n        const int64_t now = esp_timer_get_time();\n        const bool connected = companion_power_vbus_present();\n        if ((events & COMPANION_POWER_CHARGER_CONNECTED) ||\n            (connected && (last_meal_us == 0 || now - last_meal_us > 25000000LL))) {\n            companion_emotion_interaction(&state, "feed");\n            set_emotion(COMPANION_HAPPY, false);\n            if (audio_available) companion_audio_play_sound(VOICE_NOM, false);\n            save_state();\n            last_meal_us = now;\n        }\n        vTaskDelay(pdMS_TO_TICKS(1000));\n    }\n}\n\nstatic void network_setup_task(void *arg)
+static void power_task(void *arg)
+{
+    (void)arg;
+    esp_err_t err = companion_power_init();
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "AXP2101 unavailable; charging reactions disabled: %s", esp_err_to_name(err));
+        vTaskDelete(NULL);
+        return;
+    }
+    int64_t last_meal_us = 0;
+    while (true) {
+        const uint32_t events = companion_power_poll();
+        const int64_t now = esp_timer_get_time();
+        const bool connected = companion_power_vbus_present();
+        if ((events & COMPANION_POWER_CHARGER_CONNECTED) ||
+            (connected && (last_meal_us == 0 || now - last_meal_us > 25000000LL))) {
+            companion_emotion_interaction(&state, "feed");
+            set_emotion(COMPANION_HAPPY, false);
+            if (audio_available) companion_audio_play_sound(VOICE_NOM, false);
+            save_state();
+            last_meal_us = now;
+        }
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
+static void network_setup_task(void *arg)
 {
     (void)arg;
     while (!companion_wifi_is_connected()) vTaskDelay(pdMS_TO_TICKS(500));
