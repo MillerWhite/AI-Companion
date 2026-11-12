@@ -22,6 +22,7 @@
 #include "companion_audio.h"
 #include "companion_emotion.h"
 #include "companion_imu.h"
+#include "companion_motion.h"
 #include "companion_setup.h"
 #include "companion_wifi.h"
 
@@ -375,11 +376,24 @@ static void imu_task(void *arg)
 {
     (void)arg;
     while (true) {
-        if (imu_available && !sleeping) {
-            if (companion_imu_motion_event()) set_emotion(COMPANION_SURPRISED, false);
-            else if (companion_imu_tilt_event() && current_emotion == COMPANION_CALM) set_emotion(COMPANION_CURIOUS, false);
+        if (imu_available) {
+            const uint32_t events = companion_imu_poll();
+            if (events & COMPANION_MOTION_FACE_DOWN) {
+                sleeping = true;
+                manual_sleep = false;
+                set_emotion(COMPANION_SLEEPY, true);
+            } else if (events & COMPANION_MOTION_FACE_UP) {
+                sleeping = false;
+                manual_sleep = false;
+                set_emotion(COMPANION_HAPPY, true);
+            } else if (events & (COMPANION_MOTION_SHAKE | COMPANION_MOTION_FALL)) {
+                set_emotion(COMPANION_SURPRISED, false);
+            } else if ((events & (COMPANION_MOTION_UPSIDE_DOWN | COMPANION_MOTION_UPRIGHT)) &&
+                       current_emotion == COMPANION_CALM) {
+                set_emotion(COMPANION_CURIOUS, false);
+            }
         }
-        vTaskDelay(pdMS_TO_TICKS(180));
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
