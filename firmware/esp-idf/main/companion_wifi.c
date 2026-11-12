@@ -113,7 +113,14 @@ bool companion_wifi_is_connected(void)
 esp_err_t companion_wifi_reset(void)
 {
     ESP_LOGW(TAG, "Owner requested Wi-Fi provisioning reset");
-    ESP_RETURN_ON_ERROR(wifi_prov_mgr_reset_provisioning(), TAG, "clear stored Wi-Fi credentials");
+    wifi_prov_mgr_config_t config = {
+        .scheme = wifi_prov_scheme_softap,
+        .scheme_event_handler = WIFI_PROV_EVENT_HANDLER_NONE
+    };
+    ESP_RETURN_ON_ERROR(wifi_prov_mgr_init(config), TAG, "reinitialize provisioning manager");
+    esp_err_t err = wifi_prov_mgr_reset_provisioning();
+    wifi_prov_mgr_deinit();
+    if (err != ESP_OK) return err;
     esp_restart();
     return ESP_OK;
 }
