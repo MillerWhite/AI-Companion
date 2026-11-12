@@ -109,8 +109,7 @@ esp_err_t companion_ble_init(void)
     ble_store_config_init();
     err = esp_hidd_dev_init(&s_hid_config, ESP_HID_TRANSPORT_BLE, hid_event, &s_hid);
     if (err != ESP_OK) return err;
-    err = nimble_port_freertos_init(host_task);
-    if (err != ESP_OK) return err;
+    nimble_port_freertos_init(host_task);
     s_started = true;
     ESP_LOGI(TAG, "BLE media HID initialized");
     return ESP_OK;
