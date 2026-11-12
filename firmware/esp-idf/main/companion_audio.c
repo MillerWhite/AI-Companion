@@ -24,8 +24,14 @@ static esp_codec_dev_handle_t microphone;
 static bool audio_ready;
 static int64_t last_sound_us;
 static volatile bool playback_active;
+static uint8_t sound_temperament;
 
 bool companion_audio_is_ready(void) { return audio_ready; }
+
+void companion_audio_set_temperament(uint8_t temperament)
+{
+    sound_temperament = temperament <= 4 ? temperament : 0;
+}
 
 esp_err_t companion_audio_init(void)
 {
@@ -72,7 +78,8 @@ esp_err_t companion_audio_play(companion_emotion_t emotion, bool force)
 
     /* Short, soft, nonverbal motif. No speech, no continuous loop, conservative gain. */
     static int16_t pcm[2 * 9600];
-    const float base = emotion_frequency(emotion);
+    const float temperament_ratio[] = {1.0f, 0.91f, 1.16f, 0.88f, 0.96f};
+    const float base = emotion_frequency(emotion) * temperament_ratio[sound_temperament];
     const float note_ratio[3] = {1.0f, 1.19f, 1.42f};
     const size_t note_len[3] = {2400, 2100, 2700};
     size_t offset = 0;
