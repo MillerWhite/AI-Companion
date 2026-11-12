@@ -175,7 +175,10 @@ def validate_model_result(raw: Any) -> InterpretResult:
     """Reject unknown actions/emotions and malformed model output."""
     if not isinstance(raw, dict):
         raise ValueError("Model response must be a JSON object")
-    return InterpretResult.model_validate(raw)
+    result = InterpretResult.model_validate(raw)
+    if not result.addressed_to_companion and result.memory_updates:
+        raise ValueError("Unaddressed speech cannot update companion memory")
+    return result
 
 
 def make_system_prompt(name: str, personality: dict[str, Any], memory_facts: list[MemoryUpdate] | None = None) -> str:
