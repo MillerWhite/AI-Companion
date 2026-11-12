@@ -8,6 +8,7 @@
 #include "esp_log.h"
 #include "esp_check.h"
 #include "esp_mac.h"
+#include "esp_timer.h"
 #include "esp_netif.h"
 #include "esp_netif_ip_addr.h"
 #include "nvs.h"
@@ -15,17 +16,33 @@
 
 static const char *TAG = "companion_setup";
 static httpd_handle_t server;
+static uint8_t setup_pin_failures;
+static int64_t setup_pin_blocked_until_us;
 
 static bool setup_pin_valid(httpd_req_t *req)
 {
+    const int64_t now = esp_timer_get_time();
+    if (now < setup_pin_blocked_until_us) return false;
     char supplied[24] = {0}, expected[24] = {0};
-    if (httpd_req_get_hdr_value_str(req, "X-Setup-Pin", supplied, sizeof(supplied)) != ESP_OK) return false;
-    nvs_handle_t handle;
-    if (nvs_open("companion", NVS_READONLY, &handle) != ESP_OK) return false;
-    size_t size = sizeof(expected);
-    esp_err_t err = nvs_get_str(handle, "setup_pin", expected, &size);
-    nvs_close(handle);
-    return err == ESP_OK && strlen(supplied) == 8 && strcmp(supplied, expected) == 0;
+    bool valid = false;
+    if (httpd_req_get_hdr_value_str(req, "X-Setup-Pin", supplied, sizeof(supplied)) == ESP_OK) {
+        nvs_handle_t handle;
+        if (nvs_open("companion", NVS_READONLY, &handle) == ESP_OK) {
+            size_t size = sizeof(expected);
+            esp_err_t err = nvs_get_str(handle, "setup_pin", expected, &size);
+            nvs_close(handle);
+            valid = err == ESP_OK && strlen(supplied) == 8 && strcmp(supplied, expected) == 0;
+        }
+    }
+    if (valid) {
+        setup_pin_failures = 0;
+        return true;
+    }
+    if (++setup_pin_failures >= 5) {
+        setup_pin_failures = 0;
+        setup_pin_blocked_until_us = now + 60000000LL;
+    }
+    return false;
 }
 
 static esp_err_t root_handler(httpd_req_t *req)
