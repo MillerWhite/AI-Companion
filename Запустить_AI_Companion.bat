@@ -1,11 +1,40 @@
 @echo off
 chcp 65001 >nul
-set "HTML=%~dp0AI_Companion_Emotional_Engine.html"
+setlocal
+set "ROOT=%~dp0"
+set "HTML=%ROOT%AI_Companion_Emotional_Engine.html"
+set "BACKEND_URL=http://127.0.0.1:8787/health"
+
 if not exist "%HTML%" (
   echo Не найден файл AI_Companion_Emotional_Engine.html
   pause
   exit /b 1
 )
+
+REM Проверяем, не запущен ли backend уже.
+powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $r=Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 '%BACKEND_URL%'; if($r.StatusCode -eq 200){exit 0}else{exit 1} } catch { exit 1 }" >nul 2>nul
+if errorlevel 1 (
+  where py >nul 2>nul
+  if errorlevel 1 (
+    echo Python не найден. Установите Python 3.10+ и включите Add Python to PATH.
+    pause
+    exit /b 1
+  )
+  py -c "import fastapi,uvicorn,dotenv" >nul 2>nul
+  if errorlevel 1 (
+    echo Устанавливаю зависимости backend...
+    py -m pip install -r "%ROOT%backend\requirements.txt"
+    if errorlevel 1 (
+      echo Не удалось установить зависимости backend.
+      pause
+      exit /b 1
+    )
+  )
+  echo Запускаю облачный backend на http://127.0.0.1:8787 ...
+  start "AI Companion Backend" /min cmd /k "cd /d "%ROOT%" && py -m uvicorn backend.main:app --host 127.0.0.1 --port 8787"
+  timeout /t 3 /nobreak >nul
+)
+
 where msedge >nul 2>nul
 if not errorlevel 1 (
   start "" msedge --new-window "%HTML%"
