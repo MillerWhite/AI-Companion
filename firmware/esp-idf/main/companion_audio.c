@@ -32,14 +32,19 @@ esp_err_t companion_audio_init(void)
     if (!speaker || !microphone) return ESP_FAIL;
 
     const esp_codec_dev_sample_info_t format = {
-         .sample_rate = AUDIO_RATE,
+        .sample_rate = AUDIO_RATE,
         .channel = 2,
         .bits_per_sample = 16,
     };
+    /* Waveshare's 1.75C reference example closes and reopens both codec
+       handles when changing I2S sample format. Keep the board BSP as owner
+       of codec/I2S pins and amplifier control. */
+    (void)esp_codec_dev_close(speaker);
+    (void)esp_codec_dev_close(microphone);
+    ESP_RETURN_ON_ERROR(esp_codec_dev_set_in_gain(microphone, 18.0f), TAG, "microphone gain setup failed");
     ESP_RETURN_ON_ERROR(esp_codec_dev_open(speaker, &format), TAG, "speaker codec open failed");
     ESP_RETURN_ON_ERROR(esp_codec_dev_set_out_vol(speaker, 18), TAG, "speaker volume setup failed");
     ESP_RETURN_ON_ERROR(esp_codec_dev_open(microphone, &format), TAG, "microphone codec open failed");
-    ESP_RETURN_ON_ERROR(esp_codec_dev_set_in_gain(microphone, 18.0f), TAG, "microphone gain setup failed");
     audio_ready = true;
     ESP_LOGI(TAG, "ES8311 speaker and ES7210 microphones initialized at 24 kHz");
     return ESP_OK;
