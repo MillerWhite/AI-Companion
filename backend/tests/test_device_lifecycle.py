@@ -121,8 +121,8 @@ class DeviceLifecycleTests(unittest.TestCase):
         try:
             main.APP_ENV = "development"
             main.REDIS_URL = ""
-            main.SPEECHKIT_DAILY_SECONDS_LIMIT = 10
-            main.SPEECHKIT_DAILY_TOTAL_SECONDS_LIMIT = 2
+            main.AUDIO_DAILY_SECONDS_LIMIT = 10
+            main.AUDIO_DAILY_TOTAL_SECONDS_LIMIT = 2
             main._local_audio_daily.clear()
             main._check_audio_daily_budget("device-a", 1)
             main._check_audio_daily_budget("device-b", 1)
