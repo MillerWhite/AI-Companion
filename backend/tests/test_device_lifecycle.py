@@ -69,6 +69,30 @@ class DeviceLifecycleTests(unittest.TestCase):
         self.assertEqual(reset["status"], "memory_reset")
         self.assertEqual(main.get_device_memory(authorization=auth)["memory"], {"recent_context": [], "facts": []})
 
+
+    def test_audio_quota_enforces_device_and_global_caps(self):
+        old_app_env = main.APP_ENV
+        old_device_limit = main.SPEECHKIT_DAILY_SECONDS_LIMIT
+        old_global_limit = main.SPEECHKIT_DAILY_TOTAL_SECONDS_LIMIT
+        old_redis_url = main.REDIS_URL
+        try:
+            main.APP_ENV = "development"
+            main.REDIS_URL = ""
+            main.SPEECHKIT_DAILY_SECONDS_LIMIT = 10
+            main.SPEECHKIT_DAILY_TOTAL_SECONDS_LIMIT = 2
+            main._local_audio_daily.clear()
+            main._check_audio_daily_budget("device-a", 1)
+            main._check_audio_daily_budget("device-b", 1)
+            with self.assertRaises(HTTPException) as error:
+                main._check_audio_daily_budget("device-c", 1)
+            self.assertEqual(error.exception.status_code, 429)
+        finally:
+            main.APP_ENV = old_app_env
+            main.SPEECHKIT_DAILY_SECONDS_LIMIT = old_device_limit
+            main.SPEECHKIT_DAILY_TOTAL_SECONDS_LIMIT = old_global_limit
+            main.REDIS_URL = old_redis_url
+            main._local_audio_daily.clear()
+
     def test_revoked_device_token_cannot_access_owner_memory(self):
         grant = main._create_enrollment_grant("paid-order-004", 1)
         result = self.claim(grant)
