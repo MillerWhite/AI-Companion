@@ -80,6 +80,8 @@ docker compose -f docker-compose.production.yml up -d --build
 
 Caddy obtains TLS certificates for `API_DOMAIN`. Keep `.env` out of Git and restrict its permissions. Put provider keys in a managed secret store where available. This repository contains deployment templates; no cloud host has been provisioned or deployed by this change.
 
+After deployment, schedule `bash scripts/backup-postgres.sh` daily from the `backend` directory. It creates a checksum-protected local dump and removes local dumps older than 14 days. Copy backups off-host and perform restore drills; a local dump on the same server is not a disaster-recovery plan.
+
 ## Provider caveat
 
 The Yandex OpenAI-compatible chat endpoint/model/auth header configuration still needs a live smoke test using a newly created, unexposed key. The key disclosed earlier in the project conversation must be revoked and must not be reused.
