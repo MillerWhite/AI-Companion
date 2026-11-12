@@ -48,7 +48,6 @@ MEMORY_RETENTION_DAYS = int(os.getenv("MEMORY_RETENTION_DAYS", "90"))
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 REDIS_URL = os.getenv("REDIS_URL", "").strip()
 AI_DAILY_REQUEST_LIMIT = int(os.getenv("AI_DAILY_REQUEST_LIMIT", "250"))
-AUDIO_DAILY_SECONDS_LIMIT = int(os.getenv("AUDIO_DAILY_SECONDS_LIMIT", "120"))
 
 
 class Action(str, Enum):
