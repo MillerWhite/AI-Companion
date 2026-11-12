@@ -10,7 +10,8 @@
 static const char *TAG = "companion_imu";
 static qmi8658_dev_t *imu;
 static float filtered_x, filtered_y, filtered_z;
-static bool ready;\nstatic bool filter_initialized;
+static bool ready;
+static bool filter_initialized;
 
 esp_err_t companion_imu_init(void)
 {
