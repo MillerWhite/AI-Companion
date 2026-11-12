@@ -39,11 +39,11 @@ footer{border-top:1px solid var(--line);padding-top:14px;margin-top:22px;color:#
 </head>
 <body><main>
 <header><div class="brand"><div class="mark">AC</div><div><b>AI COMPANION</b><small>ТВОЙ КАРМАННЫЙ ДРУГ</small></div></div><span class="pet-hint">ВСЕГДА РЯДОМ</span></header>
-<div class="hero"><div class="eyebrow">YOUR PERSONAL COMPANION</div><h1>Твой электронный друг</h1><p>Настрой характер, экран и личные ссылки. Компаньон реагирует на тебя и события вокруг — без голода, кормления и обязательного ухода.</p></div>
+<div class="hero"><div class="eyebrow">YOUR PERSONAL COMPANION</div><h1>Твой электронный друг</h1><p>Настрой имя, характер и функции своего компаньона в одном месте.</p></div>
 <div class="companion-stage"><div class="pet-orb neutral" id="petOrb" role="button" tabindex="0" aria-label="Коснуться лица компаньона"><div class="pet-face"><i class="pet-eye"></i><i class="pet-eye"></i><i class="pet-mouth" id="petMouth"></i></div></div><div class="pet-caption" id="petCaption">Я здесь</div><div class="pet-subcaption" id="petSubcaption">Спокойно оглядываюсь и жду знакомства</div><div class="pet-hint">Коснись лица, чтобы поздороваться</div></div>
 <div class="statusbar"><div class="statusmain"><i class="dot" id="dot"></i><div class="statuscopy"><b id="conn">Не подключён</b><small id="status">Подключи брелок USB-кабелем с передачей данных. Работает в Chrome и Edge.</small></div></div><div class="statusactions"><button class="primary" id="connect">Подключить по кабелю</button><button id="disconnect" disabled>Отключить</button></div></div>
 <div class="stats"><div class="stat"><small>Прошивка</small><b id="version">—</b></div><div class="stat"><small>Батарея</small><b id="battery">—</b></div><div class="stat"><small>Имя</small><b id="deviceName">—</b></div></div>
-<div class="notice">Подключи друга, чтобы настроить его имя, характер и личные ссылки. После сохранения настройки останутся с ним.</div>
+
 
 <section><div class="sectionhead"><h2>Имя и характер</h2><small>ЛИЧНОСТЬ</small></div><div class="grid">
 <div class="field"><label for="name">Имя компаньона</label><input id="name" maxlength="40" placeholder="Например, Milo"></div>
@@ -58,33 +58,33 @@ footer{border-top:1px solid var(--line);padding-top:14px;margin-top:22px;color:#
 <div class="qrrow"><span class="qrnum">02</span><div class="field"><label for="qrTitle1">Название</label><input id="qrTitle1" maxlength="30" placeholder="Instagram"></div><div class="field url"><label for="qrUrl1">Ссылка</label><input id="qrUrl1" maxlength="130" placeholder="https://…"></div></div>
 <div class="qrrow"><span class="qrnum">03</span><div class="field"><label for="qrTitle2">Название</label><input id="qrTitle2" maxlength="30" placeholder="Сайт"></div><div class="field url"><label for="qrUrl2">Ссылка</label><input id="qrUrl2" maxlength="130" placeholder="https://…"></div></div>
 <div class="qrrow"><span class="qrnum">04</span><div class="field"><label for="qrTitle3">Название</label><input id="qrTitle3" maxlength="30" placeholder="Другая ссылка"></div><div class="field url"><label for="qrUrl3">Ссылка</label><input id="qrUrl3" maxlength="130" placeholder="https://…"></div></div>
-</div><button class="primary save" id="saveQr">Сохранить ссылки</button><div class="notice">Брелок генерирует QR-коды из сохранённых ссылок и показывает их на AMOLED. На экране нажми QR, затем листай ссылки свайпами влево и вправо.</div></section>
+</div><button class="primary save" id="saveQr">Сохранить ссылки</button><p class="muted">Ссылки сохраняются в памяти устройства. Отображение QR на экране зависит от версии прошивки.</p></section>
 
 <section><div class="sectionhead"><h2>Экран и питание</h2><small>ДИСПЛЕЙ</small></div><div class="field"><label for="brightness">Яркость: <b id="brightnessValue">85%</b></label><input type="range" id="brightness" min="5" max="100" value="85"></div><div class="grid" style="margin-top:12px"><div class="field"><label for="theme">Оформление</label><select id="theme"><option value="0">Тёмное</option><option value="1">Светлое</option><option value="2">Контрастное</option><option value="3">Тёплое</option><option value="4">Диагностика</option></select></div><div class="field"><label for="sleepTimeout">Автосон</label><select id="sleepTimeout"><option value="15">15 секунд</option><option value="30">30 секунд</option><option value="60">1 минута</option><option value="120">2 минуты</option><option value="240">4 минуты</option><option value="0">Никогда</option></select></div></div><button class="primary save" id="saveDisplay">Сохранить параметры</button></section>
 
 <section><div class="sectionhead"><h2>Быстрые действия</h2><small>РЕАКЦИИ</small></div><div class="actions"><button data-cmd="call">Позвать</button><button data-cmd="pet">Погладить</button><button data-cmd="sleep">Сон</button><button data-cmd="wake">Разбудить</button><button data-cmd="sound surprise">Звук</button></div><p class="muted">Действия отправляются непосредственно в прошивку.</p></section>
 
-<section><div class="sectionhead"><h2>Пульт компьютера</h2><small>BLUETOOTH HID</small></div>
+<details><summary>Управление компьютером</summary><div class="inside">
 <p class="muted">Сопряги AI Companion в Bluetooth-настройках Windows, macOS или Linux. После сопряжения пульт работает без USB-кабеля.</p>
 <div class="grid">
 <div><b>Режим презентации</b><p class="muted">Свайп влево/вправо — следующий/предыдущий слайд. Свайп вверх — play/pause. Свайп вниз — mute.</p></div>
 <div><b>Режим мыши</b><p class="muted">Нажми REMOTE на экране брелока, чтобы включить режим мыши. Свайпы двигают курсор и прокручивают страницу, касание выполняет левый клик. Долгое нажатие выключает режим мыши.</p></div>
 <div><b>Мультимедиа</b><p class="muted">Bluetooth HID отправляет стандартные команды воспроизведения, громкости, переключения треков и mute.</p></div>
 <div><b>QR на AMOLED</b><p class="muted">Четыре ссылки хранятся на устройстве; QR-код открывается кнопкой QR и переключается горизонтальным свайпом.</p></div>
-</div></section>
-<section><div class="sectionhead"><h2>iPhone</h2><small>ANCS / AMS · BLUETOOTH</small></div>
+</div></div></details>
+<details><summary>Подключение iPhone</summary><div class="inside"><small>ANCS / AMS · BLUETOOTH</small></div>
 <p class="muted">Подключи iPhone: Настройки → Bluetooth → AI Companion, подтверди сопряжение и разреши показ системных уведомлений, если iOS предложит. Уведомления и информация о треке выводятся на AMOLED. На устройстве переключи режим REMOTE → MOUSE → IPHONE: свайпы влево/вправо меняют трек, вверх — play/pause, вниз — громкость вверх, касание — громкость вниз. AMS может появляться только при активной медиасессии iOS.</p>
-</section>
-<section><div class="sectionhead"><h2>Приложения и диагностика</h2><small>DEVICE</small></div>
+</div></details>
+<details><summary>Диагностика устройства</summary><div class="inside"><small>DEVICE</small></div>
 <div class="grid">
 <div><b>USB Serial</b><p class="muted">Имя, характер, бейдж, экран и QR-ссылки сохраняются в памяти друга.</p></div>
 <div><b>Диагностика</b><p class="muted">Здесь можно посмотреть состояние подключения, заряд и имя друга.</p></div>
 <div><b>Локальные реакции</b><p class="muted">Эмоции, касания, звук, движение и зарядка обрабатываются на устройстве.</p></div>
 <div><b>Прошивка</b><p class="muted">Обновления будут доступны здесь, когда новая версия будет готова.</p></div>
-</div></section>
+</div></div></details>
 
 <div hidden><button id="refresh"></button><button id="clear"></button><span id="diag"></span><pre id="log">Журнал пуст</pre></div>
-<section><div class="sectionhead"><h2>Обновления</h2><small>НОВЫЕ ВОЗМОЖНОСТИ</small></div><p class="muted">Когда для друга появится новая версия, здесь будет доступно обновление.</p></section>
+
 <footer><span>AI COMPANION</span><span>Твой друг всегда рядом</span></footer>
 </main>
 <script>
