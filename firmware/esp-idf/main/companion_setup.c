@@ -5,6 +5,7 @@
 #include "cJSON.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
+#include "esp_check.h"
 #include "esp_mac.h"
 #include "esp_netif.h"
 #include "nvs.h"
@@ -26,9 +27,16 @@ static esp_err_t root_handler(httpd_req_t *req)
         "<label>Серийный номер</label><input id='serial' readonly>"
         "<label>Имя компаньона</label><input id='name' maxlength='40' value='Milo'>"
         "<label>Одноразовый код активации</label><input id='grant' autocomplete='off' placeholder='Код активации'>"
-        "<button id='claim'>Активировать устройство</button><p id='status'>Подключитесь к устройству в той же Wi-Fi сети.</p><small>Не отправляйте код активации другим людям.</small></main>"
-        "<script>fetch('/device-info').then(r=>r.json()).then(d=>{document.querySelector('#serial').value=d.serial;document.querySelector('#status').textContent='Устройство онлайн · '+d.ip+(d.claimed?' · уже активировано':' · ожидает активации')}).catch(()=>{});"
-        "document.querySelector('#claim').onclick=async()=>{let b=document.querySelector('#claim'),s=document.querySelector('#status');b.disabled=true;s.textContent='Активируем…';try{let r=await fetch('/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({api_base:document.querySelector('#api').value.trim(),serial:document.querySelector('#serial').value,companion_name:document.querySelector('#name').value.trim(),enrollment_grant:document.querySelector('#grant').value.trim()})});let d=await r.json();if(!r.ok)throw Error(d.message||d.detail?.message||'Ошибка активации');s.textContent='Готово. Устройство активировано. Можно закрыть эту страницу.';document.querySelector('#grant').value='';}catch(e){s.textContent='Не удалось активировать: '+e.message;}finally{b.disabled=false}};</script></html>";
+        "<button id='claim'>Активировать устройство</button><p id='status'>Подключитесь к устройству в той же Wi-Fi сети.</p>"
+        "<section id='owner' hidden><hr><h2>Управление компаньоном</h2><label>Темперамент</label><select id='temper'><option value='balanced'>Сбалансированный</option><option value='calm'>Спокойный</option><option value='energetic'>Энергичный</option><option value='shy'>Застенчивый</option><option value='dreamy'>Мечтательный</option></select>"
+        "<label>Инициативность</label><select id='initiative'><option value='medium'>Средняя</option><option value='high'>Высокая</option><option value='low'>Низкая</option></select>"
+        "<button id='profile'>Сохранить характер</button><button id='memory'>Посмотреть память</button><button id='reset'>Сбросить серверную память</button><pre id='memoryData' style='white-space:pre-wrap;color:#aab2c0;font-size:12px'></pre></section>"
+        "<small>Не отправляйте код активации другим людям. Устройство хранит секрет авторизации в защищённом NVS, браузер его не получает.</small></main>"
+        "<script>const $=s=>document.querySelector(s);fetch('/device-info').then(r=>r.json()).then(d=>{$('#serial').value=d.serial;$('#status').textContent='Устройство онлайн · '+d.ip+(d.claimed?' · уже активировано':' · ожидает активации');if(d.claimed)$('#owner').hidden=false}).catch(()=>{});"
+        "$('#claim').onclick=async()=>{let b=$('#claim'),s=$('#status');b.disabled=true;s.textContent='Активируем…';try{let r=await fetch('/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({api_base:$('#api').value.trim(),serial:$('#serial').value,companion_name:$('#name').value.trim(),enrollment_grant:$('#grant').value.trim()})});let d=await r.json();if(!r.ok)throw Error(d.message||d.detail?.message||'Ошибка активации');s.textContent='Готово. Устройство активировано.';$('#grant').value='';$('#owner').hidden=false;}catch(e){s.textContent='Не удалось активировать: '+e.message;}finally{b.disabled=false}};"
+        "$('#profile').onclick=async()=>{let r=await fetch('/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({companion_name:$('#name').value.trim(),personality:{temperament:$('#temper').value,initiative:$('#initiative').value}})});$('#status').textContent=r.ok?'Характер сохранён':'Не удалось сохранить характер'};"
+        "$('#memory').onclick=async()=>{let r=await fetch('/memory'),d=await r.json();$('#memoryData').textContent=JSON.stringify(d,null,2)};"
+        "$('#reset').onclick=async()=>{if(!confirm('Удалить серверную память и историю отношений?'))return;let r=await fetch('/memory/reset',{method:'POST'});$('#memoryData').textContent=r.ok?'Серверная память удалена':'Не удалось удалить память'};</script></html>";
     httpd_resp_set_type(req, "text/html; charset=utf-8");
     return httpd_resp_send(req, page, HTTPD_RESP_USE_STRLEN);
 }
@@ -115,20 +123,86 @@ static esp_err_t claim_handler(httpd_req_t *req)
     return send_err;
 }
 
+
+static esp_err_t owner_memory_handler(httpd_req_t *req)
+{
+    char response[8192] = {0};
+    esp_err_t err = companion_cloud_owner_request(HTTP_METHOD_GET, "/api/device/memory", NULL, response, sizeof(response));
+    if (err != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_503_SERVICE_UNAVAILABLE, "Owner memory service unavailable");
+        return err;
+    }
+    httpd_resp_set_type(req, "application/json");
+    return httpd_resp_send(req, response, HTTPD_RESP_USE_STRLEN);
+}
+
+static esp_err_t owner_memory_reset_handler(httpd_req_t *req)
+{
+    char response[1024] = {0};
+    esp_err_t err = companion_cloud_owner_request(HTTP_METHOD_DELETE, "/api/device/memory", NULL, response, sizeof(response));
+    if (err != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_503_SERVICE_UNAVAILABLE, "Memory reset failed");
+        return err;
+    }
+    httpd_resp_set_type(req, "application/json");
+    return httpd_resp_send(req, response, HTTPD_RESP_USE_STRLEN);
+}
+
+static esp_err_t owner_profile_handler(httpd_req_t *req)
+{
+    if (req->content_len <= 0 || req->content_len > 2048) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid profile size");
+        return ESP_FAIL;
+    }
+    char body[2049] = {0};
+    size_t total = 0;
+    while (total < (size_t)req->content_len) {
+        int received = httpd_req_recv(req, body + total, req->content_len - total);
+        if (received <= 0) {
+            httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Profile body incomplete");
+            return ESP_FAIL;
+        }
+        total += (size_t)received;
+    }
+    cJSON *json = cJSON_ParseWithLength(body, total);
+    if (!json) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid profile JSON");
+        return ESP_FAIL;
+    }
+    char *payload = cJSON_PrintUnformatted(json);
+    cJSON_Delete(json);
+    if (!payload) return ESP_ERR_NO_MEM;
+    char response[2048] = {0};
+    esp_err_t err = companion_cloud_owner_request(HTTP_METHOD_PATCH, "/api/device/profile", payload, response, sizeof(response));
+    cJSON_free(payload);
+    if (err != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_503_SERVICE_UNAVAILABLE, "Profile update failed");
+        return err;
+    }
+    httpd_resp_set_type(req, "application/json");
+    return httpd_resp_send(req, response, HTTPD_RESP_USE_STRLEN);
+}
+
 esp_err_t companion_setup_server_start(void)
 {
     if (server) return ESP_OK;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.server_port = 80;
-    config.max_uri_handlers = 8;
+    config.max_uri_handlers = 10;
     esp_err_t err = httpd_start(&server, &config);
     if (err != ESP_OK) return err;
     httpd_uri_t root = {.uri = "/", .method = HTTP_GET, .handler = root_handler};
     httpd_uri_t info = {.uri = "/device-info", .method = HTTP_GET, .handler = device_info_handler};
     httpd_uri_t claim = {.uri = "/claim", .method = HTTP_POST, .handler = claim_handler};
+    httpd_uri_t memory = {.uri = "/memory", .method = HTTP_GET, .handler = owner_memory_handler};
+    httpd_uri_t memory_reset = {.uri = "/memory/reset", .method = HTTP_POST, .handler = owner_memory_reset_handler};
+    httpd_uri_t profile = {.uri = "/profile", .method = HTTP_POST, .handler = owner_profile_handler};
     ESP_RETURN_ON_ERROR(httpd_register_uri_handler(server, &root), TAG, "register root");
     ESP_RETURN_ON_ERROR(httpd_register_uri_handler(server, &info), TAG, "register info");
     ESP_RETURN_ON_ERROR(httpd_register_uri_handler(server, &claim), TAG, "register claim");
+    ESP_RETURN_ON_ERROR(httpd_register_uri_handler(server, &memory), TAG, "register memory");
+    ESP_RETURN_ON_ERROR(httpd_register_uri_handler(server, &memory_reset), TAG, "register memory reset");
+    ESP_RETURN_ON_ERROR(httpd_register_uri_handler(server, &profile), TAG, "register profile");
     ESP_LOGI(TAG, "Local owner setup portal started on port 80");
     return ESP_OK;
 }
