@@ -52,8 +52,8 @@ footer{border-top:1px solid var(--line);padding-top:14px;margin-top:22px;color:#
 <div><b>Мультимедиа</b><p class="muted">Bluetooth HID отправляет стандартные команды воспроизведения, громкости, переключения треков и mute.</p></div>
 <div><b>QR на AMOLED</b><p class="muted">Четыре ссылки хранятся на устройстве; QR-код открывается кнопкой QR и переключается горизонтальным свайпом.</p></div>
 </div></section>
-<section><div class="sectionhead"><h2>iPhone</h2><small>ANCS / AMS</small></div>
-<p class="muted">ANCS передаёт уведомления iPhone на аксессуар, AMS позволяет читать метаданные воспроизведения и отправлять команды медиаплееру. Эта интеграция ещё требует отдельного GATT-клиента и сопряжения с iOS; не выдаю её за готовую, пока код и сборка не подтверждены.</p>
+<section><div class="sectionhead"><h2>iPhone</h2><small>ANCS / AMS · BLUETOOTH</small></div>
+<p class="muted">На прошивке добавлен GATT-клиент Apple ANCS и AMS. Подключи iPhone: Настройки → Bluetooth → AI Companion Remote, подтверди сопряжение и разреши Share System Notifications, если iOS покажет запрос. Уведомления и информация о треке выводятся на AMOLED. На устройстве переключи режим REMOTE → MOUSE → IPHONE: свайпы влево/вправо меняют трек, вверх — play/pause, вниз — громкость вверх, касание — громкость вниз. AMS может появляться только при активной медиасессии iOS.</p>
 </section>
 <section><div class="sectionhead"><h2>Приложения и диагностика</h2><small>DEVICE</small></div>
 <div class="grid">
