@@ -20,11 +20,8 @@ typedef enum {
     COMPANION_EMOTION_COUNT
 } companion_emotion_t;
 
+/* Event-driven personality model. No hunger, cleanliness, social decay or care loop. */
 typedef struct {
-    float energy;
-    float hunger;
-    float comfort;
-    float social;
     float curiosity;
     float trust;
     float playfulness;
