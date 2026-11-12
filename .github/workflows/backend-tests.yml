@@ -32,3 +32,11 @@ jobs:
             firmware/esp-idf/tests/companion_emotion_test.c \
             -o /tmp/companion_emotion_test
           /tmp/companion_emotion_test
+
+      - name: Build and test procedural voice engine
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -Ifirmware/esp-idf/main \
+            firmware/esp-idf/main/companion_voice.c \
+            firmware/esp-idf/tests/companion_voice_test.c \
+            -lm -o /tmp/companion_voice_test
+          /tmp/companion_voice_test
