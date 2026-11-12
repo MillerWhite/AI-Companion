@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include "cJSON.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
@@ -14,6 +15,18 @@
 static const char *TAG = "companion_setup";
 static httpd_handle_t server;
 
+static bool setup_pin_valid(httpd_req_t *req)
+{
+    char supplied[24] = {0}, expected[24] = {0};
+    if (httpd_req_get_hdr_value_str(req, "X-Setup-Pin", supplied, sizeof(supplied)) != ESP_OK) return false;
+    nvs_handle_t handle;
+    if (nvs_open("companion", NVS_READONLY, &handle) != ESP_OK) return false;
+    size_t size = sizeof(expected);
+    esp_err_t err = nvs_get_str(handle, "setup_pin", expected, &size);
+    nvs_close(handle);
+    return err == ESP_OK && strlen(supplied) == 8 && strcmp(supplied, expected) == 0;
+}
+
 static esp_err_t root_handler(httpd_req_t *req)
 {
     static const char page[] =
@@ -25,7 +38,7 @@ static esp_err_t root_handler(httpd_req_t *req)
         "<main><h1>Настройка AI Companion</h1><p>Устройство уже подключено к Wi-Fi. Вставьте одноразовый код активации, полученный после покупки. Токен устройства будет сохранён внутри него и не покажется в браузере.</p>"
         "<label>Адрес backend</label><input id='api' value='https://api.example.com' placeholder='https://ваш-backend'>"
         "<label>Серийный номер</label><input id='serial' readonly>"
-        "<label>Имя компаньона</label><input id='name' maxlength='40' value='Milo'>"
+        "<label>PIN с экрана устройства</label><input id='pin' type='password' inputmode='numeric' maxlength='8' placeholder='8 цифр'>""<label>Имя компаньона</label><input id='name' maxlength='40' value='Milo'>"
         "<label>Одноразовый код активации</label><input id='grant' autocomplete='off' placeholder='Код активации'>"
         "<button id='claim'>Активировать устройство</button><p id='status'>Подключитесь к устройству в той же Wi-Fi сети.</p>"
         "<section id='owner' hidden><hr><h2>Управление компаньоном</h2><label>Темперамент</label><select id='temper'><option value='balanced'>Сбалансированный</option><option value='calm'>Спокойный</option><option value='energetic'>Энергичный</option><option value='shy'>Застенчивый</option><option value='dreamy'>Мечтательный</option></select>"
@@ -33,10 +46,10 @@ static esp_err_t root_handler(httpd_req_t *req)
         "<button id='profile'>Сохранить характер</button><button id='memory'>Посмотреть память</button><button id='reset'>Сбросить серверную память</button><pre id='memoryData' style='white-space:pre-wrap;color:#aab2c0;font-size:12px'></pre></section>"
         "<small>Не отправляйте код активации другим людям. Устройство хранит секрет авторизации в защищённом NVS, браузер его не получает.</small></main>"
         "<script>const $=s=>document.querySelector(s);fetch('/device-info').then(r=>r.json()).then(d=>{$('#serial').value=d.serial;$('#status').textContent='Устройство онлайн · '+d.ip+(d.claimed?' · уже активировано':' · ожидает активации');if(d.claimed){$('#owner').hidden=false;$('#name').value=d.companion_name||'Milo';$('#temper').value=d.temperament||'balanced';$('#initiative').value=d.initiative||'medium'}}).catch(()=>{});"
-        "$('#claim').onclick=async()=>{let b=$('#claim'),s=$('#status');b.disabled=true;s.textContent='Активируем…';try{let r=await fetch('/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({api_base:$('#api').value.trim(),serial:$('#serial').value,companion_name:$('#name').value.trim(),enrollment_grant:$('#grant').value.trim()})});let d=await r.json();if(!r.ok)throw Error(d.message||d.detail?.message||'Ошибка активации');s.textContent='Готово. Устройство активировано.';$('#grant').value='';$('#owner').hidden=false;}catch(e){s.textContent='Не удалось активировать: '+e.message;}finally{b.disabled=false}};"
-        "$('#profile').onclick=async()=>{let r=await fetch('/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({companion_name:$('#name').value.trim(),personality:{temperament:$('#temper').value,initiative:$('#initiative').value}})});$('#status').textContent=r.ok?'Характер сохранён':'Не удалось сохранить характер'};"
-        "$('#memory').onclick=async()=>{let r=await fetch('/memory'),d=await r.json();$('#memoryData').textContent=JSON.stringify(d,null,2)};"
-        "$('#reset').onclick=async()=>{if(!confirm('Удалить серверную память и историю отношений?'))return;let r=await fetch('/memory/reset',{method:'POST'});$('#memoryData').textContent=r.ok?'Серверная память удалена':'Не удалось удалить память'};</script></html>";
+        "$('#claim').onclick=async()=>{let b=$('#claim'),s=$('#status');b.disabled=true;s.textContent='Активируем…';try{let r=await fetch('/claim',{method:'POST',headers:{'Content-Type':'application/json','X-Setup-Pin':$('#pin').value.trim()},body:JSON.stringify({api_base:$('#api').value.trim(),serial:$('#serial').value,companion_name:$('#name').value.trim(),enrollment_grant:$('#grant').value.trim()})});let d=await r.json();if(!r.ok)throw Error(d.message||d.detail?.message||'Ошибка активации');s.textContent='Готово. Устройство активировано.';$('#grant').value='';$('#owner').hidden=false;}catch(e){s.textContent='Не удалось активировать: '+e.message;}finally{b.disabled=false}};"
+        "$('#profile').onclick=async()=>{let r=await fetch('/profile',{method:'POST',headers:{'Content-Type':'application/json','X-Setup-Pin':$('#pin').value.trim()},body:JSON.stringify({companion_name:$('#name').value.trim(),personality:{temperament:$('#temper').value,initiative:$('#initiative').value}})});$('#status').textContent=r.ok?'Характер сохранён':'Не удалось сохранить характер'};"
+        "$('#memory').onclick=async()=>{let r=await fetch('/memory',{headers:{'X-Setup-Pin':$('#pin').value.trim()}}),d=await r.json();$('#memoryData').textContent=JSON.stringify(d,null,2)};"
+        "$('#reset').onclick=async()=>{if(!confirm('Удалить серверную память и историю отношений?'))return;let r=await fetch('/memory/reset',{method:'POST',headers:{'X-Setup-Pin':$('#pin').value.trim()}});$('#memoryData').textContent=r.ok?'Серверная память удалена':'Не удалось удалить память'};</script></html>";
     httpd_resp_set_type(req, "text/html; charset=utf-8");
     return httpd_resp_send(req, page, HTTPD_RESP_USE_STRLEN);
 }
@@ -88,7 +101,8 @@ static esp_err_t device_info_handler(httpd_req_t *req)
 }
 
 static esp_err_t claim_handler(httpd_req_t *req)
-{
+{    if (!setup_pin_valid(req)) { httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Setup PIN required"); return ESP_FAIL; }
+
     if (req->content_len <= 0 || req->content_len > 4096) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request size");
         return ESP_FAIL;
@@ -146,7 +160,8 @@ static esp_err_t claim_handler(httpd_req_t *req)
 
 
 static esp_err_t owner_memory_handler(httpd_req_t *req)
-{
+{    if (!setup_pin_valid(req)) { httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Setup PIN required"); return ESP_FAIL; }
+
     char response[8192] = {0};
     esp_err_t err = companion_cloud_owner_request(HTTP_METHOD_GET, "/api/device/memory", NULL, response, sizeof(response));
     if (err != ESP_OK) {
@@ -158,7 +173,8 @@ static esp_err_t owner_memory_handler(httpd_req_t *req)
 }
 
 static esp_err_t owner_memory_reset_handler(httpd_req_t *req)
-{
+{    if (!setup_pin_valid(req)) { httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Setup PIN required"); return ESP_FAIL; }
+
     char response[1024] = {0};
     esp_err_t err = companion_cloud_owner_request(HTTP_METHOD_DELETE, "/api/device/memory", NULL, response, sizeof(response));
     if (err != ESP_OK) {
@@ -170,7 +186,8 @@ static esp_err_t owner_memory_reset_handler(httpd_req_t *req)
 }
 
 static esp_err_t owner_profile_handler(httpd_req_t *req)
-{
+{    if (!setup_pin_valid(req)) { httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Setup PIN required"); return ESP_FAIL; }
+
     if (req->content_len <= 0 || req->content_len > 2048) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid profile size");
         return ESP_FAIL;
