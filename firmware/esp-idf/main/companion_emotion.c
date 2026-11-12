@@ -37,8 +37,6 @@ void companion_emotion_interaction(companion_state_t *state, const char *kind)
     if (!strcmp(kind, "pet")) {
         state->trust = clamp100(state->trust + 2.0f);
         state->curiosity = clamp100(state->curiosity + 3.0f);
-    } else if (!strcmp(kind, "play")) {
-        state->playfulness = clamp100(state->playfulness + 5.0f);
         state->curiosity = clamp100(state->curiosity + 4.0f);
     } else if (!strcmp(kind, "call")) {
         state->trust = clamp100(state->trust + 1.0f);
