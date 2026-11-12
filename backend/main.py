@@ -19,13 +19,13 @@ from enum import Enum
 from typing import Any
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Header, Request
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 
 load_dotenv()
 
-APP_VERSION = "1.6.0"
+APP_VERSION = "1.7.0"
 APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
 DEVICE_ENROLLMENT_SECRET = os.getenv("DEVICE_ENROLLMENT_SECRET", "").strip()
 DEVICE_DB_PATH = os.getenv("DEVICE_DB_PATH", "backend/devices.sqlite3")
@@ -280,8 +280,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 
@@ -300,7 +300,6 @@ def health() -> dict[str, str | bool]:
 @app.post("/api/devices/enroll")
 def enroll_device(
     payload: DeviceEnrollRequest,
-    request: Request,
     x_enrollment_secret: str | None = Header(default=None, alias="X-Enrollment-Secret"),
 ) -> dict[str, str]:
     """Provision one device using a server-only enrollment secret.
