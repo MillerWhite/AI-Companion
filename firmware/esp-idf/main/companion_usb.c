@@ -10,6 +10,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 #include "nvs.h"
 #include "companion_power.h"
 
@@ -18,11 +19,32 @@
 
 static const char *TAG = "companion_usb";
 static companion_usb_command_handler_t command_handler;
+static SemaphoreHandle_t usb_write_mutex;
 
 static void usb_write_line(const char *line)
 {
-    if (!line) return;
-    (void)usb_serial_jtag_write_bytes(line, (uint32_t)strlen(line), pdMS_TO_TICKS(100));
+    if (!line || !usb_write_mutex) return;
+    if (xSemaphoreTake(usb_write_mutex, 0) == pdTRUE) {
+        (void)usb_serial_jtag_write_bytes(line, (uint32_t)strlen(line), pdMS_TO_TICKS(40));
+        xSemaphoreGive(usb_write_mutex);
+    }
+}
+
+
+void companion_usb_emit_emotion(const char *emotion)
+{
+    if (!emotion || !*emotion) return;
+    char line[96];
+    int written = snprintf(line, sizeof(line), "@M %s\\n", emotion);
+    if (written > 0 && (size_t)written < sizeof(line)) usb_write_line(line);
+}
+
+void companion_usb_emit_touch(const char *event_name)
+{
+    if (!event_name || !*event_name) return;
+    char line[96];
+    int written = snprintf(line, sizeof(line), "@T %s\\n", event_name);
+    if (written > 0 && (size_t)written < sizeof(line)) usb_write_line(line);
 }
 
 static esp_err_t nvs_read_string(const char *key, char *value, size_t capacity)
@@ -212,6 +234,8 @@ static void process_command(char *line)
 static void usb_task(void *argument)
 {
     (void)argument;
+    usb_write_mutex = xSemaphoreCreateMutex();
+    if (!usb_write_mutex) { ESP_LOGE(TAG, "USB write mutex allocation failed"); vTaskDelete(NULL); return; }
     usb_serial_jtag_driver_config_t config = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
     config.rx_buffer_size = 512;
     esp_err_t err = usb_serial_jtag_driver_install(&config);
