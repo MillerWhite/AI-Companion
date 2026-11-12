@@ -257,7 +257,7 @@ static void autonomous_timer(lv_timer_t *timer)
     }
     if (sleeping && state.energy >= 68.0f) {
         sleeping = false;
-        set_emotion(COMPANION_HAPPY, true);
+        render_emotion(COMPANION_HAPPY);
     } else if (!sleeping) {
         const time_t now = time(NULL);
         struct tm local = {0};
@@ -265,7 +265,7 @@ static void autonomous_timer(lv_timer_t *timer)
         const uint8_t hour = now > 1700000000 ? (uint8_t)local.tm_hour : 12;
         companion_emotion_t next = companion_emotion_choose(&state, hour, esp_random(), current_emotion);
         if (next == COMPANION_SLEEPY) sleeping = true;
-        if (next != current_emotion) set_emotion(next, false);
+        if (next != current_emotion) render_emotion(next);
     }
     save_state();
 }
@@ -372,6 +372,8 @@ void app_main(void)
         style_eye(eyes[i]);
         lv_obj_set_size(eyes[i], 58, 78);
         lv_obj_set_pos(eyes[i], i == 0 ? 92 : 262, 112);
+        lv_obj_add_flag(eyes[i], LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(eyes[i], on_face_tap, LV_EVENT_CLICKED, NULL);
         brows[i] = lv_obj_create(face);
         lv_obj_remove_style_all(brows[i]);
         lv_obj_set_size(brows[i], 48, 7);
@@ -400,6 +402,8 @@ void app_main(void)
     lv_obj_set_style_border_width(mouth, 3, 0);
     lv_obj_set_style_border_side(mouth, LV_BORDER_SIDE_BOTTOM, 0);
     lv_obj_set_style_radius(mouth, LV_RADIUS_CIRCLE, 0);
+    lv_obj_add_flag(mouth, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(mouth, on_face_tap, LV_EVENT_CLICKED, NULL);
 
     status_label = lv_label_create(screen);
     lv_obj_set_style_text_color(status_label, lv_color_hex(0xD9E8F6), 0);
