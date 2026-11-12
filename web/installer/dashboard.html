@@ -1,53 +1,171 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#08090d"><title>AI Companion — панель устройства</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080a0e">
+<meta name="description" content="AI Companion — профессиональная панель настройки, диагностики и управления компаньоном.">
+<title>AI Companion — Device Console</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#08090d;color:#eef3f8;font:15px/1.5 system-ui,Segoe UI,sans-serif}
-main{max-width:1040px;width:92%;margin:36px auto 80px}.top{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-h1{font-size:clamp(30px,5vw,48px);margin:8px 0}h2{font-size:20px;margin:0 0 12px}h3{font-size:15px;margin:0 0 8px}
-p,.muted{color:#9eacbb}.muted{font-size:12px}.eyebrow{font-size:11px;letter-spacing:.18em;color:#91b5cc;text-transform:uppercase}
-.panel{background:#111720;border:1px solid #293646;border-radius:18px;padding:20px;margin:16px 0}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
-.card{background:#0b1017;border:1px solid #273342;border-radius:13px;padding:15px}
-label{display:block;color:#aebdca;font-size:12px;margin:10px 0 5px}
-input,select{width:100%;background:#080d13;color:#f4f7fa;border:1px solid #344456;border-radius:9px;padding:10px;font:inherit}
-button{background:#1d2a38;color:#f3f7fa;border:1px solid #40536a;border-radius:10px;padding:11px 15px;font:inherit;font-weight:650;cursor:pointer}
-button.primary{background:#d8f1ff;color:#07111a;border-color:#d8f1ff}button:disabled{opacity:.4;cursor:not-allowed}
-.status{background:#080e14;border:1px solid #293646;border-radius:10px;padding:11px;color:#b6c5d3;margin-top:12px}
-.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.row>*{flex:0 0 auto}
-.badge{font-size:10px;color:#f1c887;border:1px solid #705b38;border-radius:20px;padding:3px 8px}
-.locked{opacity:.66}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.qrrow{display:grid;grid-template-columns:1fr 1fr 2fr;gap:8px;margin:8px 0}
-hr{border:0;border-top:1px solid #293646;margin:18px 0}
-@media(max-width:600px){.two{grid-template-columns:1fr}.qrrow{grid-template-columns:1fr}}
-</style></head>
-<body><main>
-<div class="eyebrow">AI COMPANION · DEVICE CONTROL</div>
-<div class="top"><div><h1>Панель компаньона</h1><p>Управление устройством через USB. Настройки, которые поддерживает текущая прошивка, сохраняются непосредственно в памяти ESP32.</p></div><div class="row"><button id="connect" class="primary">Подключить по USB</button><button id="disconnect" disabled>Отключить</button></div></div>
-<div id="status" class="status" role="status">Устройство не подключено</div>
-<section class="panel"><div class="eyebrow">01 · DEVICE</div><h2>Состояние устройства</h2><div class="grid"><div class="card"><div class="muted">Подключение</div><strong id="connection">Нет соединения</strong></div><div class="card"><div class="muted">Версия прошивки</div><strong id="version">—</strong></div><div class="card"><div class="muted">Имя компаньона</div><strong id="deviceName">—</strong></div></div></section>
-<section class="panel"><div class="eyebrow">02 · PERSONALITY</div><h2>Имя и характер</h2><div class="two"><div><label for="name">Имя компаньона</label><input id="name" maxlength="40" value="Milo"></div><div><label for="temperament">Темперамент</label><select id="temperament"><option value="0">Сбалансированный</option><option value="1">Спокойный</option><option value="2">Энергичный</option><option value="3">Застенчивый</option><option value="4">Мечтательный</option></select></div><div><label for="initiative">Инициативность</label><select id="initiative"><option value="0">Средняя</option><option value="1">Высокая</option><option value="2">Низкая</option></select></div><div><label for="quirk">Особенность характера</label><select id="quirk"><option value="0">Нет</option><option value="1">Соня</option><option value="2">Любопытный</option><option value="3">Озорной</option><option value="4">Застенчивый</option></select></div></div><div class="row" style="margin-top:14px"><button class="primary" id="save">Сохранить на устройстве</button><span id="saved" class="muted"></span></div></section>
-<section class="panel"><div class="eyebrow">03 · QUICK ACTIONS</div><h2>Быстрые действия</h2><div class="row"><button data-cmd="pet">Погладить</button><button data-cmd="play">Поиграть</button><button data-cmd="sleep">Усыпить</button><button data-cmd="wake">Разбудить</button><button data-cmd="wifi-reset">Сбросить Wi-Fi</button></div></section>
-<section class="panel"><div class="eyebrow">04 · OWNER BADGE</div><div class="row"><h2 style="margin-right:auto">Бейдж владельца</h2><span class="badge">Требуется поддержка прошивки</span></div><div class="grid"><div><label>Первая строка</label><input disabled placeholder="Имя"></div><div><label>Вторая строка</label><input disabled placeholder="Фамилия"></div><div><label>Подпись</label><input disabled placeholder="AI Companion"></div></div><p class="muted">Макет перенесён в план панели. Запись и отображение бейджа на экране ESP32 ещё не реализованы.</p></section>
-<section class="panel"><div class="row"><h2 style="margin-right:auto">Quick QR · до четырёх ссылок</h2><span class="badge">Требуется поддержка прошивки</span></div><p>Название, подпись и URL для Telegram, Instagram, сайта или любого другого ресурса.</p><div class="qrrow"><input disabled placeholder="Название"><input disabled placeholder="Подпись"><input disabled placeholder="https://…"></div><div class="qrrow"><input disabled placeholder="Название"><input disabled placeholder="Подпись"><input disabled placeholder="https://…"></div><div class="qrrow"><input disabled placeholder="Название"><input disabled placeholder="Подпись"><input disabled placeholder="https://…"></div><div class="qrrow"><input disabled placeholder="Название"><input disabled placeholder="Подпись"><input disabled placeholder="https://…"></div><p class="muted">Нужны экран QR, свайповая навигация и хранение ссылок в NVS. В текущей прошивке этого API пока нет.</p></section>
-<section class="panel"><div class="row"><h2 style="margin-right:auto">Экран и энергосбережение</h2><span class="badge">Требуется поддержка прошивки</span></div><div class="grid"><div><label>Автосон</label><select disabled><option>Через 30 секунд</option><option>Через 1 минуту</option><option>Через 5 минут</option><option>Никогда</option></select></div><div><label>Яркость</label><input disabled type="range" min="10" max="100" value="80"></div><div><label>Оформление</label><select disabled><option>Тёмное</option><option>Светлое</option><option>Автоматически</option></select></div></div><p class="muted">Текущая версия умеет команды сна/пробуждения, но ещё не предоставляет настройки тайм-аута, яркости и темы через USB.</p></section>
-<section class="panel"><div class="row"><h2 style="margin-right:auto">Уведомления iPhone</h2><span class="badge">Не реализовано</span></div><p>Для полной копии Pip потребуется BLE-профиль Apple ANCS, сопряжение iPhone, список уведомлений и фильтрация чувствительного содержимого. В AI Companion такого BLE/ANCS стека пока нет; коды, пароли и банковские уведомления не должны сохраняться.</p></section>
-<section class="panel"><div class="eyebrow">05 · DEVELOPER</div><h2>Инструменты разработчика</h2><div class="grid"><div class="card"><h3>Тест эмоций</h3><p class="muted">Ручной вызов всех эмоциональных состояний на дисплее.</p><span class="badge">Нужен USB API</span></div><div class="card"><h3>История эмоций</h3><p class="muted">События за 24 часа и причины смены настроения.</p><span class="badge">Нужен журнал событий</span></div><div class="card"><h3>Дерево решений</h3><p class="muted">Пороговые значения, потребности и правила реакции.</p><span class="badge">Нужен диагностический API</span></div><div class="card"><h3>Режим отладки дисплея</h3><p class="muted">Границы глаз, координаты, области перерисовки и служебные показатели.</p><span class="badge">Нужен LVGL debug overlay</span></div></div></section>
-<section class="panel"><div class="eyebrow">06 · FLASH</div><h2>Прошивка</h2><p>Вернитесь на основную страницу установщика, чтобы записать опубликованный релиз.</p><a href="./index.html" style="color:#a8ddff">Открыть установщик прошивки →</a></section>
-<p class="muted">Совместимость: Chrome / Edge на компьютере, Web Serial API, USB-кабель с передачей данных.</p>
+:root{color-scheme:dark;--bg:#080a0e;--surface:#10151c;--surface2:#0c1118;--line:#27313d;--muted:#8795a5;--text:#edf2f7;--blue:#b7d8ee;--blue2:#6fa9d0;--gold:#c5a979;--green:#82c5a4;--red:#d58e8e}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -18%,#1a2b3a 0,transparent 48%),var(--bg);color:var(--text);font:14px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.01em}
+a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+main{width:min(1160px,92vw);margin:0 auto;padding:34px 0 72px}
+header{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-bottom:25px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:13px}.mark{width:38px;height:38px;border:1px solid #526577;border-radius:11px;display:grid;place-items:center;color:var(--blue);font-weight:800;letter-spacing:-.08em;background:linear-gradient(145deg,#182430,#0a0e14)}
+.brand strong{display:block;font-size:12px;letter-spacing:.2em}.brand span{display:block;color:var(--muted);font-size:10px;letter-spacing:.16em;margin-top:2px}
+.toplinks{display:flex;gap:18px;color:var(--muted);font-size:12px}
+.hero{padding:44px 0 27px;display:flex;align-items:end;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.eyebrow{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--blue2);font-weight:700}
+h1{font-size:clamp(34px,5.4vw,56px);line-height:1.02;letter-spacing:-.055em;margin:11px 0 12px;font-weight:650}
+h2{font-size:17px;letter-spacing:-.02em;margin:0}.hero p{max-width:630px;color:#a8b4c1;margin:0}
+.actions{display:flex;gap:9px;flex-wrap:wrap}
+button{font:inherit;border:1px solid #3a4a5b;border-radius:9px;background:#17212c;color:var(--text);padding:10px 14px;cursor:pointer;transition:.15s ease}
+button:hover{border-color:#8aa9c1;background:#1c2b39}button.primary{background:var(--blue);border-color:var(--blue);color:#08121b;font-weight:750}button.primary:hover{background:#d5e8f5}button:disabled{opacity:.4;cursor:not-allowed}
+.statusbar{display:grid;grid-template-columns:1.5fr repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:13px;overflow:hidden;margin:10px 0 25px}
+.metric{background:#0e141b;padding:15px 17px;min-height:76px}.metric small{display:block;color:var(--muted);font-size:10px;letter-spacing:.13em;text-transform:uppercase}.metric strong{display:block;margin-top:6px;font-size:15px;font-weight:650}.metric .sub{font-size:11px;color:var(--muted);font-weight:400}
+.panel{background:linear-gradient(145deg,rgba(18,25,34,.98),rgba(12,17,24,.98));border:1px solid var(--line);border-radius:15px;padding:21px;margin:14px 0}
+.panelhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.sectionno{color:var(--gold);font-size:10px;letter-spacing:.17em}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.field label{display:block;color:#a9b5c2;font-size:11px;margin:0 0 6px}
+input,select{width:100%;background:#090e14;color:var(--text);border:1px solid #2b3947;border-radius:8px;padding:10px 11px;font:inherit;outline:none}
+input:focus,select:focus{border-color:#7fa8c5}
+.note{color:var(--muted);font-size:11px;margin:11px 0 0}.inline{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:7px;border:1px solid #344454;border-radius:99px;padding:4px 9px;color:#aab8c6;font-size:10px;letter-spacing:.06em}
+.dot{width:6px;height:6px;border-radius:50%;background:#657585}.dot.ok{background:var(--green);box-shadow:0 0 10px #82c5a455}.dot.warn{background:var(--gold)}
+.reaction{background:#0b1118;border:1px solid #263340;border-radius:11px;padding:15px;min-height:128px}
+.reaction .num{color:var(--gold);font-size:10px;letter-spacing:.15em}.reaction strong{display:block;margin:7px 0 3px;font-size:13px}.reaction p{margin:0;color:var(--muted);font-size:11px}.sensor{display:inline-block;margin-top:11px;color:#8faec4;font-size:9px;letter-spacing:.1em;text-transform:uppercase}
+.devbutton{min-width:100px}.pending{border-style:dashed;background:#0c1117}.pending .pill{color:#c6ac82;border-color:#6b593d}
+.footer{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:11px;padding-top:18px}
+hr{border:0;border-top:1px solid var(--line);margin:17px 0}
+@media(max-width:720px){.statusbar{grid-template-columns:1fr 1fr}.grid3{grid-template-columns:1fr 1fr}.hero{padding-top:32px}}
+@media(max-width:480px){main{width:91vw;padding-top:22px}.toplinks{display:none}.grid,.grid3{grid-template-columns:1fr}.panel{padding:16px}.statusbar{grid-template-columns:1fr 1fr}.metric{padding:12px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+ <div class="brand"><div class="mark">AC</div><div><strong>AI COMPANION</strong><span>DEVICE OPERATING CONSOLE</span></div></div>
+ <nav class="toplinks"><a href="./index.html">Установщик</a><a href="https://github.com/MillerWhite/AI-Companion" target="_blank" rel="noreferrer">Исходный код ↗</a></nav>
+</header>
+<section class="hero">
+ <div><div class="eyebrow">OWNER ACCESS · ESP32-S3</div><h1>Панель управления</h1><p>Настройка характера, диагностика сенсоров и управление поведением. Параметры сохраняются в памяти устройства через USB Serial/JTAG.</p></div>
+ <div class="actions"><button class="primary" id="connect">Подключить устройство</button><button id="disconnect" disabled>Отключить</button></div>
+</section>
+<div class="statusbar">
+ <div class="metric"><small>Соединение</small><strong id="connection">Не подключено</strong><span class="sub" id="status">Ожидание USB-подключения</span></div>
+ <div class="metric"><small>Прошивка</small><strong id="version">—</strong></div>
+ <div class="metric"><small>Батарея</small><strong id="battery">—</strong><span class="sub" id="powerstate">Нет данных питания</span></div>
+ <div class="metric"><small>Компаньон</small><strong id="deviceName">—</strong></div>
+</div>
+<section class="panel">
+ <div class="panelhead"><div><div class="sectionno">01 / IDENTITY & TEMPERAMENT</div><h2>Имя и характер</h2></div><span class="pill"><i class="dot" id="liveDot"></i><span id="liveText">Ожидание устройства</span></span></div>
+ <div class="grid">
+  <div class="field"><label for="name">Имя компаньона</label><input id="name" maxlength="40" value="Milo"></div>
+  <div class="field"><label for="temperament">Темперамент</label><select id="temperament"><option value="0">Сбалансированный</option><option value="1">Спокойный</option><option value="2">Энергичный</option><option value="3">Застенчивый</option><option value="4">Мечтательный</option></select></div>
+  <div class="field"><label for="initiative">Инициативность</label><select id="initiative"><option value="0">Средняя</option><option value="1">Высокая</option><option value="2">Низкая</option></select></div>
+  <div class="field"><label for="quirk">Особенность характера</label><select id="quirk"><option value="0">Нет</option><option value="1">Соня</option><option value="2">Любопытный</option><option value="3">Озорной</option><option value="4">Застенчивый</option></select></div>
+ </div>
+ <div class="inline" style="margin-top:15px"><button class="primary" id="save">Сохранить настройки</button><span class="note" id="saved">Изменения ещё не отправлены</span></div>
+</section>
+<section class="panel">
+ <div class="panelhead"><div><div class="sectionno">02 / PERCEPTION ENGINE</div><h2>Что компаньон замечает</h2></div><span class="pill">6 реакций · локальная обработка</span></div>
+ <div class="grid3">
+  <article class="reaction"><span class="num">01 · MOTION</span><strong>Тряска и вращение</strong><p>При встряхивании теряет равновесие, показывает головокружение и постепенно восстанавливается.</p><span class="sensor">QMI8658 · IMU</span></article>
+  <article class="reaction"><span class="num">02 · AIRFLOW</span><strong>Дуновение</strong><p>Распознаёт продолжительный поток воздуха у микрофона, зажмуривается и коротко вздрагивает.</p><span class="sensor">ES7210 · MIC</span></article>
+  <article class="reaction"><span class="num">03 · ORIENTATION</span><strong>Сон экраном вниз</strong><p>Закрывает глаза, уходит в сон и гасит изображение. При поднятии просыпается.</p><span class="sensor">QMI8658 · IMU</span></article>
+  <article class="reaction"><span class="num">04 · SOUND</span><strong>Звуковой характер</strong><p>Короткие писки, мурчание, ворчание и звуки еды. Никакой голосовой речи.</p><span class="sensor">ES8311 · SPEAKER</span></article>
+  <article class="reaction"><span class="num">05 · POWER</span><strong>Зарядка — это еда</strong><p>При подключении питания радуется, восстанавливает энергию и издаёт довольный звук.</p><span class="sensor">AXP2101 · PMIC</span></article>
+  <article class="reaction"><span class="num">06 · IMPACT</span><strong>Громкий хлопок</strong><p>Резкий короткий импульс звука вызывает испуг. Срабатывание защищено от повторов.</p><span class="sensor">ES7210 · MIC</span></article>
+ </div>
+ <p class="note">Распознавание дуновения и хлопка основано на порогах микрофонного сигнала. Точные значения чувствительности потребуется откалибровать на реальной плате и в её корпусе.</p>
+</section>
+<section class="panel">
+ <div class="panelhead"><div><div class="sectionno">03 / INTERACTION</div><h2>Быстрые действия</h2></div><span class="pill">USB command channel</span></div>
+ <div class="actions"><button data-cmd="pet">Погладить</button><button data-cmd="play">Поиграть</button><button data-cmd="sleep">Усыпить</button><button data-cmd="wake">Разбудить</button><button data-cmd="wifi-reset">Сбросить Wi-Fi</button></div>
+</section>
+<section class="panel">
+ <div class="panelhead"><div><div class="sectionno">04 / DEVELOPER TOOLS</div><h2>Проверка эмоций и звуков</h2></div><span class="pill">Ручной вызов по USB</span></div>
+ <div class="grid">
+  <div class="field"><label for="emotion">Показать эмоцию</label><select id="emotion"><option value="calm">Спокойствие</option><option value="happy">Радость</option><option value="curious">Любопытство</option><option value="sleepy">Сонливость</option><option value="sad">Грусть</option><option value="affectionate">Нежность</option><option value="excited">Восторг</option><option value="surprised">Удивление</option><option value="concerned">Беспокойство</option><option value="shy">Смущение</option><option value="dizzy">Головокружение</option></select></div>
+  <div class="field"><label>Проверить звук</label><div class="actions"><button data-sound="purr">Мурчание</button><button data-sound="growl">Ворчание</button><button data-sound="nom">Еда</button><button data-sound="dizzy">Кружится</button><button data-sound="surprise">Испуг</button></div></div>
+ </div>
+ <div class="inline" style="margin-top:13px"><button id="testEmotion" class="primary">Показать на устройстве</button><span class="note">Тестовые звуки обходят обычный таймер звуковых реакций.</span></div>
+</section>
+<section class="panel pending">
+ <div class="panelhead"><div><div class="sectionno">05 / OWNER PROFILE</div><h2>Бейдж владельца и Quick QR</h2></div><span class="pill"><i class="dot warn"></i> Следующий этап</span></div>
+ <p class="note">Панель будет поддерживать карточку владельца и до четырёх QR-ссылок с навигацией на сенсорном экране. Для этого ещё предстоит добавить хранение профиля в NVS, QR-рендерер и обработку свайпов в прошивке. Сейчас эти настройки не выдаются за работающие.</p>
+</section>
+<section class="panel pending">
+ <div class="panelhead"><div><div class="sectionno">06 / CONNECTIVITY & DISPLAY</div><h2>Экран, уведомления и расширенная диагностика</h2></div><span class="pill"><i class="dot warn"></i> В разработке</span></div>
+ <div class="grid3">
+  <div class="reaction"><strong>Яркость и оформление</strong><p>Управление яркостью AMOLED, темой и таймером сна.</p></div>
+  <div class="reaction"><strong>Уведомления iPhone</strong><p>BLE-сопряжение и Apple ANCS с приватной обработкой уведомлений.</p></div>
+  <div class="reaction"><strong>История эмоций</strong><p>Журнал событий, дерево решений и отладка областей перерисовки.</p></div>
+ </div>
+</section>
+<section class="panel">
+ <div class="panelhead"><div><div class="sectionno">07 / FIRMWARE</div><h2>Установка и обновление</h2></div><a href="./index.html">Открыть установщик →</a></div>
+ <p class="note">Перед прошивкой закройте соединение с устройством в этой панели. Устанавливайте только сборку, прошедшую CI. Совместимость браузера: Chrome или Edge на компьютере с USB data-кабелем.</p>
+</section>
+<footer class="footer"><span>AI COMPANION · PRIVATE DEVICE CONSOLE</span><span>Waveshare ESP32-S3-Touch-AMOLED-1.75C</span></footer>
 </main>
 <script>
-(()=>{const $=s=>document.querySelector(s),status=$('#status');let port=null,reader=null,buffer='',writer=null,gotConfig=false;const enc=new TextEncoder(),dec=new TextDecoder();
-function say(s){status.textContent=s}
-function line(s){if(s.startsWith('@C ')){try{const c=JSON.parse(s.slice(3));$('#name').value=c.name||'Milo';$('#version').textContent=c.version||'—';$('#deviceName').textContent=c.name||'Milo';$('#temperament').value=String(c.temperament??0);$('#initiative').value=String(c.initiative??0);$('#quirk').value=String(c.quirk??0);gotConfig=true;$('#connection').textContent='Подключено';say('Подключено · прошивка '+(c.version||'—'))}catch{say('Не удалось прочитать конфигурацию')}}else if(s.startsWith('@E '))say('Ошибка устройства: '+s.slice(3))}
-async function send(s){if(!port?.writable)throw Error('USB не подключён');writer=port.writable.getWriter();try{await writer.write(enc.encode(s+'\n'))}finally{writer.releaseLock();writer=null}}
-async function readLoop(p){try{while(port===p&&p.readable){reader=p.readable.getReader();try{while(port===p){const {value,done}=await reader.read();if(done)break;buffer+=dec.decode(value,{stream:true});let i;while((i=buffer.indexOf('\n'))>=0){line(buffer.slice(0,i).replace(/\r$/,''));buffer=buffer.slice(i+1)}}}finally{reader.releaseLock();reader=null}}}catch(e){if(port===p)say('USB отключён: '+e.message)}}
-$('#connect').onclick=async()=>{try{$('#connect').disabled=true;port=await navigator.serial.requestPort({filters:[{usbVendorId:0x303a}]});await port.open({baudRate:115200});try{await port.setSignals({dataTerminalReady:false,requestToSend:false})}catch{}$('#disconnect').disabled=false;say('Подключено, ожидаю конфигурацию…');readLoop(port);for(let i=0;i<15&&!gotConfig;i++){await send('config');await new Promise(r=>setTimeout(r,600))}if(!gotConfig)throw Error('Нет ответа прошивки')}catch(e){say('Подключение не удалось: '+e.message);if(reader)try{await reader.cancel()}catch{}if(port)try{await port.close()}catch{}port=null;$('#disconnect').disabled=true}finally{$('#connect').disabled=false}};
-$('#disconnect').onclick=async()=>{const p=port;port=null;if(reader)try{await reader.cancel()}catch{}if(p)try{await p.close()}catch{}$('#connection').textContent='Нет соединения';say('USB отключён');$('#disconnect').disabled=true};
-$('#save').onclick=async()=>{try{const n=$('#name').value.trim();if(!n||n.length>40||/[\r\n]/.test(n))throw Error('Имя должно быть от 1 до 40 символов');await send('name '+n);await send('temperament '+$('#temperament').value);await send('initiative '+$('#initiative').value);await send('quirk '+$('#quirk').value);await send('config');$('#saved').textContent='Команды сохранения отправлены устройству'}catch(e){say('Сохранение не удалось: '+e.message)}};
-document.querySelectorAll('[data-cmd]').forEach(b=>b.onclick=async()=>{try{await send(b.dataset.cmd);say('Команда отправлена: '+b.textContent)}catch(e){say(e.message)}});
-if(!('serial'in navigator)){$('#connect').disabled=true;say('Нужен Chrome или Edge на компьютере (Web Serial API)')}
+(()=> {
+ const $=s=>document.querySelector(s), encoder=new TextEncoder(), decoder=new TextDecoder();
+ let port=null,reader=null,writer=null,buffer="",pollTimer=null,configReceived=false;
+ const status=(s)=>{$("#status").textContent=s};
+ function applyConfig(c){
+  $("#name").value=c.name||"Milo";$("#version").textContent=c.version||"—";$("#deviceName").textContent=c.name||"Milo";
+  $("#temperament").value=String(c.temperament??0);$("#initiative").value=String(c.initiative??0);$("#quirk").value=String(c.quirk??0);
+  configReceived=true;$("#connection").textContent="Подключено";$("#liveText").textContent="Устройство на связи";$("#liveDot").className="dot ok";
+  status("Конфигурация получена");
+ }
+ function applyStatus(s){
+  if(s.battery!==undefined)$("#battery").textContent=Math.max(0,Math.min(100,s.battery))+"%";
+  else $("#battery").textContent="—";
+  $("#powerstate").textContent=s.charging?"Заряжается · компаньон ест":(s.vbus?"Питание подключено":"Работа от батареи");
+ }
+ function onLine(line){
+  if(line.startsWith("@C ")){try{applyConfig(JSON.parse(line.slice(3)))}catch{status("Ошибка чтения конфигурации")}}
+  else if(line.startsWith("@S ")){try{applyStatus(JSON.parse(line.slice(3)))}catch{}}
+  else if(line.startsWith("@E "))status("Ошибка устройства: "+line.slice(3));
+ }
+ async function send(cmd){
+  if(!port?.writable)throw Error("Сначала подключите устройство по USB");
+  writer=port.writable.getWriter();try{await writer.write(encoder.encode(cmd+"\n"))}finally{writer.releaseLock();writer=null}
+ }
+ async function readLoop(active){
+  try{while(port===active&&active.readable){reader=active.readable.getReader();try{while(port===active){const {value,done}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});let i;while((i=buffer.indexOf("\n"))>=0){onLine(buffer.slice(0,i).replace(/\r$/,""));buffer=buffer.slice(i+1)}}}finally{reader.releaseLock();reader=null}}}
+  catch(e){if(port===active)status("USB-соединение прервано: "+e.message)}
+ }
+ $("#connect").onclick=async()=>{
+  try{
+   $("#connect").disabled=true;status("Выберите порт ESP32-S3…");
+   port=await navigator.serial.requestPort({filters:[{usbVendorId:0x303a}]});
+   await port.open({baudRate:115200});try{await port.setSignals({dataTerminalReady:false,requestToSend:false})}catch{}
+   $("#disconnect").disabled=false;status("Подключено. Считываю настройки…");readLoop(port);
+   for(let i=0;i<12&&!configReceived;i++){await send("config");await new Promise(r=>setTimeout(r,500))}
+   if(!configReceived)throw Error("Прошивка не ответила на config");
+   await send("status");pollTimer=setInterval(()=>{if(port)send("status").catch(()=>{})},2500);
+  }catch(e){status("Подключение не удалось: "+e.message);if(reader)try{await reader.cancel()}catch{}if(port)try{await port.close()}catch{}port=null;$("#disconnect").disabled=true}
+  finally{$("#connect").disabled=false}
+ };
+ $("#disconnect").onclick=async()=>{
+  const active=port;port=null;if(pollTimer)clearInterval(pollTimer);pollTimer=null;
+  if(reader)try{await reader.cancel()}catch{}if(active)try{await active.close()}catch{}
+  $("#disconnect").disabled=true;$("#connection").textContent="Не подключено";$("#liveText").textContent="Ожидание устройства";$("#liveDot").className="dot";status("USB отключён");
+ };
+ $("#save").onclick=async()=>{
+  const name=$("#name").value.trim();if(!name||name.length>40||/[\r\n]/.test(name)){status("Имя должно содержать от 1 до 40 символов");return}
+  try{await send("name "+name);await send("temperament "+$("#temperament").value);await send("initiative "+$("#initiative").value);await send("quirk "+$("#quirk").value);await send("config");$("#saved").textContent="Команды отправлены. Конфигурация обновится после ответа устройства."}
+  catch(e){status(e.message)}
+ };
+ document.querySelectorAll("[data-cmd]").forEach(b=>b.onclick=async()=>{try{await send(b.dataset.cmd);status("Команда: "+b.textContent)}catch(e){status(e.message)}});
+ document.querySelectorAll("[data-sound]").forEach(b=>b.onclick=async()=>{try{await send("sound "+b.dataset.sound);status("Звуковой тест: "+b.textContent)}catch(e){status(e.message)}});
+ $("#testEmotion").onclick=async()=>{try{await send("emotion "+$("#emotion").value);status("Эмоция отправлена на устройство")}catch(e){status(e.message)}};
+ if(!("serial"in navigator)){ $("#connect").disabled=true;status("Для USB-подключения откройте страницу в Chrome или Edge на компьютере.") }
 })();
-</script></body></html>
+</script>
+</body>
+</html>
