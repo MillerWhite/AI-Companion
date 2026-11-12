@@ -192,11 +192,7 @@ function applyCloudIntent(result){
 }
 let lastCloudUtterance='';
 function cloudBaseUrl(){if(location.protocol==='file:')return '';return location.origin;}
-// On a hosted page, localhost means the visitor's own computer, not our cloud server.
-// If the site and backend share one origin, use that origin automatically.
-if(location.protocol!=='file:'&&!['localhost','127.0.0.1'].includes(location.hostname)){
- const cloudInput=$('cloudApiUrl');if(cloudInput.value==='http://127.0.0.1:8787')cloudInput.value=location.origin;
-}
+// The published site and backend share one HTTPS origin; no client URL or API key is required.
 async function checkCloudBackend(force=false){
  const base=cloudBaseUrl();if(!base){const msg='Облачный ИИ пока не опубликован. Когда сайт AI Companion и backend будут размещены на сервере, подключение появится автоматически. Сейчас доступны автономные реакции.';$('cloudStatus').textContent='ожидает публикации';$('cloudHelp').textContent=msg;if(force)setVoiceState(msg,true);return false;}
  if(!force&&cloudHealthCache&&Date.now()-cloudHealthCheckedAt<8000)return cloudHealthCache;
