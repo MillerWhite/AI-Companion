@@ -82,7 +82,7 @@ hr{border:0;border-top:1px solid var(--line);margin:17px 0}
 </section>
 <section class="panel">
  <div class="panelhead"><div><div class="sectionno">03 / INTERACTION</div><h2>Быстрые действия</h2></div><span class="pill">USB command channel</span></div>
- <div class="actions"><button data-cmd="pet">Погладить</button><button data-cmd="play">Поиграть</button><button data-cmd="sleep">Усыпить</button><button data-cmd="wake">Разбудить</button><button data-cmd="wifi-reset">Сбросить Wi-Fi</button></div>
+ <div class="actions"><button data-cmd="pet">Погладить</button><button data-cmd="feed">Покормить</button><button data-cmd="play">Поиграть</button><button data-cmd="call">Позвать</button><button data-cmd="clean">Уход</button><button data-cmd="sleep">Усыпить</button><button data-cmd="wake">Разбудить</button><button data-cmd="wifi-reset">Сбросить Wi-Fi</button></div>
 </section>
 <section class="panel">
  <div class="panelhead"><div><div class="sectionno">04 / DEVELOPER TOOLS</div><h2>Проверка эмоций и звуков</h2></div><span class="pill">Ручной вызов по USB</span></div>
@@ -99,19 +99,15 @@ hr{border:0;border-top:1px solid var(--line);margin:17px 0}
 <section class="panel"><div class="panelhead"><div><div class="sectionno">06 / DISPLAY</div><h2>Экран и энергосбережение</h2></div><span class="pill">Настройки устройства</span></div>
 <div class="grid3"><div class="field"><label for="brightness">Яркость AMOLED: <b id="brightnessValue">85%</b></label><input id="brightness" type="range" min="5" max="100" value="85"></div><div class="field"><label for="theme">Оформление</label><select id="theme"><option value="0">Тёмное</option><option value="1">Светлое</option><option value="2">Монохромное</option><option value="3">Янтарное</option><option value="4">Системное</option></select></div><div class="field"><label for="sleepTimeout">Автосон экрана</label><select id="sleepTimeout"><option value="15">15 секунд</option><option value="30">30 секунд</option><option value="60">1 минута</option><option value="120">2 минуты</option><option value="240">4 минуты</option></select></div></div>
 <div class="inline" style="margin-top:15px"><button class="primary" id="saveDisplay">Сохранить параметры экрана</button><span class="note" id="displaySaved">Ожидает подключения</span></div></section><section class="panel pending">
- <div class="panelhead"><div><div class="sectionno">05 / OWNER PROFILE</div><h2>Бейдж владельца и Quick QR</h2></div><span class="pill"><i class="dot warn"></i> Следующий этап</span></div>
- <p class="note">Панель будет поддерживать карточку владельца и до четырёх QR-ссылок с навигацией на сенсорном экране. Для этого ещё предстоит добавить хранение профиля в NVS, QR-рендерер и обработку свайпов в прошивке. Сейчас эти настройки не выдаются за работающие.</p>
-</section>
-<section class="panel pending">
- <div class="panelhead"><div><div class="sectionno">06 / CONNECTIVITY & DISPLAY</div><h2>Экран, уведомления и расширенная диагностика</h2></div><span class="pill"><i class="dot warn"></i> В разработке</span></div>
+ <div class="panelhead"><div><div class="sectionno">07 / CONNECTIVITY & DEBUG</div><h2>Экран, уведомления и расширенная диагностика</h2></div><span class="pill"><i class="dot warn"></i> В разработке</span></div>
  <div class="grid3">
-  <div class="reaction"><strong>Яркость и оформление</strong><p>Управление яркостью AMOLED, темой и таймером сна.</p></div>
+  
   <div class="reaction"><strong>Уведомления iPhone</strong><p>BLE-сопряжение и Apple ANCS с приватной обработкой уведомлений.</p></div>
-  <div class="reaction"><strong>История эмоций</strong><p>Журнал событий, дерево решений и отладка областей перерисовки.</p></div>
+  <div class="reaction"><strong>История эмоций</strong><p>Журнал событий, дерево решений и отладка областей перерисовки.</p></div><div class="reaction"><strong>QR-карточки</strong><p>Четыре карточки, QR-рендеринг и свайповая навигация на экране.</p></div>
  </div>
 </section>
 <section class="panel">
- <div class="panelhead"><div><div class="sectionno">07 / FIRMWARE</div><h2>Установка и обновление</h2></div><a href="./index.html">Открыть установщик →</a></div>
+ <div class="panelhead"><div><div class="sectionno">08 / FIRMWARE</div><h2>Установка и обновление</h2></div><a href="./index.html">Открыть установщик →</a></div>
  <p class="note">Перед прошивкой закройте соединение с устройством в этой панели. Устанавливайте только сборку, прошедшую CI. Совместимость браузера: Chrome или Edge на компьютере с USB data-кабелем.</p>
 </section>
 <footer class="footer"><span>AI COMPANION · PRIVATE DEVICE CONSOLE</span><span>Waveshare ESP32-S3-Touch-AMOLED-1.75C</span></footer>
