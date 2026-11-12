@@ -16,5 +16,8 @@ __pycache__/
 
 # Local logs and runtime data
 *.log
+*.db
+*.sqlite
+*.sqlite3
 .DS_Store
 Thumbs.db
