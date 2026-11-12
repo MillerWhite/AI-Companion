@@ -295,7 +295,44 @@ setInterval(()=>{if(current!=='sleep'&&Math.random()<.72)blink()},2500);
 setInterval(()=>{if(current==='sleep')return;const eyes=orb.querySelectorAll('.eye');eyes.forEach((eye,i)=>{eye.style.setProperty('--mx',((Math.random()-.5)*3.5).toFixed(1)+'px');eye.style.setProperty('--my',((Math.random()-.5)*3.5).toFixed(1)+'px');eye.classList.toggle(i?'micro-right':'micro-left',true);});},720);
 setInterval(()=>{if(current==='sleep')return;const gaze=['gaze-center','gaze-left','gaze-right','gaze-up','gaze-down'];orb.classList.remove(...gaze);orb.classList.add(gaze[Math.floor(Math.random()*gaze.length)]);},3100);
 setInterval(()=>{if(current==='sleep'){needs.energy=Math.min(100,needs.energy+2.8);needs.social=Math.min(100,needs.social+.15);if(autoSleeping&&!manualSleep&&needs.energy>=65){autoSleeping=false;setMood('neutral','сам проснулся после отдыха',true,'greeting',2100);}}else{needs.energy=Math.max(0,needs.energy-.22);needs.curiosity=Math.min(100,needs.curiosity+.32);needs.social=Math.min(100,needs.social+.25);needs.comfort=Math.max(0,needs.comfort-.08);}updateNeeds();saveMemory();},8000);
-setInterval(()=>{if(current==='sleep')return;const chance=profile.initiative==='high'?.24:profile.initiative==='low'?.055:.12;if(Math.random()>chance)return;let face='curious',emotion='curiosity',reason='заметил что-то интересное';if(needs.energy<18){face='sleep';emotion='sleepiness';reason='устал и хочет отдохнуть';autoSleeping=true;manualSleep=false;}else if(needs.social>78){face=profile.temper==='shy'?'shy':'love';emotion=profile.temper==='shy'?'shyness':'affection';reason='соскучился по общению';}else if(needs.curiosity>76){face='curious';emotion='curiosity2';reason='исследует окружающий мир';needs.curiosity=Math.max(25,needs.curiosity-18);}else if(needs.comfort<30){face='sad';emotion='loneliness';reason='ищет спокойствия';}else{const pool=profile.temper==='calm'?[['curious','curiosity'],['neutral','serenity']]:profile.temper==='energetic'?[['excited','excitement'],['happy','playfulness']]:profile.temper==='shy'?[['shy','shyness'],['curious','curiosity']]:[['curious','curiosity'],['happy','joy'],['shy','shyness']];[face,emotion]=pool[Math.floor(Math.random()*pool.length)];}const traits=memory.traits||{};if((traits.playfulness||0)>62&&needs.energy>35&&Math.random()<.42){face='excited';emotion='playfulness';reason='привычка чаще приглашать владельца к игре';}else if((traits.trust||0)>62&&needs.social>60&&Math.random()<.38){face='love';emotion='affection';reason='привык к владельцу и ищет близости';}else if((traits.responsiveness||0)>55&&needs.social>55&&Math.random()<.35){face='curious';emotion='alertness';reason='привычно прислушивается к владельцу';}const period=getDayPeriod();if(period==='утро'&&Math.random()<.18){face='happy';emotion='hope';reason='утреннее оживление';}if(period==='ночь'&&needs.energy<45&&Math.random()<.55){face='sleep';emotion='sleepiness';reason='ночью естественно клонит в сон';autoSleeping=true;manualSleep=false;}setMood(face,reason,Math.random()<.12,emotion,2400);},12000);
+let lastAutonomousAt=0,lastAutonomousMood='';
+function runAutonomousDecision(){
+ if(current==='sleep')return;
+ const now=Date.now(),gap=profile.initiative==='high'?26000:profile.initiative==='low'?72000:44000;
+ if(now-lastAutonomousAt<gap)return;
+ const urgent=needs.energy<16||needs.comfort<22||needs.social>88||needs.curiosity>88;
+ if(!urgent&&Math.random()>(profile.initiative==='high'?.72:profile.initiative==='low'?.24:.46))return;
+ let face='neutral',emotion='calm',reason='спокойно наблюдает за окружающим миром';
+ if(needs.energy<16){face='sleep';emotion='sleepiness';reason='устал и самостоятельно устраивается отдохнуть';autoSleeping=true;manualSleep=false;}
+ else if(needs.comfort<22){face='sad';emotion='loneliness';reason='чувствует нехватку спокойствия и ищет мягкого контакта';}
+ else if(needs.social>88){face=profile.temper==='shy'?'shy':'love';emotion=profile.temper==='shy'?'shyness':'affection';reason='соскучился и осторожно ищет внимания';}
+ else if(needs.curiosity>88){face='curious';emotion='curiosity2';reason='заметил что-то интересное и внимательно исследует';needs.curiosity=Math.max(35,needs.curiosity-20);}
+ else{
+  const period=getDayPeriod();
+  let pool=profile.temper==='calm'?[['neutral','serenity',5],['curious','curiosity',2],['happy','content',1]]:
+   profile.temper==='energetic'?[['excited','excitement',4],['happy','playfulness',4],['curious','curiosity',1]]:
+   profile.temper==='shy'?[['shy','shyness',4],['curious','curiosity',3],['neutral','calm',2]]:
+   profile.temper==='dreamy'?[['neutral','serenity',3],['curious','wonder',3],['sleep','sleepiness',1]]:
+   [['curious','curiosity',3],['happy','joy',3],['shy','shyness',1],['neutral','calm',2]];
+  if(profile.quirk==='sleepy'&&needs.energy<55)pool.push(['sleep','sleepiness',3]);
+  if(profile.quirk==='dramatic')pool.push(['surprised','wonder',2]);
+  if(profile.quirk==='bouncy'&&needs.energy>45)pool.push(['excited','playfulness',3]);
+  if(profile.quirk==='shy')pool.push(['shy','embarrassment',3]);
+  const traits=memory.traits||{};
+  if((traits.playfulness||0)>62&&needs.energy>35)pool.push(['excited','mischievousJoy',3]);
+  if((traits.trust||0)>62&&needs.social>55)pool.push(['love','tenderness',3]);
+  if(period==='утро')pool.push(['happy','hope',2]);
+  if(period==='ночь'&&needs.energy<48)pool.push(['sleep','sleepiness',4]);
+  let total=pool.reduce((sum,item)=>sum+item[2],0),roll=Math.random()*total,chosen=pool[0];
+  for(const item of pool){roll-=item[2];if(roll<=0){chosen=item;break;}}
+  [face,emotion]=chosen;
+  reason=profile.quirk==='curious'?'с любопытством изучает всё вокруг':'проявляет свой характер и привычки';
+ }
+ if(face===lastAutonomousMood&&face!=='sleep'){face='neutral';emotion='calm';reason='делает паузу и спокойно наблюдает';}
+ lastAutonomousMood=face;lastAutonomousAt=now;
+ setMood(face,reason,Math.random()<.08,emotion,face==='sleep'?0:2600);
+}
+setInterval(runAutonomousDecision,10000);
 let touchStartAt=0;
 $('orb').addEventListener('pointerdown',()=>{touchStartAt=Date.now();});
 $('orb').addEventListener('pointerup',()=>{if(!touchStartAt)return;const held=Date.now()-touchStartAt;touchStartAt=0;if(held>650){recordAction('longPet',2);needs.comfort=Math.min(100,needs.comfort+13);needs.social=Math.max(0,needs.social-8);setMood('love','долгое нежное прикосновение',true,'comfort',3300);log('Долгое прикосновение распознано');}else trigger(profile.bond==='mischief'?'surprised':'happy');});
