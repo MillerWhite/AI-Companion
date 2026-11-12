@@ -23,6 +23,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel, Field, field_validator
 
 load_dotenv(dotenv_path=Path(__file__).resolve().with_name(".env"), override=False)
@@ -510,6 +511,47 @@ def _check_audio_daily_budget(device_id: str, duration_seconds: int) -> None:
 
 app = FastAPI(title="AI Companion Language Backend", version=APP_VERSION)
 
+allowed_hosts = [
+    item.strip() for item in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if item.strip()
+]
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
+
+@app.on_event("startup")
+def validate_production_configuration() -> None:
+    if APP_ENV != "production":
+        return
+    required = {
+        "DATABASE_URL (PostgreSQL)": DATABASE_URL.startswith(("postgresql://", "postgres://")),
+        "REDIS_URL": bool(REDIS_URL),
+        "DEVICE_ENROLLMENT_SECRET": len(DEVICE_ENROLLMENT_SECRET) >= 32,
+        "STORE_WEBHOOK_SECRET": len(STORE_WEBHOOK_SECRET) >= 32,
+        "AI_API_KEY": bool(AI_API_KEY),
+        "SPEECHKIT_API_KEY": bool(SPEECHKIT_API_KEY),
+        "AI_ALLOWED_ORIGINS": bool(os.getenv("AI_ALLOWED_ORIGINS", "").strip()),
+        "ALLOWED_HOSTS": bool(os.getenv("ALLOWED_HOSTS", "").strip()),
+    }
+    missing = [key for key, ready in required.items() if not ready]
+    if missing:
+        raise RuntimeError("Missing production configuration: " + ", ".join(missing))
+    with _device_db():
+        pass
+    client = _redis()
+    if client is None:
+        raise RuntimeError("Production Redis is required")
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["X-Frame-Options"] = "DENY"
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+    if APP_ENV == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
 origins = [
     item.strip() for item in os.getenv(
         "AI_ALLOWED_ORIGINS", "null,http://localhost:8000,http://127.0.0.1:8000,http://localhost:8787,http://127.0.0.1:8787"
@@ -709,6 +751,8 @@ def update_device_profile(payload: ProfileUpdateRequest, authorization: str | No
 async def transcribe_device_audio(request: Request, authorization: str | None = Header(default=None)) -> dict[str, str]:
     device = _authenticated_device(authorization)
     _check_device_rate_limit(device["device_id"])
+    if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/octet-stream":
+        raise HTTPException(status_code=415, detail={"code": "invalid_audio_content_type", "message": "Expected application/octet-stream PCM audio"})
     pcm = await request.body()
     # SpeechKit synchronous LPCM API: mono 16-bit PCM, up to 1 MB and 30 seconds.
     if len(pcm) < 3200 or len(pcm) > 1_000_000 or len(pcm) % 2:
