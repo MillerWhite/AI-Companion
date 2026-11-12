@@ -899,7 +899,7 @@ def update_device_profile(payload: ProfileUpdateRequest, authorization: str | No
 
 
 @app.post("/api/device/transcribe")
-async async def transcribe_device_audio(request: Request, authorization: str | None = Header(default=None)) -> dict[str, str]:
+async def transcribe_device_audio(request: Request, authorization: str | None = Header(default=None)) -> dict[str, str]:
     device = _authenticated_device(authorization)
     _check_device_rate_limit(device["device_id"])
     if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/octet-stream":
