@@ -201,6 +201,7 @@ def call_language_model(payload: InterpretRequest) -> InterpretResult:
             },
         )
 
+    _check_ai_daily_budget()
     messages: list[dict[str, str]] = [
         {"role": "system", "content": make_system_prompt(payload.companion_name, payload.personality)}
     ]
@@ -358,11 +359,17 @@ def _get_device(token: str) -> dict[str, Any] | None:
         ).fetchone()
     if not row:
         return None
+    memory = json.loads(row[3] or "{}")
+    cutoff = int(time.time()) - MEMORY_RETENTION_DAYS * 86400
+    memory["recent_context"] = [
+        item for item in memory.get("recent_context", [])
+        if int(item.get("timestamp", int(time.time()))) >= cutoff
+    ][-8:]
     return {
         "device_id": row[0],
         "companion_name": row[1],
         "personality": json.loads(row[2]),
-        "memory": json.loads(row[3] or "{}"),
+        "memory": memory,
     }
 
 
@@ -417,18 +424,84 @@ def _speechkit_transcribe(pcm: bytes) -> str:
         raise HTTPException(status_code=502, detail={"code": "speechkit_invalid_response", "message": "SpeechKit returned an invalid response"})
 
 
-# Per-process protection for a single backend instance. Production multi-instance
-# deployments should move this counter to Redis or a shared rate-limit service.
+# Redis is required for multi-instance production limits. Development can use local counters.
+_redis_client = None
 _device_request_times: dict[str, list[float]] = {}
+_local_ai_daily: dict[str, int] = {}
+_local_audio_daily: dict[str, int] = {}
+
+
+def _redis():
+    global _redis_client
+    if not REDIS_URL:
+        return None
+    if _redis_client is None:
+        try:
+            import redis
+            _redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=True, socket_connect_timeout=3, socket_timeout=3)
+            _redis_client.ping()
+        except Exception as error:
+            raise HTTPException(status_code=503, detail={"code": "rate_limit_store_unavailable", "message": "Shared rate-limit service unavailable"}) from error
+    return _redis_client
+
+
+def _utc_day() -> str:
+    return datetime.now(timezone.utc).strftime("%Y%m%d")
 
 
 def _check_device_rate_limit(device_id: str) -> None:
     now = time.time()
+    redis_client = _redis()
+    if redis_client:
+        key = f"ai-companion:device-rate:{device_id}:{int(now // 60)}"
+        count = redis_client.incr(key)
+        if count == 1:
+            redis_client.expire(key, 75)
+        if count > DEVICE_REQUESTS_PER_MINUTE:
+            raise HTTPException(status_code=429, detail={"code": "device_rate_limited", "message": "Device request limit reached"})
+        return
+    if APP_ENV == "production":
+        raise HTTPException(status_code=503, detail={"code": "redis_required", "message": "Production requires Redis for shared rate limits"})
     recent = [stamp for stamp in _device_request_times.get(device_id, []) if now - stamp < 60]
     if len(recent) >= DEVICE_REQUESTS_PER_MINUTE:
         raise HTTPException(status_code=429, detail={"code": "device_rate_limited", "message": "Device request limit reached"})
     recent.append(now)
     _device_request_times[device_id] = recent
+
+
+def _check_ai_daily_budget() -> None:
+    day = _utc_day()
+    redis_client = _redis()
+    if redis_client:
+        key = f"ai-companion:ai-daily:{day}"
+        count = redis_client.incr(key)
+        if count == 1:
+            redis_client.expire(key, 172800)
+    else:
+        if APP_ENV == "production":
+            raise HTTPException(status_code=503, detail={"code": "redis_required", "message": "Production requires Redis for budget controls"})
+        count = _local_ai_daily.get(day, 0) + 1
+        _local_ai_daily[day] = count
+    if count > AI_DAILY_REQUEST_LIMIT:
+        raise HTTPException(status_code=429, detail={"code": "ai_daily_budget_reached", "message": "Daily AI request budget reached"})
+
+
+def _check_audio_daily_budget(device_id: str, duration_seconds: int) -> None:
+    day = _utc_day()
+    redis_client = _redis()
+    if redis_client:
+        key = f"ai-companion:audio-daily:{device_id}:{day}"
+        total = redis_client.incrby(key, max(1, duration_seconds))
+        if total == max(1, duration_seconds):
+            redis_client.expire(key, 172800)
+    else:
+        if APP_ENV == "production":
+            raise HTTPException(status_code=503, detail={"code": "redis_required", "message": "Production requires Redis for audio quotas"})
+        key = f"{device_id}:{day}"
+        total = _local_audio_daily.get(key, 0) + max(1, duration_seconds)
+        _local_audio_daily[key] = total
+    if total > SPEECHKIT_DAILY_SECONDS_LIMIT:
+        raise HTTPException(status_code=429, detail={"code": "audio_daily_budget_reached", "message": "Daily speech recognition budget reached"})
 
 
 app = FastAPI(title="AI Companion Language Backend", version=APP_VERSION)
@@ -628,6 +701,8 @@ async def transcribe_device_audio(request: Request, authorization: str | None = 
     # SpeechKit synchronous LPCM API: mono 16-bit PCM, up to 1 MB and 30 seconds.
     if len(pcm) < 3200 or len(pcm) > 1_000_000 or len(pcm) % 2:
         raise HTTPException(status_code=413, detail={"code": "invalid_audio_size", "message": "Audio must be 0.1–30 seconds of 16-bit mono PCM and no larger than 1 MB"})
+    duration_seconds = len(pcm) // (2 * SPEECHKIT_SAMPLE_RATE)
+    _check_audio_daily_budget(device["device_id"], duration_seconds)
     return {"text": _speechkit_transcribe(pcm)}
 
 
@@ -650,9 +725,10 @@ def interpret_for_device(
     result = call_language_model(request_payload)
     # Keep a small rolling text context per device, never raw audio.
     history = list(device["memory"].get("recent_context", []))[-6:]
-    history.append({"role": "owner", "text": payload.utterance[:500]})
+    now = int(time.time())
+    history.append({"role": "owner", "text": payload.utterance[:500], "timestamp": now})
     if result.addressed_to_companion and result.understood:
-        history.append({"role": "companion", "text": f"intent={result.intent}; action={result.action.value}; emotion={result.emotion.value}"})
+        history.append({"role": "companion", "text": f"intent={result.intent}; action={result.action.value}; emotion={result.emotion.value}", "timestamp": now})
     with _device_db() as connection:
         connection.execute(
             "UPDATE devices SET memory_json = ? WHERE device_id = ? AND revoked_at IS NULL",
