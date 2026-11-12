@@ -6,6 +6,7 @@ idf_component_register(
         "companion_audio.c"
         "companion_voice.c"
         "companion_imu.c"
+        "companion_motion.c"
         "companion_wifi.c"
         "companion_setup.c"
     INCLUDE_DIRS "."
