@@ -1,0 +1,20 @@
+# Local secrets
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Python development
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Local logs and runtime data
+*.log
+.DS_Store
+Thumbs.db
