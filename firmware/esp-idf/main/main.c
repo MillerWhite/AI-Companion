@@ -335,6 +335,27 @@ static void on_usb_command(const char *command)
         set_emotion(COMPANION_EXCITED, false);
         if (audio_available) companion_audio_play_sound(VOICE_NOM, false);
         save_state();
+    } else if (!strcmp(command, "feed")) {
+        sleeping = false;
+        manual_sleep = false;
+        companion_emotion_interaction(&state, "feed");
+        set_emotion(COMPANION_HAPPY, false);
+        if (audio_available) companion_audio_play_sound(VOICE_NOM, false);
+        save_state();
+    } else if (!strcmp(command, "call")) {
+        sleeping = false;
+        manual_sleep = false;
+        companion_emotion_interaction(&state, "call");
+        set_emotion(COMPANION_CURIOUS, false);
+        if (audio_available) companion_audio_play_sound(VOICE_TICK, false);
+        save_state();
+    } else if (!strcmp(command, "clean")) {
+        sleeping = false;
+        manual_sleep = false;
+        companion_emotion_interaction(&state, "clean");
+        set_emotion(COMPANION_AFFECTIONATE, false);
+        if (audio_available) companion_audio_play_sound(VOICE_PURR, false);
+        save_state();
     } else if (!strncmp(command, "emotion ", 8)) {
         const companion_emotion_t emotion = parse_emotion(command + 8);
         set_emotion(emotion, true);
