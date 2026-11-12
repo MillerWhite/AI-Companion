@@ -70,37 +70,66 @@ static float emotion_frequency(companion_emotion_t emotion)
 
 esp_err_t companion_audio_play(companion_emotion_t emotion, bool force)
 {
-    if (!audio_ready) return ESP_ERR_INVALID_STATE;
+    if (!audio_ready || !speaker) return ESP_ERR_INVALID_STATE;
     if (playback_active) return ESP_ERR_TIMEOUT;
     const int64_t now = esp_timer_get_time();
-    if (!force && now - last_sound_us < AUDIO_COOLDOWN_US) return ESP_ERR_TIMEOUT;
+    if (!force && now - last_sound_us < 5200000LL) return ESP_OK;
     last_sound_us = now;
 
-    /* Short, soft, nonverbal motif. No speech, no continuous loop, conservative gain. */
-    static int16_t pcm[2 * 9600];
+    static const float note_shape[COMPANION_EMOTION_COUNT][3] = {
+        {1.00f, 1.05f, 0.98f}, /* calm */
+        {0.96f, 1.13f, 1.25f}, /* happy */
+        {1.00f, 1.19f, 1.08f}, /* curious */
+        {1.00f, 0.91f, 0.83f}, /* sleepy */
+        {1.00f, 0.91f, 0.82f}, /* sad */
+        {0.94f, 1.04f, 0.98f}, /* affectionate */
+        {1.00f, 1.22f, 1.36f}, /* excited */
+        {1.00f, 1.31f, 1.13f}, /* surprised */
+        {1.00f, 0.94f, 0.88f}, /* concerned */
+        {1.00f, 1.08f, 0.95f}, /* shy */
+    };
+    static const uint16_t note_ms[COMPANION_EMOTION_COUNT] = {
+        170, 150, 155, 250, 230, 205, 145, 115, 210, 150
+    };
+    const uint32_t seed = esp_random();
     const float temperament_ratio[] = {1.0f, 0.91f, 1.16f, 0.88f, 0.96f};
+    const unsigned mood = (unsigned)emotion < COMPANION_EMOTION_COUNT ? (unsigned)emotion : 0U;
     const float base = emotion_frequency(emotion) * temperament_ratio[sound_temperament];
-    const float note_ratio[3] = {1.0f, 1.19f, 1.42f};
-    const size_t note_len[3] = {2400, 2100, 2700};
+    const float variation = 0.985f + (float)(seed % 31U) / 1000.0f;
     size_t offset = 0;
+    float phase = 0.0f;
+    const size_t gap_frames = AUDIO_RATE * 38U / 1000U;
+
     for (int note = 0; note < 3; ++note) {
-        const size_t count = note_len[note];
-        for (size_t i = 0; i < count; ++i) {
-            const float t = (float)i / AUDIO_RATE;
-            const float progress = (float)i / (float)count;
-            const float envelope = sinf(3.1415926f * progress) * (1.0f - 0.32f * progress);
-            const float f = base * note_ratio[note];
-            const float fundamental = sinf(6.2831853f * f * t);
-            const float overtone = sinf(6.2831853f * f * 2.01f * t) * 0.16f;
-            const int16_t sample = (int16_t)((fundamental + overtone) * envelope * 1050.0f);
-            pcm[(offset + i) * 2] = sample;
-            pcm[(offset + i) * 2 + 1] = sample;
+        const int jitter = (int)((seed >> (note * 5)) % 19U) - 9;
+        const uint32_t duration_ms = (uint32_t)((int)note_ms[mood] + jitter);
+        const size_t frames = AUDIO_RATE * duration_ms / 1000U;
+        const float frequency = base * note_shape[mood][note] * variation;
+        for (size_t i = 0; i < frames && offset < 15000U; ++i) {
+            const float t = (float)i / (float)frames;
+            const float glide = 1.0f + 0.035f * sinf(3.14159265f * t + note * 0.55f);
+            const float attack = fminf(1.0f, t / 0.18f);
+            const float release = fminf(1.0f, (1.0f - t) / 0.24f);
+            const float envelope = attack * release * (0.88f + 0.12f * cosf(3.14159265f * t));
+            phase += 6.2831853f * frequency * glide / (float)AUDIO_RATE;
+            if (phase >= 6.2831853f) phase -= 6.2831853f;
+            const float voice = sinf(phase) + 0.19f * sinf(2.0f * phase + 0.37f)
+                              + 0.055f * sinf(3.0f * phase + 1.05f);
+            const int16_t sample = (int16_t)(voice * envelope * 2300.0f);
+            pcm[offset * 2] = sample;
+            pcm[offset * 2 + 1] = sample;
+            offset++;
         }
-        offset += count;
-        offset += 420; /* deliberate silence between notes */
+        if (note < 2) {
+            for (size_t i = 0; i < gap_frames && offset < 15000U; ++i) {
+                pcm[offset * 2] = 0;
+                pcm[offset * 2 + 1] = 0;
+                offset++;
+            }
+        }
     }
     playback_active = true;
-    esp_err_t err = esp_codec_dev_write(speaker, pcm, offset * 2 * sizeof(int16_t));
+    esp_err_t err = esp_codec_dev_write(speaker, pcm, (int)(offset * 2U * sizeof(int16_t)));
     playback_active = false;
     return err;
 }
