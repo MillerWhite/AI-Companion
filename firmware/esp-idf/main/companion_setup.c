@@ -38,7 +38,7 @@ static esp_err_t root_handler(httpd_req_t *req)
         "<main><h1>Настройка AI Companion</h1><p>Устройство уже подключено к Wi-Fi. Вставьте одноразовый код активации, полученный после покупки. Токен устройства будет сохранён внутри него и не покажется в браузере.</p>"
         "<label>Адрес backend</label><input id='api' value='https://api.example.com' placeholder='https://ваш-backend'>"
         "<label>Серийный номер</label><input id='serial' readonly>"
-        "<label>PIN с экрана устройства</label><input id='pin' type='password' inputmode='numeric' maxlength='8' placeholder='8 цифр'>""<label>Имя компаньона</label><input id='name' maxlength='40' value='Milo'>"
+        "<label>PIN с экрана устройства</label><input id='pin' type='password' inputmode='numeric' maxlength='8' placeholder='8 цифр'>"\n        "<label>Имя компаньона</label><input id='name' maxlength='40' value='Milo'>"
         "<label>Одноразовый код активации</label><input id='grant' autocomplete='off' placeholder='Код активации'>"
         "<button id='claim'>Активировать устройство</button><p id='status'>Подключитесь к устройству в той же Wi-Fi сети.</p>"
         "<section id='owner' hidden><hr><h2>Управление компаньоном</h2><label>Темперамент</label><select id='temper'><option value='balanced'>Сбалансированный</option><option value='calm'>Спокойный</option><option value='energetic'>Энергичный</option><option value='shy'>Застенчивый</option><option value='dreamy'>Мечтательный</option></select>"
@@ -101,7 +101,11 @@ static esp_err_t device_info_handler(httpd_req_t *req)
 }
 
 static esp_err_t claim_handler(httpd_req_t *req)
-{    if (!setup_pin_valid(req)) { httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Setup PIN required"); return ESP_FAIL; }
+{
+    if (!setup_pin_valid(req)) {
+        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Setup PIN required");
+        return ESP_FAIL;
+    }
 
     if (req->content_len <= 0 || req->content_len > 4096) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid request size");
@@ -160,7 +164,11 @@ static esp_err_t claim_handler(httpd_req_t *req)
 
 
 static esp_err_t owner_memory_handler(httpd_req_t *req)
-{    if (!setup_pin_valid(req)) { httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Setup PIN required"); return ESP_FAIL; }
+{
+    if (!setup_pin_valid(req)) {
+        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Setup PIN required");
+        return ESP_FAIL;
+    }
 
     char response[8192] = {0};
     esp_err_t err = companion_cloud_owner_request(HTTP_METHOD_GET, "/api/device/memory", NULL, response, sizeof(response));
@@ -173,7 +181,11 @@ static esp_err_t owner_memory_handler(httpd_req_t *req)
 }
 
 static esp_err_t owner_memory_reset_handler(httpd_req_t *req)
-{    if (!setup_pin_valid(req)) { httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Setup PIN required"); return ESP_FAIL; }
+{
+    if (!setup_pin_valid(req)) {
+        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Setup PIN required");
+        return ESP_FAIL;
+    }
 
     char response[1024] = {0};
     esp_err_t err = companion_cloud_owner_request(HTTP_METHOD_DELETE, "/api/device/memory", NULL, response, sizeof(response));
@@ -186,7 +198,11 @@ static esp_err_t owner_memory_reset_handler(httpd_req_t *req)
 }
 
 static esp_err_t owner_profile_handler(httpd_req_t *req)
-{    if (!setup_pin_valid(req)) { httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Setup PIN required"); return ESP_FAIL; }
+{
+    if (!setup_pin_valid(req)) {
+        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Setup PIN required");
+        return ESP_FAIL;
+    }
 
     if (req->content_len <= 0 || req->content_len > 2048) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid profile size");
