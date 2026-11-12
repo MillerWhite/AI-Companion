@@ -23,6 +23,7 @@
 #include "companion_emotion.h"
 #include "companion_imu.h"
 #include "companion_motion.h"
+#include "companion_usb.h"
 #include "companion_setup.h"
 #include "companion_wifi.h"
 
@@ -272,6 +273,38 @@ static void apply_cloud_intent(const char *json_text)
     set_emotion(next, true);
     save_state();
     cJSON_Delete(json);
+}
+
+
+static void on_usb_command(const char *command)
+{
+    if (!command) return;
+    if (!strcmp(command, "profile")) {
+        refresh_personality();
+        save_state();
+    } else if (!strcmp(command, "sleep")) {
+        sleeping = true;
+        manual_sleep = true;
+        set_emotion(COMPANION_SLEEPY, true);
+    } else if (!strcmp(command, "wake")) {
+        sleeping = false;
+        manual_sleep = false;
+        set_emotion(COMPANION_HAPPY, true);
+    } else if (!strcmp(command, "pet")) {
+        sleeping = false;
+        manual_sleep = false;
+        companion_emotion_interaction(&state, "pet");
+        set_emotion(COMPANION_HAPPY, true);
+        save_state();
+    } else if (!strcmp(command, "play")) {
+        sleeping = false;
+        manual_sleep = false;
+        companion_emotion_interaction(&state, "play");
+        set_emotion(COMPANION_EXCITED, true);
+        save_state();
+    } else if (!strcmp(command, "wifi-reset")) {
+        (void)companion_wifi_reset();
+    }
 }
 
 static void on_face_long_press(lv_event_t *event)
@@ -533,4 +566,7 @@ void app_main(void)
     }
     xTaskCreate(network_setup_task, "companion_setup", 4096, NULL, 2, NULL);
     ESP_LOGI(TAG, "AI Companion firmware 2.0 started. Nonverbal output only; offline local mode retained.");
+    if (companion_usb_start(on_usb_command) != ESP_OK) {
+        ESP_LOGW(TAG, "USB Serial/JTAG control protocol unavailable");
+    }
 }
