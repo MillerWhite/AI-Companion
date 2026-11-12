@@ -71,6 +71,25 @@ class DeviceLifecycleTests(unittest.TestCase):
         self.assertEqual(main.get_device_memory(authorization=auth)["memory"], {"recent_context": [], "facts": []})
 
 
+
+    def test_expired_memory_is_removed_from_persistent_storage(self):
+        grant = main._create_enrollment_grant("paid-order-retention", 1)
+        result = self.claim(grant)
+        old = int(time.time()) - (main.MEMORY_RETENTION_DAYS + 2) * 86400
+        with main._device_db() as connection:
+            connection.execute(
+                "UPDATE devices SET memory_json = ? WHERE device_id = ?",
+                (json.dumps({
+                    "recent_context": [{"role": "owner", "text": "expired", "timestamp": old}],
+                    "facts": [{"kind": "nickname", "value": "expired", "timestamp": old}],
+                }), result["device_id"]),
+            )
+        auth = "Bearer " + result["device_token"]
+        self.assertEqual(main.get_device_memory(authorization=auth)["memory"], {"recent_context": [], "facts": []})
+        with main._device_db() as connection:
+            stored = connection.execute("SELECT memory_json FROM devices WHERE device_id = ?", (result["device_id"],)).fetchone()[0]
+        self.assertEqual(json.loads(stored), {"recent_context": [], "facts": []})
+
     def test_audio_quota_enforces_device_and_global_caps(self):
         old_app_env = main.APP_ENV
         old_device_limit = main.SPEECHKIT_DAILY_SECONDS_LIMIT
