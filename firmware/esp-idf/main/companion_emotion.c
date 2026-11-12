@@ -56,6 +56,9 @@ void companion_emotion_interaction(companion_state_t *state, const char *kind)
         state->comfort = clamp01(state->comfort + 12.0f);
         state->playfulness = clamp01(state->playfulness + 4.0f);
         state->social = clamp01(state->social + 1.5f);
+    } else if (strcmp(kind, "clean") == 0) {
+        state->comfort = clamp01(state->comfort + 16.0f);
+        state->social = clamp01(state->social - 3.0f);
     } else if (strcmp(kind, "rest") == 0) {
         state->energy = clamp01(state->energy + 4.0f);
         state->comfort = clamp01(state->comfort + 2.0f);
