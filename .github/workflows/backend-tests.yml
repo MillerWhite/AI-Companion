@@ -25,3 +25,10 @@ jobs:
         run: python -m compileall -q backend
       - name: Run unit tests
         run: python -m unittest discover -s backend/tests -v
+      - name: Build and test native emotion engine
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -Ifirmware/esp-idf/main \
+            firmware/esp-idf/main/companion_emotion.c \
+            firmware/esp-idf/tests/companion_emotion_test.c \
+            -o /tmp/companion_emotion_test
+          /tmp/companion_emotion_test
