@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field, field_validator
 
 load_dotenv(dotenv_path=Path(__file__).resolve().with_name(".env"), override=False)
 
-APP_VERSION = "1.8.0"
+APP_VERSION = "1.9.0"
 APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
 DEVICE_ENROLLMENT_SECRET = os.getenv("DEVICE_ENROLLMENT_SECRET", "").strip()
 DEVICE_DB_PATH = os.getenv("DEVICE_DB_PATH", "backend/devices.sqlite3")
@@ -103,6 +103,7 @@ class DeviceEnrollRequest(BaseModel):
 
 class DeviceInterpretRequest(BaseModel):
     utterance: str = Field(min_length=1, max_length=1200)
+    recent_context: list[ContextTurn] = Field(default_factory=list, max_length=8)
 
 
 class InterpretResult(BaseModel):
@@ -238,10 +239,14 @@ def _device_db() -> sqlite3.Connection:
             token_hash TEXT NOT NULL,
             companion_name TEXT NOT NULL,
             personality_json TEXT NOT NULL,
+            memory_json TEXT NOT NULL DEFAULT '{}',
             created_at INTEGER NOT NULL,
             revoked_at INTEGER
         )
     """)
+    columns = {row[1] for row in connection.execute("PRAGMA table_info(devices)").fetchall()}
+    if "memory_json" not in columns:
+        connection.execute("ALTER TABLE devices ADD COLUMN memory_json TEXT NOT NULL DEFAULT '{}'")
     connection.commit()
     return connection
 
@@ -254,7 +259,7 @@ def _get_device(token: str) -> dict[str, Any] | None:
     digest = _token_hash(token)
     with _device_db() as connection:
         row = connection.execute(
-            "SELECT device_id, companion_name, personality_json FROM devices "
+            "SELECT device_id, companion_name, personality_json, memory_json FROM devices "
             "WHERE token_hash = ? AND revoked_at IS NULL", (digest,)
         ).fetchone()
     if not row:
@@ -263,6 +268,7 @@ def _get_device(token: str) -> dict[str, Any] | None:
         "device_id": row[0],
         "companion_name": row[1],
         "personality": json.loads(row[2]),
+        "memory": json.loads(row[3] or "{}"),
     }
 
 
@@ -295,7 +301,7 @@ app.add_middleware(
     allow_origin_regex=None if APP_ENV == "production" else r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=False,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_headers=["Content-Type", "Authorization", "X-Enrollment-Secret"],
 )
 
 
@@ -378,9 +384,23 @@ def interpret_for_device(
         utterance=payload.utterance,
         companion_name=device["companion_name"],
         personality=device["personality"],
-        recent_context=[],
+        recent_context=payload.recent_context or [
+            ContextTurn(role=item["role"], text=item["text"])
+            for item in device["memory"].get("recent_context", [])[-8:]
+        ],
     )
-    return call_language_model(request_payload)
+    result = call_language_model(request_payload)
+    # Keep a small rolling text context per device, never raw audio.
+    history = list(device["memory"].get("recent_context", []))[-6:]
+    history.append({"role": "owner", "text": payload.utterance[:500]})
+    if result.addressed_to_companion and result.understood:
+        history.append({"role": "companion", "text": f"intent={result.intent}; action={result.action.value}; emotion={result.emotion.value}"})
+    with _device_db() as connection:
+        connection.execute(
+            "UPDATE devices SET memory_json = ? WHERE device_id = ? AND revoked_at IS NULL",
+            (json.dumps({"recent_context": history[-8:]}, ensure_ascii=False), device["device_id"]),
+        )
+    return result
 
 
 @app.post("/api/interpret", response_model=InterpretResult)
