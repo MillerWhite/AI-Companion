@@ -73,15 +73,15 @@ uint32_t companion_motion_feed(companion_motion_state_t *m, float ax, float ay, 
     }
 
     if (ay < UPSIDE_Y && !m->face_down) {
-        m->upside_time += dt;
-        if (!m->upside && m->upside_time > UPSIDE_S) {
-            m->upside = true;
+        m->upside_down_time += dt;
+        if (!m->upside_down && m->upside_down_time > UPSIDE_S) {
+            m->upside_down = true;
             events |= COMPANION_MOTION_UPSIDE_DOWN;
         }
     } else {
-        m->upside_time = 0.0f;
-        if (m->upside && ay > UPSIDE_Y + 0.3f) {
-            m->upside = false;
+        m->upside_down_time = 0.0f;
+        if (m->upside_down && ay > UPSIDE_Y + 0.3f) {
+            m->upside_down = false;
             events |= COMPANION_MOTION_UPRIGHT;
         }
     }
