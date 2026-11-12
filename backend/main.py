@@ -941,17 +941,21 @@ def interpret_for_device(
     # Keep a small rolling text context per device, never raw audio.
     history = list(device["memory"].get("recent_context", []))[-6:]
     now = int(time.time())
-    history.append({"role": "owner", "text": payload.utterance[:500], "timestamp": now})
-    if result.addressed_to_companion and result.understood:
-        history.append({"role": "companion", "text": f"intent={result.intent}; action={result.action.value}; emotion={result.emotion.value}", "timestamp": now})
+    # Ambient speech is never retained. Only utterances addressed to this pet
+    # enter the rolling conversation context.
+    if result.addressed_to_companion:
+        history.append({"role": "owner", "text": payload.utterance[:500], "timestamp": now})
+        if result.understood:
+            history.append({"role": "companion", "text": f"intent={result.intent}; action={result.action.value}; emotion={result.emotion.value}", "timestamp": now})
     facts = list(device["memory"].get("facts", []))[-20:]
     cutoff = int(time.time()) - MEMORY_RETENTION_DAYS * 86400
-    facts = [item for item in facts if int(item.get("timestamp", int(time.time()))) >= cutoff]
-    for update in result.memory_updates:
-        if update.confidence < 0.85:
-            continue
-        facts = [item for item in facts if not (item.get("kind") == update.kind.value and item.get("value") == update.value)]
-        facts.append({"kind": update.kind.value, "value": update.value, "confidence": update.confidence, "timestamp": now})
+    facts = [item for item in facts if int(item.get("timestamp", 0)) >= cutoff]
+    if result.addressed_to_companion and result.understood:
+        for update in result.memory_updates:
+            if update.confidence < 0.85:
+                continue
+            facts = [item for item in facts if not (item.get("kind") == update.kind.value and item.get("value") == update.value)]
+            facts.append({"kind": update.kind.value, "value": update.value, "confidence": update.confidence, "timestamp": now})
     with _device_db() as connection:
         connection.execute(
             "UPDATE devices SET memory_json = ? WHERE device_id = ? AND revoked_at IS NULL",
