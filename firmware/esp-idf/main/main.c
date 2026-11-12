@@ -37,7 +37,7 @@
 #include "companion_face_renderer.h"
 
 static const char *TAG = "ai_companion";
-static lv_obj_t *eyes[2], *pupils[2], *glints[2], *mouth, *status_label, *brows[2], *tears[2], *setup_label, *screen_face, *face_canvas;\nstatic face_t face_model;\nstatic uint16_t *face_pixels;\nstatic float face_gaze_x, face_gaze_y, face_gaze_target_x, face_gaze_target_y;\nstatic int64_t face_next_glance_us;\nstatic int64_t face_last_frame_us;
+static lv_obj_t *status_label, *setup_label, *screen_face, *face_canvas;\nstatic face_t face_model;\nstatic uint16_t *face_pixels;\nstatic float face_gaze_x, face_gaze_y, face_gaze_target_x, face_gaze_target_y;\nstatic int64_t face_next_glance_us;\nstatic int64_t face_last_frame_us;
 static bool screen_asleep;
 static int64_t dizzy_until_us;
 static int64_t last_activity_us;
@@ -69,42 +69,6 @@ static const char *emotion_label(companion_emotion_t emotion)
         "Affection", "Excited", "Surprised", "Scared", "Concerned", "Shy", "Dizzy", "Flinch"
     };
     return labels[emotion < COMPANION_EMOTION_COUNT ? emotion : COMPANION_CALM];
-}
-
-static void animate_eye_height(void *object, int32_t height)
-{
-    lv_obj_set_height((lv_obj_t *)object, height);
-}
-
-static void animate_mouth_width(void *object, int32_t width)
-{
-    lv_obj_set_width((lv_obj_t *)object, width);
-}
-
-static void style_eye(lv_obj_t *eye)
-{
-    lv_obj_remove_style_all(eye);
-    lv_obj_set_style_bg_color(eye, lv_color_hex(0xF8FBFF), 0);
-    lv_obj_set_style_bg_opa(eye, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(eye, 0, 0);
-    lv_obj_set_style_radius(eye, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_shadow_color(eye, lv_color_hex(0xA8D9FF), 0);
-    lv_obj_set_style_shadow_width(eye, 12, 0);
-    lv_obj_set_style_shadow_opa(eye, LV_OPA_30, 0);
-}
-
-static void animate_size(lv_obj_t *object, int32_t from, int32_t to,
-                         uint32_t duration, lv_anim_exec_xcb_t callback)
-{
-    lv_anim_delete(object, callback);
-    lv_anim_t animation;
-    lv_anim_init(&animation);
-    lv_anim_set_var(&animation, object);
-    lv_anim_set_values(&animation, from, to);
-    lv_anim_set_duration(&animation, duration);
-    lv_anim_set_path_cb(&animation, lv_anim_path_ease_in_out);
-    lv_anim_set_exec_cb(&animation, callback);
-    lv_anim_start(&animation);
 }
 
 static uint32_t theme_background(void)
@@ -142,13 +106,6 @@ static void apply_display_settings(void)
     if (bsp_display_lock(pdMS_TO_TICKS(1000)) != ESP_OK) return;
     lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(theme_background()), 0);
     lv_obj_set_style_bg_opa(lv_screen_active(), LV_OPA_COVER, 0);
-    if (eyes[0] && eyes[1]) {
-        for (int i = 0; i < 2; ++i) {
-            lv_obj_set_style_bg_color(eyes[i], lv_color_hex(theme_face_color()), 0);
-            lv_obj_set_style_shadow_color(eyes[i], lv_color_hex(display_theme == 3 ? 0x9B6D32 : 0xA8D9FF), 0);
-        }
-    }
-    if (mouth) lv_obj_set_style_border_color(mouth, lv_color_hex(theme_face_color()), 0);
     if (status_label) lv_obj_set_style_text_color(status_label, lv_color_hex(display_theme == 1 ? 0x263442 : theme_face_color()), 0);
     if (setup_label) lv_obj_set_style_text_color(setup_label, lv_color_hex(display_theme == 1 ? 0x536272 : 0x7F91A5), 0);
     bsp_display_unlock();
@@ -665,46 +622,6 @@ static void on_face_tap(lv_event_t *event)
 static void animate_pupil_x(void *object, int32_t value)
 {
     lv_obj_set_x((lv_obj_t *)object, value);
-}
-
-static void gaze_timer(lv_timer_t *timer)
-{
-    (void)timer;
-    if (sleeping || screen_asleep || current_emotion == COMPANION_SLEEPY) return;
-    const int dx = (int)(esp_random() % 13U) - 6;
-    const int dy = (int)(esp_random() % 9U) - 4;
-    for (int i = 0; i < 2; ++i) {
-        if (!pupils[i]) continue;
-        const int base_x = current_emotion == COMPANION_CURIOUS ? 25 : 18;
-        lv_anim_t a;
-        lv_anim_init(&a);
-        lv_anim_set_var(&a, pupils[i]);
-        lv_anim_set_values(&a, lv_obj_get_x(pupils[i]), base_x + dx + (i ? 1 : -1));
-        lv_anim_set_duration(&a, 420 + (esp_random() % 260U));
-        lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
-        lv_anim_set_exec_cb(&a, animate_pupil_x);
-        lv_anim_start(&a);
-        lv_obj_set_y(pupils[i], 23 + dy);
-    }
-}
-
-static void blink_timer(lv_timer_t *timer)
-{
-    (void)timer;
-    if (sleeping || screen_asleep || !eyes[0]) return;
-    if ((esp_random() % 100U) > 72U) return;
-    for (int i = 0; i < 2; ++i) {
-        lv_anim_t a;
-        lv_anim_init(&a);
-        lv_anim_set_var(&a, eyes[i]);
-        lv_anim_set_values(&a, lv_obj_get_height(eyes[i]), 5);
-        lv_anim_set_duration(&a, 78);
-        lv_anim_set_reverse_duration(&a, 138);
-        lv_anim_set_delay(&a, i == 1 ? 34 : 0);
-        lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
-        lv_anim_set_exec_cb(&a, animate_eye_height);
-        lv_anim_start(&a);
-    }
 }
 
 static void autonomous_timer(lv_timer_t *timer)
