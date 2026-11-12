@@ -45,11 +45,12 @@ static esp_err_t root_handler(httpd_req_t *req)
         "<button id='claim'>Активировать устройство</button><p id='status'>Подключитесь к устройству в той же Wi-Fi сети.</p>"
         "<section id='owner' hidden><hr><h2>Управление компаньоном</h2><label>Темперамент</label><select id='temper'><option value='balanced'>Сбалансированный</option><option value='calm'>Спокойный</option><option value='energetic'>Энергичный</option><option value='shy'>Застенчивый</option><option value='dreamy'>Мечтательный</option></select>"
         "<label>Инициативность</label><select id='initiative'><option value='medium'>Средняя</option><option value='high'>Высокая</option><option value='low'>Низкая</option></select>"
+        "<label>Привычка характера</label><select id='quirks'><option value='none'>Нет особой привычки</option><option value='sleepy'>Соня</option><option value='curious'>Любопытный</option><option value='playful'>Озорной</option><option value='shy'>Застенчивый</option></select>"
         "<button id='profile'>Сохранить характер</button><button id='memory'>Посмотреть память</button><button id='reset'>Сбросить серверную память</button><pre id='memoryData' style='white-space:pre-wrap;color:#aab2c0;font-size:12px'></pre></section>"
         "<small>Не отправляйте код активации другим людям. Устройство хранит секрет авторизации в защищённом NVS, браузер его не получает.</small></main>"
-        "<script>const $=s=>document.querySelector(s);fetch('/device-info').then(r=>r.json()).then(d=>{$('#serial').value=d.serial;$('#status').textContent='Устройство онлайн · '+d.ip+(d.claimed?' · уже активировано':' · ожидает активации');if(d.claimed){$('#owner').hidden=false;$('#name').value=d.companion_name||'Milo';$('#temper').value=d.temperament||'balanced';$('#initiative').value=d.initiative||'medium'}}).catch(()=>{});"
+        "<script>const $=s=>document.querySelector(s);fetch('/device-info').then(r=>r.json()).then(d=>{$('#serial').value=d.serial;$('#status').textContent='Устройство онлайн · '+d.ip+(d.claimed?' · уже активировано':' · ожидает активации');if(d.claimed){$('#owner').hidden=false;$('#name').value=d.companion_name||'Milo';$('#temper').value=d.temperament||'balanced';$('#initiative').value=d.initiative||'medium';$('#quirks').value=d.quirks||'none'}}).catch(()=>{});"
         "$('#claim').onclick=async()=>{let b=$('#claim'),s=$('#status');b.disabled=true;s.textContent='Активируем…';try{let r=await fetch('/claim',{method:'POST',headers:{'Content-Type':'application/json','X-Setup-Pin':$('#pin').value.trim()},body:JSON.stringify({api_base:$('#api').value.trim(),serial:$('#serial').value,companion_name:$('#name').value.trim(),enrollment_grant:$('#grant').value.trim()})});let d=await r.json();if(!r.ok)throw Error(d.message||d.detail?.message||'Ошибка активации');s.textContent='Готово. Устройство активировано.';$('#grant').value='';$('#owner').hidden=false;}catch(e){s.textContent='Не удалось активировать: '+e.message;}finally{b.disabled=false}};"
-        "$('#profile').onclick=async()=>{let r=await fetch('/profile',{method:'POST',headers:{'Content-Type':'application/json','X-Setup-Pin':$('#pin').value.trim()},body:JSON.stringify({companion_name:$('#name').value.trim(),personality:{temperament:$('#temper').value,initiative:$('#initiative').value}})});$('#status').textContent=r.ok?'Характер сохранён':'Не удалось сохранить характер'};"
+        "$('#profile').onclick=async()=>{let r=await fetch('/profile',{method:'POST',headers:{'Content-Type':'application/json','X-Setup-Pin':$('#pin').value.trim()},body:JSON.stringify({companion_name:$('#name').value.trim(),personality:{temperament:$('#temper').value,initiative:$('#initiative').value,quirks:$('#quirks').value}})});$('#status').textContent=r.ok?'Характер сохранён':'Не удалось сохранить характер'};"
         "$('#memory').onclick=async()=>{let r=await fetch('/memory',{headers:{'X-Setup-Pin':$('#pin').value.trim()}}),d=await r.json();$('#memoryData').textContent=JSON.stringify(d,null,2)};"
         "$('#reset').onclick=async()=>{if(!confirm('Удалить серверную память и историю отношений?'))return;let r=await fetch('/memory/reset',{method:'POST',headers:{'X-Setup-Pin':$('#pin').value.trim()}});$('#memoryData').textContent=r.ok?'Серверная память удалена':'Не удалось удалить память'};</script></html>";
     httpd_resp_set_type(req, "text/html; charset=utf-8");
@@ -84,13 +85,13 @@ static esp_err_t device_info_handler(httpd_req_t *req)
         char companion_name[48] = "Milo"; size_t name_size = sizeof(companion_name);
         if (nvs_get_str(nvs, "companion_name", companion_name, &name_size) == ESP_OK)
             cJSON_AddStringToObject(json, "companion_name", companion_name);
-        uint8_t temperament = 0, initiative = 0;
+        uint8_t temperament = 0, initiative = 0, quirk = 0;
         nvs_get_u8(nvs, "temperament", &temperament);
-        nvs_get_u8(nvs, "initiative", &initiative);
+        nvs_get_u8(nvs, "initiative", &initiative);\n        nvs_get_u8(nvs, "quirk", &quirk);
         static const char *temper_names[] = {"balanced", "calm", "energetic", "shy", "dreamy"};
         static const char *initiative_names[] = {"medium", "high", "low"};
         cJSON_AddStringToObject(json, "temperament", temper_names[temperament <= 4 ? temperament : 0]);
-        cJSON_AddStringToObject(json, "initiative", initiative_names[initiative <= 2 ? initiative : 0]);
+        cJSON_AddStringToObject(json, "initiative", initiative_names[initiative <= 2 ? initiative : 0]);\n        static const char *quirk_names[] = {"none", "sleepy", "curious", "playful", "shy"};\n        cJSON_AddStringToObject(json, "quirks", quirk_names[quirk <= 4 ? quirk : 0]);
         nvs_close(nvs);
     }
     char *body = cJSON_PrintUnformatted(json);
@@ -232,7 +233,7 @@ static esp_err_t owner_profile_handler(httpd_req_t *req)
     if (cJSON_IsObject(personality)) {
         const cJSON *temper = cJSON_GetObjectItemCaseSensitive(personality, "temperament");
         const cJSON *initiative = cJSON_GetObjectItemCaseSensitive(personality, "initiative");
-        uint8_t temper_value = 0, initiative_value = 0;
+        uint8_t temper_value = 0, initiative_value = 0, quirk_value = 0;
         if (cJSON_IsString(temper)) {
             if (!strcmp(temper->valuestring, "calm")) temper_value = 1;
             else if (!strcmp(temper->valuestring, "energetic")) temper_value = 2;
@@ -243,10 +244,18 @@ static esp_err_t owner_profile_handler(httpd_req_t *req)
             if (!strcmp(initiative->valuestring, "high")) initiative_value = 1;
             else if (!strcmp(initiative->valuestring, "low")) initiative_value = 2;
         }
+        const cJSON *quirks = cJSON_GetObjectItemCaseSensitive(personality, "quirks");
+        if (cJSON_IsString(quirks)) {
+            if (!strcmp(quirks->valuestring, "sleepy")) quirk_value = 1;
+            else if (!strcmp(quirks->valuestring, "curious")) quirk_value = 2;
+            else if (!strcmp(quirks->valuestring, "playful")) quirk_value = 3;
+            else if (!strcmp(quirks->valuestring, "shy")) quirk_value = 4;
+        }
         nvs_handle_t handle;
         if (nvs_open("companion", NVS_READWRITE, &handle) == ESP_OK) {
             nvs_set_u8(handle, "temperament", temper_value);
             nvs_set_u8(handle, "initiative", initiative_value);
+            nvs_set_u8(handle, "quirk", quirk_value);
             nvs_commit(handle);
             nvs_close(handle);
         }
