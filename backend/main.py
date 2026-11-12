@@ -667,7 +667,7 @@ def admin_create_enrollment_grant(
 
 
 @app.post("/api/store/webhook")
-async def store_payment_webhook(
+async async def store_payment_webhook(
     request: Request,
     x_store_signature: str | None = Header(default=None, alias="X-Store-Signature"),
 ) -> dict[str, Any]:
@@ -818,7 +818,7 @@ def update_device_profile(payload: ProfileUpdateRequest, authorization: str | No
 
 
 @app.post("/api/device/transcribe")
-async def transcribe_device_audio(request: Request, authorization: str | None = Header(default=None)) -> dict[str, str]:
+async async def transcribe_device_audio(request: Request, authorization: str | None = Header(default=None)) -> dict[str, str]:
     device = _authenticated_device(authorization)
     _check_device_rate_limit(device["device_id"])
     if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/octet-stream":
