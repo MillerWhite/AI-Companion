@@ -1,0 +1,63 @@
+name: AI Companion quality checks
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend contract tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements.txt
+      - name: Run backend tests
+        run: python -m unittest discover -s backend/tests -v
+      - name: Compile backend
+        run: python -m compileall -q backend
+
+  firmware-core:
+    name: Native firmware logic tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and test emotion core
+        run: |
+          gcc -std=c11 -Wall -Wextra -Werror -Ifirmware/esp-idf/main \
+            firmware/esp-idf/main/companion_emotion.c \
+            firmware/tests/test_companion_emotion.c \
+            -o /tmp/test_companion_emotion
+          /tmp/test_companion_emotion
+
+  installer:
+    name: Installer JavaScript syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check inline JavaScript
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          html = Path("web/installer/index.html").read_text(encoding="utf-8")
+          scripts = re.findall(r"<script(?:\\s[^>]*)?>(.*?)</script>", html, re.I | re.S)
+          if not scripts:
+              raise SystemExit("No inline scripts found")
+          for index, script in enumerate(scripts):
+              Path(f"/tmp/installer-{index}.js").write_text(script, encoding="utf-8")
+          print(f"Found {len(scripts)} inline script(s)")
+          PY
+          for file in /tmp/installer-*.js; do node --check "$file"; done
