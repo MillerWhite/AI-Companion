@@ -37,7 +37,7 @@
 #include "companion_face_renderer.h"
 
 static const char *TAG = "ai_companion";
-static lv_obj_t *status_label, *setup_label, *screen_face, *face_canvas;\nstatic face_t face_model;\nstatic uint16_t *face_pixels;\nstatic float face_gaze_x, face_gaze_y, face_gaze_target_x, face_gaze_target_y;\nstatic int64_t face_next_glance_us;\nstatic int64_t face_last_frame_us;
+static lv_obj_t *status_label, *setup_label, *face_canvas;\nstatic face_t face_model;\nstatic uint16_t *face_pixels;\nstatic float face_gaze_x, face_gaze_y, face_gaze_target_x, face_gaze_target_y;\nstatic int64_t face_next_glance_us;\nstatic int64_t face_last_frame_us;
 static bool screen_asleep;
 static int64_t dizzy_until_us;
 static int64_t last_activity_us;
@@ -78,15 +78,6 @@ static uint32_t theme_background(void)
         case 2: return 0x000000;
         case 3: return 0x120D06;
         default: return 0x05070B;
-    }
-}
-
-static uint32_t theme_face_color(void)
-{
-    switch (display_theme) {
-        case 1: return 0x17212B;
-        case 3: return 0xF1C27D;
-        default: return 0xF8FBFF;
     }
 }
 
@@ -868,7 +859,6 @@ void app_main(void)
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, 0);
 
     lv_obj_t *face = lv_obj_create(screen);
-    screen_face = face;
     lv_obj_remove_style_all(face);
     lv_obj_set_size(face, 466, 330);
     lv_obj_align(face, LV_ALIGN_CENTER, 0, -25);
