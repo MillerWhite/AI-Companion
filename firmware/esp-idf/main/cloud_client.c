@@ -277,6 +277,7 @@ esp_err_t companion_cloud_claim(const char *api_base,
     if (err == ESP_OK) {
         err = nvs_set_str(handle, "api_base", base);
         if (err == ESP_OK) err = nvs_set_str(handle, "device_token", token->valuestring);
+        if (err == ESP_OK) err = nvs_set_str(handle, "companion_name", companion_name);
         if (err == ESP_OK) err = nvs_commit(handle);
         nvs_close(handle);
     }
@@ -293,12 +294,12 @@ esp_err_t companion_cloud_owner_request(esp_http_client_method_t method,
                                         size_t response_capacity)
 {
     if (!path || path[0] != '/' || !response || response_capacity < 2) return ESP_ERR_INVALID_ARG;
-    response[0] = '\\0';
+    response[0] = '\0';
     char api_base[192] = {0}, token[160] = {0}, url[320] = {0}, authorization[192] = {0};
     ESP_RETURN_ON_ERROR(read_nvs_string("api_base", api_base, sizeof(api_base)), TAG, "API base missing");
     ESP_RETURN_ON_ERROR(read_nvs_string("device_token", token, sizeof(token)), TAG, "device token missing");
     size_t n = strlen(api_base);
-    while (n && api_base[n - 1] == '/') api_base[--n] = '\\0';
+    while (n && api_base[n - 1] == '/') api_base[--n] = '\0';
     int len = snprintf(url, sizeof(url), "%s%s", api_base, path);
     if (len < 0 || (size_t)len >= sizeof(url)) return ESP_ERR_INVALID_SIZE;
     len = snprintf(authorization, sizeof(authorization), "Bearer %s", token);
