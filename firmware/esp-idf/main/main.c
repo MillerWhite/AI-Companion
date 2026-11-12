@@ -192,7 +192,8 @@ static void render_emotion(companion_emotion_t emotion)
         lv_obj_set_style_bg_color(eyes[i], sad ? lv_color_hex(0xDCEEFF) : lv_color_hex(theme_face_color()), 0);
         if (pupils[i]) {
             const bool closed = sleepy || flinch;
-            lv_obj_add_flag(pupils[i], closed ? LV_OBJ_FLAG_HIDDEN : 0);
+            if (closed) lv_obj_add_flag(pupils[i], LV_OBJ_FLAG_HIDDEN);
+            else lv_obj_clear_flag(pupils[i], LV_OBJ_FLAG_HIDDEN);
             lv_obj_set_pos(pupils[i], i == 0 ? (sad ? 22 : curious ? 28 : 18) : (sad ? 22 : curious ? 28 : 18),
                            sad ? 27 : excited ? 18 : 23);
             lv_obj_set_style_bg_color(pupils[i], lv_color_hex(0x05080D), 0);
@@ -648,6 +649,11 @@ static void on_face_tap(lv_event_t *event)
     save_state();
 }
 
+static void animate_pupil_x(void *object, int32_t value)
+{
+    lv_obj_set_x((lv_obj_t *)object, value);
+}
+
 static void gaze_timer(lv_timer_t *timer)
 {
     (void)timer;
@@ -663,7 +669,7 @@ static void gaze_timer(lv_timer_t *timer)
         lv_anim_set_values(&a, lv_obj_get_x(pupils[i]), base_x + dx + (i ? 1 : -1));
         lv_anim_set_duration(&a, 420 + (esp_random() % 260U));
         lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
-        lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_obj_set_x);
+        lv_anim_set_exec_cb(&a, animate_pupil_x);
         lv_anim_start(&a);
         lv_obj_set_y(pupils[i], 23 + dy);
     }
