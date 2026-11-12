@@ -23,7 +23,7 @@ static int battery_percent = -1;
 static esp_err_t read_reg(uint8_t reg, uint8_t *value)
 {
     if (!pmu || !value) return ESP_ERR_INVALID_STATE;
-    return i2c_master_transmit_receive(pmu, &reg, 1, value, 1, pdMS_TO_TICKS(100));
+    return i2c_master_transmit_receive(pmu, &reg, 1, value, 1, 100);
 }
 
 esp_err_t companion_power_init(void)
