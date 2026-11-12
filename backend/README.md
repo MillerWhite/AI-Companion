@@ -21,7 +21,7 @@ FastAPI service for natural-language intent interpretation, SpeechKit transcript
 
 ## Speech pipeline
 
-Firmware sends mono signed 16-bit LPCM at 16 kHz over HTTPS. The backend limits request size/duration, applies per-device daily audio quotas, and forwards audio to the synchronous Yandex SpeechKit recognition endpoint. Raw audio is not stored. Transcribed text is passed separately to the language model.
+Firmware sends mono signed 16-bit LPCM at 16 kHz over HTTPS. The backend limits request size/duration, applies per-device daily audio quotas, and forwards audio to the synchronous Yandex SpeechKit recognition endpoint. Raw audio is not stored. Transcribed text is passed separately to the language model. Unaddressed ambient speech is not retained in the device conversation context; only speech the model identifies as addressed to the companion is saved.
 
 Configure `SPEECHKIT_API_KEY`, `SPEECHKIT_FOLDER_ID` and `SPEECHKIT_SAMPLE_RATE=16000`. Confirm SpeechKit API key permissions and current account quotas before enabling the device microphone.
 
