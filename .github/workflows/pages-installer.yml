@@ -1,11 +1,6 @@
 name: Deploy ESP Web Installer
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "web/installer/**"
-      - ".github/workflows/pages-installer.yml"
   workflow_dispatch:
 
 permissions:
