@@ -38,6 +38,20 @@ jobs:
             firmware/tests/test_companion_emotion.c \
             -o /tmp/test_companion_emotion
           /tmp/test_companion_emotion
+      - name: Compile and test procedural voice engine
+        run: |
+          gcc -std=c11 -Wall -Wextra -Werror -Ifirmware/esp-idf/main \
+            firmware/esp-idf/main/companion_voice.c \
+            firmware/esp-idf/tests/companion_voice_test.c \
+            -lm -o /tmp/companion_voice_test
+          /tmp/companion_voice_test
+      - name: Compile and test motion classifier
+        run: |
+          gcc -std=c11 -Wall -Wextra -Werror -Ifirmware/esp-idf/main \
+            firmware/esp-idf/main/companion_motion.c \
+            firmware/esp-idf/tests/companion_motion_test.c \
+            -lm -o /tmp/companion_motion_test
+          /tmp/companion_motion_test
 
   installer:
     name: Installer JavaScript syntax
