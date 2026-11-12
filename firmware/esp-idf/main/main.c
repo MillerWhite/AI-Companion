@@ -215,24 +215,56 @@ static void apply_cloud_intent(const char *json_text)
     const cJSON *understood = cJSON_GetObjectItemCaseSensitive(json, "understood");
     const cJSON *action = cJSON_GetObjectItemCaseSensitive(json, "action");
     const cJSON *emotion = cJSON_GetObjectItemCaseSensitive(json, "emotion");
-    if (!cJSON_IsTrue(addressed) || !cJSON_IsTrue(understood) || !cJSON_IsString(action) || !cJSON_IsString(emotion)) {
+    const cJSON *confidence = cJSON_GetObjectItemCaseSensitive(json, "confidence");
+
+    if (!cJSON_IsTrue(addressed) || !cJSON_IsString(action) || !cJSON_IsString(emotion)) {
         cJSON_Delete(json);
         return;
     }
-    if (!strcmp(action->valuestring, "sleep")) {
+
+    const bool needs_clarification = !cJSON_IsTrue(understood) ||
+        (cJSON_IsNumber(confidence) && confidence->valuedouble < 0.35);
+    if (needs_clarification || !strcmp(action->valuestring, "clarify")) {
+        set_emotion(COMPANION_CURIOUS, true);
+        cJSON_Delete(json);
+        return;
+    }
+
+    const char *kind = NULL;
+    companion_emotion_t next = parse_emotion(emotion->valuestring);
+    const char *verb = action->valuestring;
+
+    if (!strcmp(verb, "idle")) {
+        cJSON_Delete(json);
+        return;
+    } else if (!strcmp(verb, "sleep")) {
         sleeping = true;
         manual_sleep = true;
-        set_emotion(COMPANION_SLEEPY, true);
-    } else if (!strcmp(action->valuestring, "wake")) {
+        next = COMPANION_SLEEPY;
+    } else if (!strcmp(verb, "wake")) {
         sleeping = false;
         manual_sleep = false;
-        set_emotion(COMPANION_HAPPY, true);
-    } else {
-        if (!strcmp(action->valuestring, "pet")) companion_emotion_interaction(&state, "pet");
-        else if (!strcmp(action->valuestring, "play")) companion_emotion_interaction(&state, "play");
-        else if (!strcmp(action->valuestring, "greet") || !strcmp(action->valuestring, "acknowledge")) companion_emotion_interaction(&state, "call");
-        set_emotion(parse_emotion(emotion->valuestring), true);
+        kind = "call";
+        next = COMPANION_HAPPY;
+    } else if (!strcmp(verb, "pet") || !strcmp(verb, "comfort")) {
+        kind = "pet";
+        if (!strcmp(verb, "comfort") && next == COMPANION_CALM) next = COMPANION_AFFECTIONATE;
+    } else if (!strcmp(verb, "play")) {
+        kind = "play";
+    } else if (!strcmp(verb, "greet") || !strcmp(verb, "acknowledge") ||
+               !strcmp(verb, "attend") || !strcmp(verb, "thank")) {
+        kind = "call";
+        if (!strcmp(verb, "thank") && next == COMPANION_CALM) next = COMPANION_AFFECTIONATE;
+    } else if (!strcmp(verb, "surprise")) {
+        next = COMPANION_SURPRISED;
+    } else if (!strcmp(verb, "express_joy")) {
+        next = COMPANION_HAPPY;
+    } else if (!strcmp(verb, "express_curiosity")) {
+        next = COMPANION_CURIOUS;
     }
+
+    if (kind) companion_emotion_interaction(&state, kind);
+    if (!sleeping || !manual_sleep || next == COMPANION_SLEEPY) set_emotion(next, true);
     save_state();
     cJSON_Delete(json);
 }
