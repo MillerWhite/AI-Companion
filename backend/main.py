@@ -350,6 +350,10 @@ def _token_hash(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
+def _is_unique_violation(error: Exception) -> bool:
+    return isinstance(error, sqlite3.IntegrityError) or getattr(error, "sqlstate", None) == "23505"
+
+
 def _get_device(token: str) -> dict[str, Any] | None:
     digest = _token_hash(token)
     with _device_db() as connection:
@@ -545,7 +549,9 @@ def admin_create_enrollment_grant(
         raise HTTPException(status_code=401, detail={"code": "admin_auth_failed", "message": "Enrollment administration authorization failed"})
     try:
         grant = _create_enrollment_grant(payload.order_id.strip(), payload.ttl_hours)
-    except sqlite3.IntegrityError:
+    except Exception as error:
+        if not _is_unique_violation(error):
+            raise
         raise HTTPException(status_code=409, detail={"code": "order_already_granted", "message": "This order already has an enrollment grant"})
     return {"enrollment_grant": grant, "expires_in_seconds": payload.ttl_hours * 3600, "order_id": payload.order_id}
 
@@ -582,7 +588,9 @@ async def store_payment_webhook(
                 "INSERT INTO enrollment_grants (grant_hash, order_id, created_at, expires_at, used_at) VALUES (?, ?, ?, ?, NULL)",
                 (_token_hash(grant), order_id, now, now + 86400),
             )
-    except sqlite3.IntegrityError:
+    except Exception as error:
+        if not _is_unique_violation(error):
+            raise
         raise HTTPException(status_code=409, detail={"code": "duplicate_payment_event", "message": "Order or payment event already processed"})
     return {"accepted": True, "grant_created": True, "enrollment_grant": grant, "expires_in_seconds": 86400}
 
@@ -608,7 +616,9 @@ def claim_device(payload: DeviceClaimRequest) -> dict[str, str]:
                 "INSERT INTO devices (device_id, serial, token_hash, companion_name, personality_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
                 (device_id, serial, _token_hash(device_token), name, json.dumps(personality, ensure_ascii=False), now),
             )
-        except sqlite3.IntegrityError:
+        except Exception as error:
+            if not _is_unique_violation(error):
+                raise
             raise HTTPException(status_code=409, detail={"code": "device_already_enrolled", "message": "This device serial is already enrolled"})
         connection.execute("UPDATE enrollment_grants SET used_at = ? WHERE grant_hash = ? AND used_at IS NULL", (now, grant_hash))
     return {"device_id": device_id, "device_token": device_token, "message": "Store this token securely. It is returned only once."}
