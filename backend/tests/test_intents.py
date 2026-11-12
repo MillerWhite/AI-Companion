@@ -32,7 +32,7 @@ def valid_result(**overrides):
 class IntentValidationTests(unittest.TestCase):
     def test_accepts_known_intent(self):
         result = validate_model_result(valid_result())
-        self.assertEqual(result.action, Action.play)
+        self.assertEqual(result.action, Action.express_joy)
         self.assertEqual(result.emotion, Emotion.happy)
         self.assertTrue(result.addressed_to_companion)
 
