@@ -14,7 +14,19 @@ services:
     expose:
       - "8787"
     depends_on:
-      caddy:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - api-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8787/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  caddy:
     image: caddy:2-alpine
     restart: unless-stopped
     environment:
@@ -28,19 +40,8 @@ services:
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
-      - api
-
-  db:
+      api:
         condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - api-data:/data
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8787/health', timeout=3)"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
 
   db:
     image: postgres:16-alpine
