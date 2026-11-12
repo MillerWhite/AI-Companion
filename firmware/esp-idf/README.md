@@ -93,7 +93,7 @@ The firmware exposes a composite BLE HID accessory named `AI Companion Remote` (
 
 ## iPhone pairing and controls
 
-1. On iPhone, open **Settings → Bluetooth** and select **AI Companion Remote**.
+1. On iPhone, open **Settings → Bluetooth** and select **AI Companion**.
 2. Accept the pairing request. Keep the iPhone connected to the accessory; the firmware starts encrypted GATT discovery automatically.
 3. If iOS asks whether to share system notifications, allow it. Notification visibility still follows each app's iOS notification settings.
 4. On the Waveshare screen, tap the bottom-left mode label until it reads `IPHONE`.
