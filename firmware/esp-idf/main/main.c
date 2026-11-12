@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdint.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -193,7 +194,7 @@ static void face_apply_emotion(companion_emotion_t emotion)
         e->h = h * (i ? 1.0f : .98f);
         e->depth = 78.0f;
         e->yaw = 0; e->pitch = 0; e->roll = (i ? -1.0f : 1.0f) * (emotion==COMPANION_SAD ? -.12f : .015f);
-        e->taper = emotion==COMPANION_ANGRY ? .28f : 0;
+        e->taper = emotion==COMPANION_CONCERNED ? .12f : 0;
         e->lid = lid + (i ? .035f : 0);
         e->tilt = i ? -tilt : tilt;
         e->smile = smile;
