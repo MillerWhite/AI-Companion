@@ -399,7 +399,7 @@ static void on_usb_command(const char *command)
     } else if (!strcmp(command, "feed")) {
         sleeping = false;
         manual_sleep = false;
-        companion_emotion_interaction(&state, "feed");
+        companion_emotion_interaction(&state, "charge");
         set_emotion(COMPANION_HAPPY, false);
         if (audio_available) companion_audio_play_sound(VOICE_NOM, false);
         save_state();
