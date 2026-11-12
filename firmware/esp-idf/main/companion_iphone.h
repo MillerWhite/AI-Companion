@@ -15,6 +15,7 @@ typedef enum {
 } companion_iphone_command_t;
 
 void companion_iphone_init(void);
+void companion_iphone_poll(void);
 bool companion_iphone_connected(void);
 bool companion_iphone_ancs_ready(void);
 bool companion_iphone_ams_ready(void);
