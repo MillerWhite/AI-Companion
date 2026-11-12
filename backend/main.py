@@ -310,6 +310,57 @@ def _get_device(token: str) -> dict[str, Any] | None:
     }
 
 
+
+def _authenticated_device(authorization: str | None) -> dict[str, Any]:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail={"code": "device_auth_required", "message": "Device owner token required"})
+    device = _get_device(authorization[7:].strip())
+    if not device:
+        raise HTTPException(status_code=401, detail={"code": "invalid_device_token", "message": "Device token is invalid or revoked"})
+    return device
+
+
+def _create_enrollment_grant(order_id: str, ttl_hours: int = 24) -> str:
+    grant = secrets.token_urlsafe(32)
+    now = int(time.time())
+    with _device_db() as connection:
+        connection.execute(
+            "INSERT INTO enrollment_grants (grant_hash, order_id, created_at, expires_at, used_at) VALUES (?, ?, ?, ?, NULL)",
+            (_token_hash(grant), order_id, now, now + ttl_hours * 3600),
+        )
+    return grant
+
+
+def _speechkit_transcribe(pcm: bytes) -> str:
+    if not SPEECHKIT_API_KEY:
+        raise HTTPException(status_code=503, detail={"code": "speechkit_not_configured", "message": "Speech recognition is not configured"})
+    params = ["topic=general", "lang=ru-RU", "format=lpcm", f"sampleRateHertz={SPEECHKIT_SAMPLE_RATE}"]
+    if SPEECHKIT_FOLDER_ID:
+        params.append("folderId=" + SPEECHKIT_FOLDER_ID)
+    request = urllib.request.Request(
+        "https://stt.api.cloud.yandex.net/speech/v1/stt:recognize?" + "&".join(params),
+        data=pcm,
+        headers={"Authorization": "Api-Key " + SPEECHKIT_API_KEY, "Content-Type": "application/octet-stream"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=25) as response:
+            result = json.loads(response.read().decode("utf-8")).get("result", "")
+        if not isinstance(result, str):
+            raise ValueError("Invalid SpeechKit result")
+        return " ".join(result.split())[:1200]
+    except urllib.error.HTTPError as error:
+        if error.code == 429:
+            raise HTTPException(status_code=503, detail={"code": "speechkit_rate_limited", "message": "SpeechKit rate limit reached"})
+        if error.code in (401, 403):
+            raise HTTPException(status_code=503, detail={"code": "speechkit_auth_failed", "message": "SpeechKit authentication failed"})
+        raise HTTPException(status_code=502, detail={"code": "speechkit_unavailable", "message": "SpeechKit could not recognize the audio"})
+    except (urllib.error.URLError, TimeoutError):
+        raise HTTPException(status_code=502, detail={"code": "speechkit_unavailable", "message": "SpeechKit is unavailable"})
+    except (ValueError, json.JSONDecodeError):
+        raise HTTPException(status_code=502, detail={"code": "speechkit_invalid_response", "message": "SpeechKit returned an invalid response"})
+
+
 # Per-process protection for a single backend instance. Production multi-instance
 # deployments should move this counter to Redis or a shared rate-limit service.
 _device_request_times: dict[str, list[float]] = {}
