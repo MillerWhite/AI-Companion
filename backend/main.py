@@ -49,7 +49,6 @@ DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 REDIS_URL = os.getenv("REDIS_URL", "").strip()
 AI_DAILY_REQUEST_LIMIT = int(os.getenv("AI_DAILY_REQUEST_LIMIT", "250"))
 AUDIO_DAILY_SECONDS_LIMIT = int(os.getenv("AUDIO_DAILY_SECONDS_LIMIT", "120"))
-AUDIO_DAILY_TOTAL_SECONDS_LIMIT = int(os.getenv("AUDIO_DAILY_TOTAL_SECONDS_LIMIT", "3600"))
 
 
 class Action(str, Enum):
@@ -639,7 +638,6 @@ def validate_production_configuration() -> None:
         "STORE_WEBHOOK_SECRET (32+ chars)": len(STORE_WEBHOOK_SECRET) >= 32,
         "AI_API_KEY": bool(AI_API_KEY),
         "AI_MODEL": bool(AI_MODEL),
-        "AI_API_KEY": bool(AI_API_KEY),
         "AI_TRANSCRIPTION_MODEL": bool(AI_TRANSCRIPTION_MODEL),
         "AUDIO_SAMPLE_RATE=16000": AUDIO_SAMPLE_RATE == 16000,
         "AI_ALLOWED_ORIGINS": bool(production_origins) and "*" not in production_origins and all(origin.startswith("https://") for origin in production_origins),
@@ -902,7 +900,7 @@ async def transcribe_device_audio(request: Request, authorization: str | None = 
         raise HTTPException(status_code=413, detail={"code": "invalid_audio_size", "message": "Audio must be 0.1–30 seconds of 16-bit mono PCM and no larger than 1 MB"})
     duration_seconds = len(pcm) // (2 * AUDIO_SAMPLE_RATE)
     _check_audio_daily_budget(device["device_id"], duration_seconds)
-    transcript = await asyncio.to_thread(_transcription_transcribe, pcm)
+    transcript = await asyncio.to_thread(_openai_transcribe, pcm)
     return {"text": transcript}
 
 
