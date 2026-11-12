@@ -4,6 +4,7 @@ idf_component_register(
         "cloud_client.c"
         "companion_emotion.c"
         "companion_audio.c"
+        "companion_voice.c"
         "companion_imu.c"
         "companion_wifi.c"
         "companion_setup.c"
