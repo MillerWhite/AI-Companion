@@ -1,6 +1,6 @@
 # AI Companion firmware — Waveshare ESP32-S3-Touch-AMOLED-1.75C
 
-Firmware target: Waveshare ESP32-S3-Touch-AMOLED-1.75C (ESP32-S3, 32 MB flash, 8 MB PSRAM, 466×466 AMOLED). The source tree now contains the integrated service path; it is not yet a hardware-verified release.
+Firmware target: Waveshare ESP32-S3-Touch-AMOLED-1.75C (ESP32-S3, 32 MB flash, 8 MB PSRAM, 466×466 AMOLED). The source tree now contains the integrated service path and a custom 32 MB partition map with 6 MB factory/OTA app slots; it is not yet a hardware-verified release.
 
 ## Firmware modules
 
