@@ -35,7 +35,7 @@
 #include "companion_iphone.h"
 
 static const char *TAG = "ai_companion";
-static lv_obj_t *eyes[2], *mouth, *status_label, *brows[2], *tears[2], *setup_label, *screen_face;
+static lv_obj_t *eyes[2], *pupils[2], *glints[2], *mouth, *status_label, *brows[2], *tears[2], *setup_label, *screen_face;
 static bool screen_asleep;
 static int64_t dizzy_until_us;
 static int64_t last_activity_us;
@@ -190,6 +190,17 @@ static void render_emotion(companion_emotion_t emotion)
         lv_obj_set_x(eyes[i], i == 0 ? 150 - eye_width / 2 : 316 - eye_width / 2);
         lv_obj_set_y(eyes[i], sad ? 156 : 164);
         lv_obj_set_style_bg_color(eyes[i], sad ? lv_color_hex(0xDCEEFF) : lv_color_hex(theme_face_color()), 0);
+        if (pupils[i]) {
+            const bool closed = sleepy || flinch;
+            lv_obj_add_flag(pupils[i], closed ? LV_OBJ_FLAG_HIDDEN : 0);
+            lv_obj_set_pos(pupils[i], i == 0 ? (sad ? 22 : curious ? 28 : 18) : (sad ? 22 : curious ? 28 : 18),
+                           sad ? 27 : excited ? 18 : 23);
+            lv_obj_set_style_bg_color(pupils[i], lv_color_hex(0x05080D), 0);
+            if (glints[i]) {
+                if (closed) lv_obj_add_flag(glints[i], LV_OBJ_FLAG_HIDDEN);
+                else lv_obj_clear_flag(glints[i], LV_OBJ_FLAG_HIDDEN);
+            }
+        }
         lv_obj_set_style_shadow_color(eyes[i], sad ? lv_color_hex(0x6BB7E8) : lv_color_hex(0xA8D9FF), 0);
         lv_obj_set_style_shadow_width(eyes[i], sad ? 20 : 12, 0);
         lv_obj_set_style_bg_opa(eyes[i], (sleepy || flinch) ? LV_OPA_80 : LV_OPA_COVER, 0);
@@ -637,6 +648,27 @@ static void on_face_tap(lv_event_t *event)
     save_state();
 }
 
+static void gaze_timer(lv_timer_t *timer)
+{
+    (void)timer;
+    if (sleeping || screen_asleep || current_emotion == COMPANION_SLEEPY) return;
+    const int dx = (int)(esp_random() % 13U) - 6;
+    const int dy = (int)(esp_random() % 9U) - 4;
+    for (int i = 0; i < 2; ++i) {
+        if (!pupils[i]) continue;
+        const int base_x = current_emotion == COMPANION_CURIOUS ? 25 : 18;
+        lv_anim_t a;
+        lv_anim_init(&a);
+        lv_anim_set_var(&a, pupils[i]);
+        lv_anim_set_values(&a, lv_obj_get_x(pupils[i]), base_x + dx + (i ? 1 : -1));
+        lv_anim_set_duration(&a, 420 + (esp_random() % 260U));
+        lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
+        lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_obj_set_x);
+        lv_anim_start(&a);
+        lv_obj_set_y(pupils[i], 23 + dy);
+    }
+}
+
 static void blink_timer(lv_timer_t *timer)
 {
     (void)timer;
@@ -913,6 +945,22 @@ void app_main(void)
         style_eye(eyes[i]);
         lv_obj_set_size(eyes[i], 58, 78);
         lv_obj_set_pos(eyes[i], i == 0 ? 121 : 287, 112);
+        pupils[i] = lv_obj_create(eyes[i]);
+        lv_obj_remove_style_all(pupils[i]);
+        lv_obj_set_size(pupils[i], 20, 27);
+        lv_obj_set_pos(pupils[i], 18, 23);
+        lv_obj_set_style_bg_color(pupils[i], lv_color_hex(0x05080D), 0);
+        lv_obj_set_style_bg_opa(pupils[i], LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(pupils[i], LV_RADIUS_CIRCLE, 0);
+        lv_obj_clear_flag(pupils[i], LV_OBJ_FLAG_CLICKABLE);
+        glints[i] = lv_obj_create(pupils[i]);
+        lv_obj_remove_style_all(glints[i]);
+        lv_obj_set_size(glints[i], 6, 8);
+        lv_obj_set_pos(glints[i], 4, 4);
+        lv_obj_set_style_bg_color(glints[i], lv_color_hex(0xFFFFFF), 0);
+        lv_obj_set_style_bg_opa(glints[i], LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(glints[i], LV_RADIUS_CIRCLE, 0);
+        lv_obj_clear_flag(glints[i], LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_flag(eyes[i], LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_event_cb(eyes[i], on_face_tap, LV_EVENT_CLICKED, NULL);
         lv_obj_add_event_cb(eyes[i], on_face_long_press, LV_EVENT_LONG_PRESSED, NULL);
@@ -988,6 +1036,7 @@ void app_main(void)
     render_emotion(COMPANION_CALM);
     lv_timer_create(autonomous_timer, 8000, NULL);
     lv_timer_create(blink_timer, 2600, NULL);
+    lv_timer_create(gaze_timer, 1850, NULL);
     bsp_display_unlock();
 
     err = companion_ble_init();
