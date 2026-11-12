@@ -28,7 +28,7 @@ AI Companion — электронный друг и карманная перс�
 | iPhone music/camera | Не завершено | BLE AMS/HID, команды управления, тест iOS |
 | PC presentation remote | Не завершено | BLE HID keyboard/mouse, кнопки, наклон/указка, тест Windows/macOS/Linux |
 | Apps: clock/timer/stopwatch/flashlight/noise meter | Не завершены на устройстве | UI-модули LVGL, события, энергопотребление |
-| Games | Не завершены на устройстве | Отдельные LVGL apps, управление и тесты |
+| Игровые режимы | Не входят в продуктовую концепцию | AI Companion — компаньон, а не игровая приставка; оставить только полезные приложения и естественные реакции |
 | Firmware installer | Есть manifest и ESP Web Tools оболочка | Успешный firmware build, tagged release asset, USB flash acceptance |
 | Browser timer/stopwatch | Работают в web console | Не требуют прошивки |
 | Cloud speech/intent | Backend и firmware path как основа | Проверить live credentials, безопасность, latency, квоты и отказоустойчивость |
@@ -53,7 +53,7 @@ AI Companion — электронный друг и карманная перс�
 - Компьютерный HID не ломает существующее сопряжение с iPhone.
 
 ### D. On-device apps
-- QR, бейдж, clock, timer, stopwatch, flashlight, noise meter и games имеют реальные LVGL экраны.
+- QR, бейдж, clock, timer, stopwatch, flashlight и noise meter имеют реальные LVGL экраны.
 - Вход/выход из приложения, back/home, энергосбережение и восстановление состояния протестированы.
 
 ### E. Release
