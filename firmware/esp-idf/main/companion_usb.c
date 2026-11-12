@@ -60,6 +60,19 @@ static void send_config(void)
     cJSON_AddNumberToObject(json, "temperament", nvs_read_u8("temperament", 0, 4));
     cJSON_AddNumberToObject(json, "initiative", nvs_read_u8("initiative", 0, 2));
     cJSON_AddNumberToObject(json, "quirk", nvs_read_u8("quirk", 0, 4));
+    cJSON_AddNumberToObject(json, "brightness", nvs_read_u8("brightness", 85, 100));
+    cJSON_AddNumberToObject(json, "theme", nvs_read_u8("theme", 0, 4));
+    cJSON_AddNumberToObject(json, "sleep_timeout", nvs_read_u8("sleep_timeout", 30, 300));
+    char owner[48] = "", badge[64] = "", qr[4][180] = {{0}};
+    (void)nvs_read_string("owner_name", owner, sizeof(owner));
+    (void)nvs_read_string("owner_badge", badge, sizeof(badge));
+    cJSON_AddStringToObject(json, "owner", owner);
+    cJSON_AddStringToObject(json, "badge", badge);
+    static const char *const qr_keys[4] = {"qr0", "qr1", "qr2", "qr3"};
+    for (int i = 0; i < 4; ++i) {
+        (void)nvs_read_string(qr_keys[i], qr[i], sizeof(qr[i]));
+        cJSON_AddStringToObject(json, qr_keys[i], qr[i]);
+    }
     char *payload = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
     if (!payload) return;
@@ -100,6 +113,23 @@ static bool save_name(const char *name)
     nvs_handle_t handle;
     if (nvs_open("companion", NVS_READWRITE, &handle) != ESP_OK) return false;
     esp_err_t err = nvs_set_str(handle, "companion_name", name);
+    if (err == ESP_OK) err = nvs_commit(handle);
+    nvs_close(handle);
+    return err == ESP_OK;
+}
+
+static bool save_profile_string(const char *key, const char *value, size_t maximum)
+{
+    if (!value || !*value) return false;
+    size_t length = strlen(value);
+    if (length > maximum) return false;
+    for (size_t i = 0; i < length; ++i) {
+        unsigned char ch = (unsigned char)value[i];
+        if (ch < 0x20 || ch == 0x7f) return false;
+    }
+    nvs_handle_t handle;
+    if (nvs_open("companion", NVS_READWRITE, &handle) != ESP_OK) return false;
+    esp_err_t err = nvs_set_str(handle, key, value);
     if (err == ESP_OK) err = nvs_commit(handle);
     nvs_close(handle);
     return err == ESP_OK;
