@@ -6,6 +6,7 @@ idf_component_register(
         "companion_audio.c"
         "companion_voice.c"
         "companion_imu.c"
+        "companion_power.c"
         "companion_motion.c"
         "companion_wifi.c"
         "companion_setup.c"
@@ -20,6 +21,7 @@ idf_component_register(
         esp_event
         esp_netif
         esp_timer
+        esp_driver_i2c
         esp_driver_usb_serial_jtag
         esp_system
         esp_hw_support

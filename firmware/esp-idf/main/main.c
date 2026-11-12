@@ -26,9 +26,14 @@
 #include "companion_usb.h"
 #include "companion_setup.h"
 #include "companion_wifi.h"
+#include "companion_power.h"
+#include "companion_voice.h"
+#include "esp_timer.h"
 
 static const char *TAG = "ai_companion";
-static lv_obj_t *eyes[2], *mouth, *status_label, *brows[2], *tears[2], *setup_label;
+static lv_obj_t *eyes[2], *mouth, *status_label, *brows[2], *tears[2], *setup_label, *screen_face;
+static bool screen_asleep;
+static int64_t dizzy_until_us;
 static companion_state_t state;
 static companion_emotion_t current_emotion = COMPANION_CALM;
 static bool sleeping;
@@ -42,7 +47,7 @@ static const char *emotion_label(companion_emotion_t emotion)
 {
     static const char *labels[COMPANION_EMOTION_COUNT] = {
         "Calm", "Happy", "Curious", "Sleepy", "Sad",
-        "Affection", "Excited", "Surprised", "Concerned", "Shy"
+        "Affection", "Excited", "Surprised", "Concerned", "Shy", "Dizzy", "Flinch"
     };
     return labels[emotion < COMPANION_EMOTION_COUNT ? emotion : COMPANION_CALM];
 }
@@ -91,6 +96,8 @@ static void render_emotion(companion_emotion_t emotion)
     const bool sleepy = emotion == COMPANION_SLEEPY;
     const bool excited = emotion == COMPANION_EXCITED;
     const bool curious = emotion == COMPANION_CURIOUS || emotion == COMPANION_SURPRISED;
+    const bool dizzy = emotion == COMPANION_DIZZY;
+    const bool flinch = emotion == COMPANION_FLINCH;
     int eye_width = 58, eye_height = 78, mouth_width = 27, mouth_height = 8;
     int mouth_top = 0;
 
@@ -104,6 +111,8 @@ static void render_emotion(companion_emotion_t emotion)
         case COMPANION_SURPRISED: eye_width = 66; eye_height = 100; mouth_width = 15; mouth_height = 22; break;
         case COMPANION_CONCERNED: eye_width = 57; eye_height = 70; mouth_width = 29; mouth_height = 8; break;
         case COMPANION_SHY: eye_width = 58; eye_height = 60; mouth_width = 16; mouth_height = 7; break;
+        case COMPANION_DIZZY: eye_width = 54; eye_height = 48; mouth_width = 34; mouth_height = 12; break;
+        case COMPANION_FLINCH: eye_width = 58; eye_height = 4; mouth_width = 11; mouth_height = 4; break;
         default: break;
     }
 
@@ -116,9 +125,9 @@ static void render_emotion(companion_emotion_t emotion)
         lv_obj_set_style_bg_color(eyes[i], sad ? lv_color_hex(0xDCEEFF) : lv_color_hex(0xFFFFFF), 0);
         lv_obj_set_style_shadow_color(eyes[i], sad ? lv_color_hex(0x6BB7E8) : lv_color_hex(0xA8D9FF), 0);
         lv_obj_set_style_shadow_width(eyes[i], sad ? 20 : 12, 0);
-        lv_obj_set_style_bg_opa(eyes[i], sleepy ? LV_OPA_80 : LV_OPA_COVER, 0);
-        lv_obj_set_style_radius(eyes[i], sleepy ? 8 : LV_RADIUS_CIRCLE, 0);
-        lv_obj_set_style_transform_rotation(eyes[i], sad ? (i == 0 ? -65 : 65) : 0, 0);
+        lv_obj_set_style_bg_opa(eyes[i], (sleepy || flinch) ? LV_OPA_80 : LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(eyes[i], (sleepy || flinch) ? 8 : LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_transform_rotation(eyes[i], sad ? (i == 0 ? -65 : 65) : (dizzy ? (i == 0 ? 18 : -18) : 0), 0);
         lv_obj_clear_flag(tears[i], LV_OBJ_FLAG_HIDDEN);
         if (sad) lv_obj_set_y(tears[i], 218 + (i ? 5 : 0));
         else lv_obj_add_flag(tears[i], LV_OBJ_FLAG_HIDDEN);
@@ -141,7 +150,7 @@ static void render_emotion(companion_emotion_t emotion)
     lv_obj_set_style_border_width(mouth, sleepy ? 0 : 3, 0);
     lv_obj_set_style_border_side(mouth, sad || emotion == COMPANION_CONCERNED ? LV_BORDER_SIDE_TOP : LV_BORDER_SIDE_BOTTOM, 0);
     lv_obj_set_style_radius(mouth, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_transform_rotation(mouth, emotion == COMPANION_SHY ? -40 : 0, 0);
+    lv_obj_set_style_transform_rotation(mouth, emotion == COMPANION_SHY ? -40 : (dizzy ? 12 : 0), 0);
     lv_label_set_text(status_label, emotion_label(emotion));
 }
 
@@ -155,6 +164,25 @@ static void set_emotion(companion_emotion_t emotion, bool sound)
         esp_err_t err = companion_audio_play(emotion, false);
         if (err != ESP_OK && err != ESP_ERR_TIMEOUT) ESP_LOGW(TAG, "Audio play: %s", esp_err_to_name(err));
     }
+}
+
+static void set_screen_sleep(bool asleep)
+{
+    if (screen_asleep == asleep || !screen_face) return;
+    if (bsp_display_lock(pdMS_TO_TICKS(1000)) != ESP_OK) return;
+    screen_asleep = asleep;
+    lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(asleep ? 0x000000 : 0x05070B), 0);
+    if (asleep) {
+        /* The CO5300 AMOLED has no LED backlight: a fully black frame blanks its pixels. */
+        lv_obj_add_flag(screen_face, LV_OBJ_FLAG_HIDDEN);
+        if (status_label) lv_obj_add_flag(status_label, LV_OBJ_FLAG_HIDDEN);
+        if (setup_label) lv_obj_add_flag(setup_label, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_clear_flag(screen_face, LV_OBJ_FLAG_HIDDEN);
+        if (status_label) lv_obj_clear_flag(status_label, LV_OBJ_FLAG_HIDDEN);
+        if (setup_label) lv_obj_clear_flag(setup_label, LV_OBJ_FLAG_HIDDEN);
+    }
+    bsp_display_unlock();
 }
 
 static void save_state(void)
@@ -206,6 +234,8 @@ static companion_emotion_t parse_emotion(const char *value)
     if (!strcmp(value, "surprised")) return COMPANION_SURPRISED;
     if (!strcmp(value, "concerned")) return COMPANION_CONCERNED;
     if (!strcmp(value, "shy")) return COMPANION_SHY;
+    if (!strcmp(value, "dizzy")) return COMPANION_DIZZY;
+    if (!strcmp(value, "flinch")) return COMPANION_FLINCH;
     return COMPANION_CALM;
 }
 
@@ -289,19 +319,35 @@ static void on_usb_command(const char *command)
     } else if (!strcmp(command, "wake")) {
         sleeping = false;
         manual_sleep = false;
+        set_screen_sleep(false);
         set_emotion(COMPANION_HAPPY, true);
     } else if (!strcmp(command, "pet")) {
         sleeping = false;
         manual_sleep = false;
         companion_emotion_interaction(&state, "pet");
-        set_emotion(COMPANION_HAPPY, true);
+        set_emotion(COMPANION_HAPPY, false);
+        if (audio_available) companion_audio_play_sound(VOICE_PURR, false);
         save_state();
     } else if (!strcmp(command, "play")) {
         sleeping = false;
         manual_sleep = false;
         companion_emotion_interaction(&state, "play");
-        set_emotion(COMPANION_EXCITED, true);
+        set_emotion(COMPANION_EXCITED, false);
+        if (audio_available) companion_audio_play_sound(VOICE_NOM, false);
         save_state();
+    } else if (!strncmp(command, "emotion ", 8)) {
+        const companion_emotion_t emotion = parse_emotion(command + 8);
+        set_emotion(emotion, true);
+    } else if (!strncmp(command, "sound ", 6)) {
+        const char *sound = command + 6;
+        int cue = VOICE_HM;
+        if (!strcmp(sound, "purr")) cue = VOICE_PURR;
+        else if (!strcmp(sound, "growl")) cue = VOICE_GROWL;
+        else if (!strcmp(sound, "nom")) cue = VOICE_NOM;
+        else if (!strcmp(sound, "dizzy")) cue = VOICE_DIZZY;
+        else if (!strcmp(sound, "surprise")) cue = VOICE_OH;
+        else if (!strcmp(sound, "hmph")) cue = VOICE_HMPH;
+        if (audio_available) companion_audio_play_sound(cue, true);
     } else if (!strcmp(command, "wifi-reset")) {
         (void)companion_wifi_reset();
     }
@@ -382,6 +428,19 @@ static void voice_task(void *arg)
         if (!audio_available) { vTaskDelay(pdMS_TO_TICKS(1000)); continue; }
         size_t samples = 0;
         esp_err_t err = companion_audio_capture_utterance(pcm, max_samples, &samples, 6000);
+        const uint32_t audio_events = companion_audio_take_events();
+        if (audio_events & COMPANION_AUDIO_BLOW) {
+            set_emotion(COMPANION_FLINCH, false);
+            if (audio_available) companion_audio_play_sound(VOICE_POKE, false);
+            vTaskDelay(pdMS_TO_TICKS(850));
+            if (!sleeping) set_emotion(COMPANION_CURIOUS, false);
+            continue;
+        }
+        if (audio_events & COMPANION_AUDIO_CLAP) {
+            set_emotion(COMPANION_SURPRISED, false);
+            if (audio_available) companion_audio_play_sound(VOICE_OH, false);
+            continue;
+        }
         if (err == ESP_OK && samples > 0) {
             if (!companion_wifi_is_connected()) {
                 ESP_LOGI(TAG, "Speech detected offline; local touch and emotion engine remain active");
@@ -414,19 +473,55 @@ static void imu_task(void *arg)
             if (events & COMPANION_MOTION_FACE_DOWN) {
                 sleeping = true;
                 manual_sleep = false;
-                set_emotion(COMPANION_SLEEPY, true);
+                set_emotion(COMPANION_SLEEPY, false);
+                set_screen_sleep(true);
             } else if (events & COMPANION_MOTION_FACE_UP) {
                 sleeping = false;
                 manual_sleep = false;
+                set_screen_sleep(false);
                 set_emotion(COMPANION_HAPPY, true);
-            } else if (events & (COMPANION_MOTION_SHAKE | COMPANION_MOTION_FALL)) {
+            } else if (events & COMPANION_MOTION_SHAKE) {
+                dizzy_until_us = esp_timer_get_time() + 2600000LL;
+                set_emotion(COMPANION_DIZZY, true);
+            } else if (events & COMPANION_MOTION_FALL) {
                 set_emotion(COMPANION_SURPRISED, false);
             } else if ((events & (COMPANION_MOTION_UPSIDE_DOWN | COMPANION_MOTION_UPRIGHT)) &&
                        current_emotion == COMPANION_CALM) {
                 set_emotion(COMPANION_CURIOUS, false);
             }
+            if (dizzy_until_us && esp_timer_get_time() >= dizzy_until_us &&
+                current_emotion == COMPANION_DIZZY && !sleeping) {
+                dizzy_until_us = 0;
+                set_emotion(COMPANION_CURIOUS, false);
+            }
         }
         vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+
+static void power_task(void *arg)
+{
+    (void)arg;
+    esp_err_t err = companion_power_init();
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "AXP2101 unavailable; charging reactions disabled: %s", esp_err_to_name(err));
+        vTaskDelete(NULL);
+        return;
+    }
+    int64_t last_meal_us = 0;
+    while (true) {
+        const uint32_t events = companion_power_poll();
+        const int64_t now = esp_timer_get_time();
+        const bool connected = companion_power_vbus_present();
+        if ((events & COMPANION_POWER_CHARGER_CONNECTED) ||
+            (connected && (last_meal_us == 0 || now - last_meal_us > 25000000LL))) {
+            companion_emotion_interaction(&state, "feed");
+            set_emotion(COMPANION_HAPPY, false);
+            if (audio_available) companion_audio_play_sound(VOICE_NOM, false);
+            save_state();
+            last_meal_us = now;
+        }
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 
@@ -479,6 +574,7 @@ void app_main(void)
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, 0);
 
     lv_obj_t *face = lv_obj_create(screen);
+    screen_face = face;
     lv_obj_remove_style_all(face);
     lv_obj_set_size(face, 466, 330);
     lv_obj_align(face, LV_ALIGN_CENTER, 0, -25);
@@ -565,7 +661,8 @@ void app_main(void)
         ESP_LOGW(TAG, "QMI8658 unavailable; IMU reactions disabled");
     }
     xTaskCreate(network_setup_task, "companion_setup", 4096, NULL, 2, NULL);
-    ESP_LOGI(TAG, "AI Companion firmware 2.1.0 started. Nonverbal output only; offline local mode retained.");
+    xTaskCreate(power_task, "companion_power", 4096, NULL, 2, NULL);
+    ESP_LOGI(TAG, "AI Companion firmware 2.2.0 started. Nonverbal output only; offline local mode retained.");
     if (companion_usb_start(on_usb_command) != ESP_OK) {
         ESP_LOGW(TAG, "USB Serial/JTAG control protocol unavailable");
     }

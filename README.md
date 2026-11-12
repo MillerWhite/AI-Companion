@@ -10,7 +10,7 @@
 
 ## Что добавлено в программную основу
 
-- Десять эмоций с анимированной мимикой, отдельным выражением грусти, слезами/бровями и морганием.
+- Двенадцать эмоций с анимированной мимикой, отдельным выражением грусти, слезами/бровями и морганием.
 - Потребности, доверие, игривость, темперамент, инициативность и индивидуальные привычки с локальным сохранением.
 - ES8311/ES7210 BSP audio path: мягкие процедурные невербальные звуки, VAD и захват PCM 16 kHz.
 - QMI8658 motion/tilt service with filtering and event cooldowns.
@@ -51,7 +51,7 @@ python -m unittest discover -s backend/tests -v
 
 ## Firmware installer
 
-Откройте `web/installer/index.html` через GitHub Pages/HTTPS. Для публикации включите GitHub Pages с источником GitHub Actions в Settings → Pages; workflow `.github/workflows/pages-installer.yml` развернёт страницу после merge в `main` (доступность Pages для private repo зависит от плана GitHub). Используйте Chrome или Edge и USB-кабель с передачей данных. Публичный бинарник появится только после успешного workflow и тега `firmware-vX.Y.Z`.
+Откройте `web/installer/index.html` через GitHub Pages/HTTPS. Для публикации включите GitHub Pages с источником GitHub Actions в Settings → Pages; workflow `.github/workflows/pages.yml` развернёт страницу после merge в `main` (доступность Pages для private repo зависит от плана GitHub). Используйте Chrome или Edge и USB-кабель с передачей данных. Публичный бинарник появится только после успешного workflow и тега `firmware-vX.Y.Z`.
 
 ## Hardware
 

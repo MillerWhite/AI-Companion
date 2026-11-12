@@ -1,4 +1,4 @@
-# AI Companion — implementation status 2.1
+# AI Companion — implementation status 2.2
 
 This is a code-level status, not a claim of hardware or production acceptance. A feature is not release-ready until its CI and physical acceptance checks pass.
 
@@ -15,13 +15,14 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 
 | Task | Code status | Remaining acceptance gate |
 |---|---|---|
-| Full emotional transitions and facial expressions | Implemented in firmware/browser code: ten moods, animated eye/mouth geometry, sadness brows/tears, blink and need-driven transitions | ESP-IDF build; physical display smoothness and emotional clarity test |
+| Full emotional transitions and facial expressions | Implemented in firmware/browser code: twelve moods, animated eye/mouth geometry, sadness brows/tears, blink and need-driven transitions | ESP-IDF build; physical display smoothness and emotional clarity test |
 | Unique personality and long-term development | Implemented foundation: temperament, initiative, selectable quirks, needs, trust/playfulness, persistent local state and safe durable preference facts | Broader traits/quirks, multi-month progression tuning and owner data export review |
 | Physical speaker sound system | Implemented driver path: ES8311 BSP handle, soft procedural motifs, low gain and cooldown | Board test, audio calibration, echo/feedback and listening-quality review |
 | Microphone speech recognition | Implemented pipeline: ES7210 BSP capture, VAD, mono 16 kHz PCM, backend SpeechKit route | Board microphone slot mapping, Russian/noise tests, live SpeechKit credentials and quota test |
 | Wi-Fi and automatic reconnect | Implemented: SoftAP Security 1 provisioning, NVS credential persistence, exponential reconnect | First-boot test with actual router and recovery/reset test |
 | Cloud intent → firmware behavior | Implemented: voice → SpeechKit → intent → allowlist validation → emotion/action application | Live Yandex model smoke test and real device integration test |
-| ES8311, ES7210, QMI8658 drivers | BSP codec handles and QMI8658 managed driver are wired into service modules | Verify actual BSP component resolution, build and physical register/data test |
+| Sensor-driven pet reactions | Added QMI8658 shake/dizzy and face-down blank/wake; ES7210 mic blow/clap classifiers; AXP2101 VBUS/charge/battery telemetry with feeding/energy response | Threshold calibration, AMOLED blank-state power measurement, AXP2101 read validation and physical acceptance test |
+| ES8311, ES7210, QMI8658, AXP2101 drivers | BSP codec handles, QMI8658 managed driver and AXP2101 register reads are wired into service modules | Verify actual BSP component resolution, build and physical register/data test |
 | Owner server-memory controls | Implemented: bounded context, safe fact categories, 90-day expiry, export/delete/profile APIs and PIN-protected local portal | Privacy review, retention job/backup review and owner usability test |
 | Automatic website firmware flashing | Implemented: ESP Web Tools page, manifest and tagged release workflow | Successful firmware CI build and published release asset; browser/USB test |
 | Registration after purchase | Implemented generic flow: HMAC-signed paid event → hashed single-use grant → serial claim → NVS token | Connect and verify an actual payment provider, refunds/chargebacks and order/account system |
@@ -51,7 +52,7 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 
 ## Explicitly not claimed
 
-- No successful firmware build or physical board test has been observed yet.
+- No successful firmware build or physical board test has been observed yet. Sensor reaction thresholds are code-level prototypes until calibrated on the exact board and enclosure.
 - No public production backend has been deployed.
 - No actual payment provider has been connected.
 - No Yandex AI or SpeechKit live request has been verified with a rotated secret.

@@ -1,6 +1,8 @@
 #include "companion_audio.h"
 
 #include <math.h>
+#include <string.h>
+#include "esp_timer.h"
 #include "companion_voice.h"
 #include "esp_codec_dev.h"
 #include "esp_log.h"
@@ -27,9 +29,20 @@ static bool audio_ready;
 static int64_t last_sound_us;
 static volatile bool playback_active;
 static uint8_t sound_temperament;
+static volatile uint32_t detected_events;
+static uint8_t blow_frames;
+static int64_t last_blow_event_us;
+static int64_t last_clap_event_us;
 static int16_t playback_pcm[PLAYBACK_CAPACITY];
 
 bool companion_audio_is_ready(void) { return audio_ready; }
+
+uint32_t companion_audio_take_events(void)
+{
+    uint32_t events = detected_events;
+    detected_events = 0;
+    return events;
+}
 
 void companion_audio_set_temperament(uint8_t temperament)
 {
@@ -70,45 +83,55 @@ static int voice_for_emotion(companion_emotion_t emotion)
 {
     switch (emotion) {
         case COMPANION_HAPPY: return VOICE_HAPPY;
-        case COMPANION_CURIOUS: return VOICE_HM;
+        case COMPANION_CURIOUS: return VOICE_TICK;
         case COMPANION_SLEEPY: return VOICE_YAWN;
         case COMPANION_SAD: return VOICE_SAD;
         case COMPANION_AFFECTIONATE: return VOICE_LOVE;
         case COMPANION_EXCITED: return VOICE_HAPPY;
         case COMPANION_SURPRISED: return VOICE_OH;
-        case COMPANION_CONCERNED: return VOICE_HM;
+        case COMPANION_CONCERNED: return VOICE_GROWL;
         case COMPANION_SHY: return VOICE_POKE;
+        case COMPANION_DIZZY: return VOICE_DIZZY;
+        case COMPANION_FLINCH: return VOICE_POKE;
         case COMPANION_CALM:
         default: return VOICE_HM;
     }
 }
 
-esp_err_t companion_audio_play(companion_emotion_t emotion, bool force)
+static esp_err_t audio_play_voice(int sound, bool force)
 {
     if (!audio_ready || !speaker || !audio_mutex) return ESP_ERR_INVALID_STATE;
     if (xSemaphoreTake(audio_mutex, pdMS_TO_TICKS(250)) != pdTRUE) return ESP_ERR_TIMEOUT;
-
     const int64_t now = esp_timer_get_time();
     if (!force && now - last_sound_us < AUDIO_COOLDOWN_US) {
         xSemaphoreGive(audio_mutex);
         return ESP_OK;
     }
-    if ((unsigned)emotion >= COMPANION_EMOTION_COUNT) emotion = COMPANION_CALM;
+    if (sound < 0 || sound >= VOICE_COUNT) sound = VOICE_HM;
     last_sound_us = now;
     playback_active = true;
-    voice_say(voice_for_emotion(emotion));
-
+    voice_say(sound);
     size_t samples = 0;
     while (voice_busy() && samples + PLAYBACK_CHUNK <= PLAYBACK_CAPACITY) {
         voice_render(&playback_pcm[samples], PLAYBACK_CHUNK);
         samples += PLAYBACK_CHUNK;
     }
-
     esp_err_t err = samples ? esp_codec_dev_write(speaker, playback_pcm, (int)(samples * sizeof(int16_t))) : ESP_OK;
     playback_active = false;
     xSemaphoreGive(audio_mutex);
     if (err != ESP_OK) ESP_LOGW(TAG, "Nonverbal sound playback failed: %s", esp_err_to_name(err));
     return err;
+}
+
+esp_err_t companion_audio_play(companion_emotion_t emotion, bool force)
+{
+    if ((unsigned)emotion >= COMPANION_EMOTION_COUNT) emotion = COMPANION_CALM;
+    return audio_play_voice(voice_for_emotion(emotion), force);
+}
+
+esp_err_t companion_audio_play_sound(int sound, bool force)
+{
+    return audio_play_voice(sound, force);
 }
 
 esp_err_t companion_audio_capture_utterance(int16_t *mono_pcm, size_t capacity_samples,
@@ -132,12 +155,53 @@ esp_err_t companion_audio_capture_utterance(int16_t *mono_pcm, size_t capacity_s
         xSemaphoreGive(audio_mutex);
         if (err != ESP_OK) return err;
 
-        float energy = 0.0f;
+        float energy = 0.0f, peak = 0.0f, mean = 0.0f;
+        for (size_t i = 0; i < AUDIO_FRAME_SAMPLES; ++i) mean += (float)frame_pcm[i];
+        mean /= (float)AUDIO_FRAME_SAMPLES;
+        unsigned zero_crossings = 0;
+        float diff_energy = 0.0f;
+        float previous = (float)frame_pcm[0] - mean;
         for (size_t i = 0; i < AUDIO_FRAME_SAMPLES; ++i) {
-            const float sample = (float)frame_pcm[i];
+            const float sample = (float)frame_pcm[i] - mean;
             energy += sample * sample;
+            if (fabsf(sample) > peak) peak = fabsf(sample);
+            if (i > 0) {
+                if ((sample >= 0.0f && previous < 0.0f) || (sample < 0.0f && previous >= 0.0f)) ++zero_crossings;
+                const float diff = sample - previous;
+                diff_energy += diff * diff;
+            }
+            previous = sample;
         }
         const float rms = sqrtf(energy / (float)AUDIO_FRAME_SAMPLES);
+        const float zcr = (float)zero_crossings / (float)AUDIO_FRAME_SAMPLES;
+        const float high_frequency_ratio = sqrtf(diff_energy / (float)AUDIO_FRAME_SAMPLES) / (rms + 1.0f);
+        const int64_t now_us = esp_timer_get_time();
+
+        /* A clap is a short high-crest impulse; wind is sustained and low-frequency. */
+        if (peak > 10500.0f && rms > 1700.0f && peak > rms * 3.0f &&
+            now_us - last_clap_event_us > 1300000LL) {
+            last_clap_event_us = now_us;
+            detected_events |= COMPANION_AUDIO_CLAP;
+            *captured_samples = 0;
+            blow_frames = 0;
+            return ESP_ERR_NOT_FOUND;
+        }
+        const bool blow_candidate = rms > 650.0f && rms < 6500.0f &&
+                                    zcr < 0.13f && high_frequency_ratio < 1.05f &&
+                                    peak > 1400.0f;
+        if (blow_candidate) {
+            if (blow_frames < 20) ++blow_frames;
+        } else if (blow_frames > 0) {
+            --blow_frames;
+        }
+        if (blow_frames >= 8 && now_us - last_blow_event_us > 2600000LL) {
+            last_blow_event_us = now_us;
+            detected_events |= COMPANION_AUDIO_BLOW;
+            *captured_samples = 0;
+            blow_frames = 0;
+            return ESP_ERR_NOT_FOUND;
+        }
+
         if (rms > VAD_RMS_THRESHOLD) {
             ++active_frames;
             silent_frames = 0;
