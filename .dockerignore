@@ -3,5 +3,9 @@
 **/__pycache__
 **/*.pyc
 backend/.env
+backend/.env*
+!backend/.env.example
+!backend/.env.production.example
+backend/backups
 backend/devices.sqlite3
 firmware/esp-idf/build
