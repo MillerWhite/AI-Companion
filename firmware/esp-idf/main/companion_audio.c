@@ -83,14 +83,15 @@ static int voice_for_emotion(companion_emotion_t emotion)
 {
     switch (emotion) {
         case COMPANION_HAPPY: return VOICE_HAPPY;
-        case COMPANION_CURIOUS: return VOICE_HM;
+        case COMPANION_CURIOUS: return VOICE_TICK;
         case COMPANION_SLEEPY: return VOICE_YAWN;
         case COMPANION_SAD: return VOICE_SAD;
         case COMPANION_AFFECTIONATE: return VOICE_LOVE;
         case COMPANION_EXCITED: return VOICE_HAPPY;
         case COMPANION_SURPRISED: return VOICE_OH;
-        case COMPANION_CONCERNED: return VOICE_HM;
+        case COMPANION_CONCERNED: return VOICE_GROWL;
         case COMPANION_SHY: return VOICE_POKE;
+        case COMPANION_DIZZY: return VOICE_DIZZY;
         case COMPANION_CALM:
         default: return VOICE_HM;
     }
