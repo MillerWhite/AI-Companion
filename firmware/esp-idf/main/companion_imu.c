@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "esp_check.h"
 #include "bsp/esp-bsp.h"
 #include "qmi8658.h"
@@ -12,6 +13,8 @@ static qmi8658_dev_t *imu;
 static float filtered_x, filtered_y, filtered_z;
 static bool ready;
 static bool filter_initialized;
+static int64_t last_motion_event_us;
+static int64_t last_tilt_event_us;
 
 esp_err_t companion_imu_init(void)
 {
@@ -53,11 +56,21 @@ bool companion_imu_motion_event(void)
     float x, y, z;
     if (!read_motion(&x, &y, &z)) return false;
     const float magnitude = sqrtf(x*x + y*y + z*z);
-    return fabsf(magnitude - 9.81f) > 5.2f;
+    const int64_t now = esp_timer_get_time();
+    if (fabsf(magnitude - 9.81f) > 5.2f && now - last_motion_event_us > 1800000LL) {
+        last_motion_event_us = now;
+        return true;
+    }
+    return false;
 }
 
 bool companion_imu_tilt_event(void)
 {
     if (!filter_initialized) return false;
-    return fabsf(filtered_x) > 6.0f || fabsf(filtered_y) > 6.0f;
+    const int64_t now = esp_timer_get_time();
+    if ((fabsf(filtered_x) > 6.0f || fabsf(filtered_y) > 6.0f) && now - last_tilt_event_us > 3500000LL) {
+        last_tilt_event_us = now;
+        return true;
+    }
+    return false;
 }
