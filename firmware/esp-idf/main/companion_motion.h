@@ -19,7 +19,7 @@ typedef struct {
     uint32_t steps;
     bool initialized, above_step, falling;
     float base_x, base_y, shake_time, face_down_time, upside_time, fall_time;
-    float magnitude_lp, magnitude_base, elapsed, last_step;
+    float magnitude_lp, magnitude_base, elapsed, last_step, upside_down_time;
 } companion_motion_state_t;
 
 uint32_t companion_motion_feed(companion_motion_state_t *state, float ax_g, float ay_g, float az_g, float elapsed_seconds);
