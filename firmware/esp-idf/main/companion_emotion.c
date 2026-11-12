@@ -64,7 +64,7 @@ companion_emotion_t companion_emotion_choose(const companion_state_t *s,
 {
     if (!s) return COMPANION_CALM;
     companion_emotion_t chosen;
-    if (s->energy < 13.0f || (hour >= 23 || hour < 6) && s->energy < 48.0f) chosen = COMPANION_SLEEPY;
+    if (s->energy < 13.0f || ((hour >= 23 || hour < 6) && s->energy < 48.0f)) chosen = COMPANION_SLEEPY;
     else if (s->comfort < 18.0f) chosen = COMPANION_SAD;
     else if (s->social > 88.0f && s->trust > 35.0f) chosen = COMPANION_AFFECTIONATE;
     else if (s->quirk == 1 && s->energy < 58.0f) chosen = COMPANION_SLEEPY;
