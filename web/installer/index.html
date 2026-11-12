@@ -20,6 +20,29 @@ section{padding:17px 0;border-top:1px solid var(--line)}.sectionhead{display:fle
 .actions{display:flex;gap:8px;flex-wrap:wrap}.muted{color:var(--muted);font-size:11px;margin:9px 0 0}.save{margin-top:12px}.qrrow{display:grid;grid-template-columns:24px 1fr 1.7fr;gap:8px;align-items:end;margin:9px 0}.qrnum{font:11px var(--mono);color:var(--blue);padding:10px 0}
 details{border:1px solid var(--line);border-radius:10px;margin-top:12px;background:#101419}summary{padding:12px 14px;cursor:pointer;font-size:13px;font-weight:650}details .inside{padding:0 14px 14px}.log{white-space:pre-wrap;overflow:auto;max-height:210px;background:#090c0f;border:1px solid #2a333c;border-radius:8px;padding:10px;color:#b4d3e2;font:11px/1.5 var(--mono)}
 footer{border-top:1px solid var(--line);padding-top:14px;margin-top:22px;color:#78838f;font:10px var(--mono);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}a{color:var(--blue);text-decoration:none}
+
+.firmware-card{position:relative;overflow:hidden;margin:18px 0 22px;padding:22px;border:1px solid #456174;border-radius:17px;background:radial-gradient(ellipse at 90% 0%,#1d3b4c 0,transparent 48%),linear-gradient(135deg,#141f28 0%,#10171e 62%,#121b23 100%);box-shadow:0 14px 40px #0005}
+.firmware-card:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:linear-gradient(180deg,#c5edff,#5b9fbd 65%,#34566c)}
+.firmware-card .sectionhead{align-items:center;margin-bottom:10px}
+.firmware-card .sectionhead h2{font-size:19px;letter-spacing:-.035em}
+.firmware-card .sectionhead small{color:#a9cfe1}
+.firmware-kicker{display:flex;align-items:center;gap:7px;color:#a9cfe1;font:10px var(--mono);letter-spacing:.13em;text-transform:uppercase;margin-bottom:8px}
+.firmware-kicker:before{content:"";width:7px;height:7px;border-radius:50%;background:#8bd5ad;box-shadow:0 0 12px #8bd5ad88}
+.firmware-copy{max-width:540px;color:#aab8c4;font-size:12px;line-height:1.6;margin:0 0 16px}
+.firmware-install{display:block;width:100%;--esp-tools-button-color:#d8f2ff;--esp-tools-button-text-color:#0b1820;--esp-tools-button-border-radius:11px}
+.firmware-install::part(button){font-size:inherit}
+.firmware-install [slot="activate"]{display:block;width:100%;border:0;border-radius:11px;padding:0;background:transparent}
+.firmware-install-button{width:100%;min-height:58px;display:flex;align-items:center;justify-content:center;gap:12px;border:1px solid #e2f6ff;background:linear-gradient(110deg,#dff6ff,#a9d9ef);color:#08151d;border-radius:11px;padding:14px 18px;font-size:15px;font-weight:800;letter-spacing:-.01em;box-shadow:0 5px 22px #87cbe533,inset 0 1px #fff;transition:transform .16s ease,box-shadow .16s ease,filter .16s ease}
+.firmware-install-button:before{content:"↥";width:29px;height:29px;display:grid;place-items:center;border:1px solid #18364733;border-radius:8px;font-size:21px;line-height:1}
+.firmware-install-button:hover{transform:translateY(-1px);filter:brightness(1.04);box-shadow:0 9px 28px #87cbe555,inset 0 1px #fff}
+.firmware-install-button:active{transform:translateY(0)}
+.firmware-install [slot="unsupported"],.firmware-install [slot="not-allowed"]{display:block;margin-top:11px;padding:10px 12px;border:1px solid #765b43;border-radius:9px;background:#2a211a;color:#f1c99f;font-size:12px;line-height:1.5}
+.firmware-footnote{display:flex;gap:8px;align-items:flex-start;margin-top:12px;color:#8194a2;font-size:11px;line-height:1.5}
+.firmware-footnote:before{content:"i";flex:none;width:16px;height:16px;display:grid;place-items:center;border:1px solid #587386;border-radius:50%;font:11px var(--mono);color:#a9cfe1}
+.statusactions #connect{min-width:190px}
+.statusactions #disconnect{min-width:145px}
+@media(max-width:560px){.firmware-card{padding:17px 15px;margin:14px 0 18px}.firmware-card .sectionhead h2{font-size:17px}.firmware-install-button{min-height:56px;font-size:14px}.statusactions #connect,.statusactions #disconnect{min-width:0}}
+
 @media(max-width:560px){main{width:min(100% - 22px,760px);padding-top:13px}header{align-items:flex-start;flex-direction:column}.statusbar{grid-template-columns:1fr}.statusactions{justify-content:flex-start}.stats{grid-template-columns:repeat(3,1fr);gap:5px}.stat{padding:8px}.grid{grid-template-columns:1fr}.qrrow{grid-template-columns:20px 1fr}.qrrow .url{grid-column:2}.sectionhead{align-items:flex-start;flex-direction:column}}
 
 .companion-stage{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:26px 16px 22px;margin:18px 0;background:radial-gradient(ellipse at 50% 42%,#202b36 0,#111820 43%,#0c1015 78%);border:1px solid #303b46;border-radius:22px;overflow:hidden;position:relative}
@@ -41,13 +64,19 @@ footer{border-top:1px solid var(--line);padding-top:14px;margin-top:22px;color:#
 <header><div class="brand"><div class="mark">AC</div><div><b>AI COMPANION</b><small>ТВОЙ КАРМАННЫЙ ДРУГ</small></div></div><span class="pet-hint">ВСЕГДА РЯДОМ</span></header>
 <div class="hero"><div class="eyebrow">YOUR PERSONAL COMPANION</div><h1>Твой электронный друг</h1><p>Настрой имя, характер и функции своего компаньона в одном месте.</p></div>
 <div class="companion-stage"><div class="pet-orb neutral" id="petOrb" role="button" tabindex="0" aria-label="Коснуться лица компаньона"><div class="pet-face"><i class="pet-eye"></i><i class="pet-eye"></i><i class="pet-mouth" id="petMouth"></i></div></div><div class="pet-caption" id="petCaption">Я здесь</div><div class="pet-subcaption" id="petSubcaption">Спокойно оглядываюсь и жду знакомства</div><div class="pet-hint">Коснись лица, чтобы поздороваться</div></div>
-<div class="statusbar"><div class="statusmain"><i class="dot" id="dot"></i><div class="statuscopy"><b id="conn">Не подключён</b><small id="status">Подключи брелок USB-кабелем с передачей данных. Работает в Chrome и Edge.</small></div></div><div class="statusactions"><button class="primary" id="connect">Подключить по кабелю</button><button id="disconnect" disabled>Отключить</button></div></div>
+<div class="statusbar"><div class="statusmain"><i class="dot" id="dot"></i><div class="statuscopy"><b id="conn">Не подключён</b><small id="status">Подключи брелок USB-кабелем с передачей данных. Работает в Chrome и Edge.</small></div></div><div class="statusactions"><button class="primary" id="connect">Подключить устройство</button><button id="disconnect" disabled>Отключить устройство</button></div></div>
 <div class="stats"><div class="stat"><small>Прошивка</small><b id="version">—</b></div><div class="stat"><small>Батарея</small><b id="battery">—</b></div><div class="stat"><small>Имя</small><b id="deviceName">—</b></div></div>
 
-<section><div class="sectionhead"><h2>Установка и обновление прошивки</h2><small>ESP32-S3 · USB</small></div>
-<p class="muted">Установи актуальную прошивку прямо из браузера. Нужен Chrome или Edge на компьютере и USB-кабель с передачей данных. Не отключай устройство во время прошивки.</p>
-<esp-web-install-button manifest="./manifest.json"></esp-web-install-button>
-<p class="muted">Кнопка загрузит последний опубликованный релиз AI Companion. Если релиз ещё не опубликован, сначала потребуется успешная сборка firmware и выпуск версии.</p>
+<section class="firmware-card" aria-labelledby="firmwareTitle">
+<div class="firmware-kicker">Обновление устройства</div>
+<div class="sectionhead"><h2 id="firmwareTitle">Установка прошивки</h2><small>ESP32-S3 · USB</small></div>
+<p class="firmware-copy">Установи AI Companion или обнови его до последней версии прямо из браузера. Нужны компьютер с Chrome или Edge и USB-кабель с передачей данных.</p>
+<esp-web-install-button class="firmware-install" manifest="./manifest.json">
+<button slot="activate" class="firmware-install-button" type="button">Установить / обновить прошивку</button>
+<span slot="unsupported">Этот браузер не поддерживает установку по USB. Открой страницу в Google Chrome или Microsoft Edge на компьютере.</span>
+<span slot="not-allowed">Для установки открой сайт по HTTPS. Браузер блокирует прошивку на обычном HTTP.</span>
+</esp-web-install-button>
+<div class="firmware-footnote">Если брелок уже подключён к панели выше, сначала нажми «Отключить устройство». Затем нажми кнопку установки и выбери USB-порт брелока в окне браузера. Не отключай кабель до завершения прошивки.</div>
 </section>
 
 
