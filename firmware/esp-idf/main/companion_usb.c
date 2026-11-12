@@ -177,7 +177,7 @@ static void process_command(char *line)
         if (!save_u8("theme", line + 6, 4)) { usb_write_line("@E invalid_theme\n"); return; }
         profile_changed = true;
     } else if (!strncmp(line, "sleep-timeout ", 14)) {
-        if (!save_u8("sleep_timeout", line + 14, 300)) { usb_write_line("@E invalid_sleep_timeout\n"); return; }
+        if (!save_u8("sleep_timeout", line + 14, 240)) { usb_write_line("@E invalid_sleep_timeout\n"); return; }
         profile_changed = true;
     } else if (!strncmp(line, "owner ", 6)) {
         if (!save_profile_string("owner_name", line + 6, 40)) { usb_write_line("@E invalid_owner\n"); return; }
