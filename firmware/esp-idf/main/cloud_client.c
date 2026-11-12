@@ -114,5 +114,50 @@ esp_err_t companion_cloud_interpret(const char *utterance,
         return ESP_FAIL;
     }
     if (target.length == 0) return ESP_ERR_INVALID_RESPONSE;
+
+    /* Treat cloud JSON as untrusted data. Reject missing or unknown enum values
+       before a future behavior layer can apply the result to the display. */
+    cJSON *result = cJSON_ParseWithLength(response_json, target.length);
+    if (!result) return ESP_ERR_INVALID_RESPONSE;
+    const cJSON *addressed = cJSON_GetObjectItemCaseSensitive(result, "addressed_to_companion");
+    const cJSON *understood = cJSON_GetObjectItemCaseSensitive(result, "understood");
+    const cJSON *action = cJSON_GetObjectItemCaseSensitive(result, "action");
+    const cJSON *emotion = cJSON_GetObjectItemCaseSensitive(result, "emotion");
+    const cJSON *confidence = cJSON_GetObjectItemCaseSensitive(result, "confidence");
+    const bool valid_action = cJSON_IsString(action) &&
+        (strcmp(action->valuestring, "idle") == 0 ||
+         strcmp(action->valuestring, "greet") == 0 ||
+         strcmp(action->valuestring, "acknowledge") == 0 ||
+         strcmp(action->valuestring, "play") == 0 ||
+         strcmp(action->valuestring, "pet") == 0 ||
+         strcmp(action->valuestring, "sleep") == 0 ||
+         strcmp(action->valuestring, "wake") == 0 ||
+         strcmp(action->valuestring, "surprise") == 0 ||
+         strcmp(action->valuestring, "comfort") == 0 ||
+         strcmp(action->valuestring, "attend") == 0 ||
+         strcmp(action->valuestring, "express_joy") == 0 ||
+         strcmp(action->valuestring, "express_curiosity") == 0 ||
+         strcmp(action->valuestring, "thank") == 0 ||
+         strcmp(action->valuestring, "clarify") == 0);
+    const bool valid_emotion = cJSON_IsString(emotion) &&
+        (strcmp(emotion->valuestring, "neutral") == 0 ||
+         strcmp(emotion->valuestring, "happy") == 0 ||
+         strcmp(emotion->valuestring, "curious") == 0 ||
+         strcmp(emotion->valuestring, "affectionate") == 0 ||
+         strcmp(emotion->valuestring, "sleepy") == 0 ||
+         strcmp(emotion->valuestring, "surprised") == 0 ||
+         strcmp(emotion->valuestring, "sad") == 0 ||
+         strcmp(emotion->valuestring, "calm") == 0 ||
+         strcmp(emotion->valuestring, "excited") == 0 ||
+         strcmp(emotion->valuestring, "concerned") == 0);
+    const bool valid = cJSON_IsBool(addressed) && cJSON_IsBool(understood) &&
+        valid_action && valid_emotion && cJSON_IsNumber(confidence) &&
+        confidence->valuedouble >= 0.0 && confidence->valuedouble <= 1.0;
+    cJSON_Delete(result);
+    if (!valid) {
+        response_json[0] = '\\0';
+        ESP_LOGW(TAG, "Cloud response did not match the intent allowlist");
+        return ESP_ERR_INVALID_RESPONSE;
+    }
     return ESP_OK;
 }
