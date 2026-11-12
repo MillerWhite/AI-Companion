@@ -243,80 +243,7 @@ static void render_emotion(companion_emotion_t emotion)
     if (emotion >= COMPANION_EMOTION_COUNT) emotion = COMPANION_CALM;
     current_emotion = emotion;
     face_apply_emotion(emotion);
-    const bool sad = emotion == COMPANION_SAD;
-    const bool sleepy = emotion == COMPANION_SLEEPY;
-    const bool excited = emotion == COMPANION_EXCITED;
-    const bool curious = emotion == COMPANION_CURIOUS || emotion == COMPANION_SURPRISED || emotion == COMPANION_SCARED;
-    const bool dizzy = emotion == COMPANION_DIZZY;
-    const bool flinch = emotion == COMPANION_FLINCH;
-    const bool scared = emotion == COMPANION_SCARED;
-    int eye_width = 58, eye_height = 78, mouth_width = 27, mouth_height = 8;
-    int mouth_top = 0;
-
-    switch (emotion) {
-        case COMPANION_HAPPY: eye_height = 56; mouth_width = 40; mouth_height = 15; break;
-        case COMPANION_CURIOUS: eye_width = 63; eye_height = 88; mouth_width = 15; mouth_height = 18; break;
-        case COMPANION_SLEEPY: eye_height = 6; mouth_width = 20; mouth_height = 4; break;
-        case COMPANION_SAD: eye_width = 55; eye_height = 61; mouth_width = 37; mouth_height = 17; mouth_top = 8; break;
-        case COMPANION_AFFECTIONATE: eye_width = 61; eye_height = 70; mouth_width = 36; mouth_height = 13; break;
-        case COMPANION_EXCITED: eye_width = 68; eye_height = 96; mouth_width = 24; mouth_height = 25; break;
-        case COMPANION_SURPRISED: eye_width = 66; eye_height = 100; mouth_width = 15; mouth_height = 22; break;
-        case COMPANION_SCARED: eye_width = 68; eye_height = 91; mouth_width = 17; mouth_height = 23; break;
-        case COMPANION_CONCERNED: eye_width = 57; eye_height = 70; mouth_width = 29; mouth_height = 8; break;
-        case COMPANION_SHY: eye_width = 58; eye_height = 60; mouth_width = 16; mouth_height = 7; break;
-        case COMPANION_DIZZY: eye_width = 54; eye_height = 48; mouth_width = 34; mouth_height = 12; break;
-        case COMPANION_FLINCH: eye_width = 58; eye_height = 4; mouth_width = 11; mouth_height = 4; break;
-        default: break;
-    }
-
-    for (int i = 0; i < 2; ++i) {
-        int old_height = lv_obj_get_height(eyes[i]);
-        lv_obj_set_width(eyes[i], eye_width);
-        animate_size(eyes[i], old_height > 0 ? old_height : 78, eye_height, 260, animate_eye_height);
-        lv_obj_set_x(eyes[i], i == 0 ? 150 - eye_width / 2 : 316 - eye_width / 2);
-        lv_obj_set_y(eyes[i], sad ? 156 : 164);
-        lv_obj_set_style_bg_color(eyes[i], sad ? lv_color_hex(0xDCEEFF) : lv_color_hex(theme_face_color()), 0);
-        if (pupils[i]) {
-            const bool closed = sleepy || flinch;
-            if (closed) lv_obj_add_flag(pupils[i], LV_OBJ_FLAG_HIDDEN);
-            else lv_obj_clear_flag(pupils[i], LV_OBJ_FLAG_HIDDEN);
-            lv_obj_set_pos(pupils[i], i == 0 ? (sad ? 22 : curious ? 28 : 18) : (sad ? 22 : curious ? 28 : 18),
-                           sad ? 27 : excited ? 18 : 23);
-            lv_obj_set_style_bg_color(pupils[i], lv_color_hex(0x05080D), 0);
-            if (glints[i]) {
-                if (closed) lv_obj_add_flag(glints[i], LV_OBJ_FLAG_HIDDEN);
-                else lv_obj_clear_flag(glints[i], LV_OBJ_FLAG_HIDDEN);
-            }
-        }
-        lv_obj_set_style_shadow_color(eyes[i], sad ? lv_color_hex(0x6BB7E8) : lv_color_hex(0xA8D9FF), 0);
-        lv_obj_set_style_shadow_width(eyes[i], sad ? 20 : 12, 0);
-        lv_obj_set_style_bg_opa(eyes[i], (sleepy || flinch) ? LV_OPA_80 : LV_OPA_COVER, 0);
-        lv_obj_set_style_radius(eyes[i], (sleepy || flinch) ? 8 : LV_RADIUS_CIRCLE, 0);
-        lv_obj_set_style_transform_rotation(eyes[i], sad ? (i == 0 ? -65 : 65) : (dizzy ? (i == 0 ? 18 : -18) : (scared ? (i == 0 ? -5 : 5) : 0)), 0);
-        lv_obj_clear_flag(tears[i], LV_OBJ_FLAG_HIDDEN);
-        if (sad) lv_obj_set_y(tears[i], 218 + (i ? 5 : 0));
-        else lv_obj_add_flag(tears[i], LV_OBJ_FLAG_HIDDEN);
-        if (sad) {
-            lv_obj_clear_flag(brows[i], LV_OBJ_FLAG_HIDDEN);
-            lv_obj_set_style_bg_color(brows[i], lv_color_hex(0xCDE7FA), 0);
-            lv_obj_set_style_transform_rotation(brows[i], i == 0 ? 150 : -150, 0);
-        } else {
-            lv_obj_add_flag(brows[i], LV_OBJ_FLAG_HIDDEN);
-        }
-    }
-
-    int old_width = lv_obj_get_width(mouth);
-    animate_size(mouth, old_width > 0 ? old_width : 27, mouth_width, 220, animate_mouth_width);
-    lv_obj_set_height(mouth, mouth_height);
-    lv_obj_set_y(mouth, 280 + mouth_top);
-    lv_obj_set_style_bg_opa(mouth, excited || curious ? LV_OPA_20 : LV_OPA_TRANSP, 0);
-    lv_obj_set_style_bg_color(mouth, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_border_color(mouth, sad ? lv_color_hex(0xC6E6FF) : lv_color_hex(theme_face_color()), 0);
-    lv_obj_set_style_border_width(mouth, sleepy ? 0 : 3, 0);
-    lv_obj_set_style_border_side(mouth, sad || emotion == COMPANION_CONCERNED ? LV_BORDER_SIDE_TOP : LV_BORDER_SIDE_BOTTOM, 0);
-    lv_obj_set_style_radius(mouth, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_transform_rotation(mouth, emotion == COMPANION_SHY ? -40 : (dizzy ? 12 : 0), 0);
-    lv_label_set_text(status_label, emotion_label(emotion));
+    if (status_label) lv_label_set_text(status_label, emotion_label(emotion));
     companion_usb_emit_emotion(emotion_label(emotion));
 }
 
@@ -1032,61 +959,6 @@ void app_main(void)
     lv_obj_add_event_cb(face, on_face_tap, LV_EVENT_CLICKED, NULL);
     lv_obj_add_event_cb(face, on_face_long_press, LV_EVENT_LONG_PRESSED, NULL);
 
-    for (int i = 0; i < 2; ++i) {
-        eyes[i] = lv_obj_create(face);
-        style_eye(eyes[i]);
-        lv_obj_set_size(eyes[i], 58, 78);
-        lv_obj_set_pos(eyes[i], i == 0 ? 121 : 287, 112);
-        pupils[i] = lv_obj_create(eyes[i]);
-        lv_obj_remove_style_all(pupils[i]);
-        lv_obj_set_size(pupils[i], 20, 27);
-        lv_obj_set_pos(pupils[i], 18, 23);
-        lv_obj_set_style_bg_color(pupils[i], lv_color_hex(0x05080D), 0);
-        lv_obj_set_style_bg_opa(pupils[i], LV_OPA_COVER, 0);
-        lv_obj_set_style_radius(pupils[i], LV_RADIUS_CIRCLE, 0);
-        lv_obj_clear_flag(pupils[i], LV_OBJ_FLAG_CLICKABLE);
-        glints[i] = lv_obj_create(pupils[i]);
-        lv_obj_remove_style_all(glints[i]);
-        lv_obj_set_size(glints[i], 6, 8);
-        lv_obj_set_pos(glints[i], 4, 4);
-        lv_obj_set_style_bg_color(glints[i], lv_color_hex(0xFFFFFF), 0);
-        lv_obj_set_style_bg_opa(glints[i], LV_OPA_COVER, 0);
-        lv_obj_set_style_radius(glints[i], LV_RADIUS_CIRCLE, 0);
-        lv_obj_clear_flag(glints[i], LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_add_flag(eyes[i], LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_add_event_cb(eyes[i], on_face_tap, LV_EVENT_CLICKED, NULL);
-        lv_obj_add_event_cb(eyes[i], on_face_long_press, LV_EVENT_LONG_PRESSED, NULL);
-        brows[i] = lv_obj_create(face);
-        lv_obj_remove_style_all(brows[i]);
-        lv_obj_set_size(brows[i], 48, 7);
-        lv_obj_set_pos(brows[i], i == 0 ? 126 : 292, 94);
-        lv_obj_set_style_bg_color(brows[i], lv_color_hex(0xDCEEFF), 0);
-        lv_obj_set_style_bg_opa(brows[i], LV_OPA_COVER, 0);
-        lv_obj_set_style_radius(brows[i], LV_RADIUS_CIRCLE, 0);
-        lv_obj_add_flag(brows[i], LV_OBJ_FLAG_HIDDEN);
-        tears[i] = lv_obj_create(face);
-        lv_obj_remove_style_all(tears[i]);
-        lv_obj_set_size(tears[i], i == 0 ? 11 : 9, i == 0 ? 20 : 16);
-        lv_obj_set_pos(tears[i], i == 0 ? 145 : 310, 218);
-        lv_obj_set_style_bg_color(tears[i], lv_color_hex(0x66C7FF), 0);
-        lv_obj_set_style_bg_opa(tears[i], LV_OPA_COVER, 0);
-        lv_obj_set_style_radius(tears[i], LV_RADIUS_CIRCLE, 0);
-        lv_obj_set_style_shadow_color(tears[i], lv_color_hex(0x58BFFF), 0);
-        lv_obj_set_style_shadow_width(tears[i], 12, 0);
-        lv_obj_add_flag(tears[i], LV_OBJ_FLAG_HIDDEN);
-    }
-
-    mouth = lv_obj_create(face);
-    lv_obj_remove_style_all(mouth);
-    lv_obj_set_size(mouth, 27, 8);
-    lv_obj_set_pos(mouth, 219, 280);
-    lv_obj_set_style_border_color(mouth, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_border_width(mouth, 3, 0);
-    lv_obj_set_style_border_side(mouth, LV_BORDER_SIDE_BOTTOM, 0);
-    lv_obj_set_style_radius(mouth, LV_RADIUS_CIRCLE, 0);
-    /* The face is intentionally mouthless: interaction is handled by the whole face surface. */
-    lv_obj_add_flag(mouth, LV_OBJ_FLAG_HIDDEN);
-
     face_pixels = heap_caps_calloc(466U * 330U, sizeof(uint16_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (!face_pixels) face_pixels = heap_caps_calloc(466U * 330U, sizeof(uint16_t), MALLOC_CAP_8BIT);
     if (face_pixels) {
@@ -1099,7 +971,7 @@ void app_main(void)
         face_apply_emotion(COMPANION_CALM);
         face_draw(&face_model, face_pixels, 466, 330);
     } else {
-        ESP_LOGE(TAG, "Unable to allocate procedural face framebuffer; using fallback eyes");
+        ESP_LOGE(TAG, "Unable to allocate procedural face framebuffer; fallback eyes unavailable");
     }
 
     status_label = lv_label_create(screen);
