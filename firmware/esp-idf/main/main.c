@@ -113,12 +113,15 @@ void app_main(void)
         style_eye(eyes[i]);
         lv_obj_set_pos(eyes[i], i == 0 ? 70 : 174, 35);
         lv_obj_set_size(eyes[i], 58, 78);
+        lv_obj_add_event_cb(eyes[i], on_face_tap, LV_EVENT_CLICKED, NULL);
     }
 
     mouth = lv_obj_create(face);
     lv_obj_remove_style_all(mouth);
     lv_obj_set_pos(mouth, 136, 145);
     lv_obj_set_size(mouth, 28, 12);
+    lv_obj_add_flag(mouth, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(mouth, on_face_tap, LV_EVENT_CLICKED, NULL);
 
     status_label = lv_label_create(screen);
     lv_obj_set_style_text_color(status_label, lv_color_hex(0xB8B8C0), 0);
