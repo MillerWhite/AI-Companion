@@ -18,7 +18,6 @@
 static const char *TAG = "companion_wifi";
 static EventGroupHandle_t wifi_events;
 #define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAILED_BIT BIT1
 static int retry_count;
 static bool provisioning_finished;
 static esp_timer_handle_t reconnect_timer;
