@@ -264,7 +264,11 @@ static void apply_cloud_intent(const char *json_text)
     }
 
     if (kind) companion_emotion_interaction(&state, kind);
-    if (!sleeping || !manual_sleep || next == COMPANION_SLEEPY) set_emotion(next, true);
+    if (strcmp(verb, "sleep") != 0) {
+        sleeping = false;
+        manual_sleep = false;
+    }
+    set_emotion(next, true);
     save_state();
     cJSON_Delete(json);
 }
