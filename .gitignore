@@ -5,6 +5,7 @@
 backend/.env
 backend/.env.*
 !backend/.env.example
+!backend/.env.production.example
 
 # Python development
 .venv/
@@ -21,3 +22,6 @@ __pycache__/
 *.sqlite3
 .DS_Store
 Thumbs.db
+
+# Production database backups
+backend/backups/
