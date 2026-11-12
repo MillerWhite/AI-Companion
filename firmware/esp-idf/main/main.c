@@ -202,6 +202,23 @@ static void face_animation_timer(lv_timer_t *timer)
         e->wob_t += dt;
     }
     face_draw(&face_model,face_pixels,466,330);
+    /* A quiet rainy scene is part of the character's gloomy expression, not a status icon. */
+    if (current_emotion == COMPANION_SAD) {
+        const uint16_t cloud = 0x9CF3, rain = 0x6DDF;
+        const int phase = (int)((now / 90000LL) % 18);
+        for (int y=13; y<35; ++y) for (int x=207; x<259; ++x) {
+            const float dx1=(float)(x-220), dy1=(float)(y-27);
+            const float dx2=(float)(x-234), dy2=(float)(y-31);
+            const float dx3=(float)(x-247), dy3=(float)(y-26);
+            if (dx1*dx1+dy1*dy1<105.0f || dx2*dx2+dy2*dy2<145.0f || dx3*dx3+dy3*dy3<100.0f)
+                face_pixels[y*466+x]=cloud;
+        }
+        for (int i=0;i<5;++i) {
+            const int x=214+i*9;
+            const int y=39+((phase+i*4)%17);
+            for(int k=0;k<5;++k) if(y+k<330) face_pixels[(y+k)*466+x+(k/2)]=rain;
+        }
+    }
     lv_obj_invalidate(face_canvas);
 }
 
