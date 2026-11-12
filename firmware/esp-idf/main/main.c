@@ -618,6 +618,11 @@ static void on_face_tap(lv_event_t *event)
 {
     (void)event;
     if (qr_mode) return;
+    if (iphone_media_mode) {
+        esp_err_t err = companion_iphone_media_command(COMPANION_IPHONE_VOLUME_DOWN);
+        if (err != ESP_OK) ESP_LOGW(TAG, "iPhone volume command unavailable: %s", esp_err_to_name(err));
+        return;
+    }
     if (remote_mode) {
         esp_err_t err = companion_ble_mouse_click(false);
         if (err != ESP_OK) ESP_LOGW(TAG, "BLE mouse click unavailable: %s", esp_err_to_name(err));
