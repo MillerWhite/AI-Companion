@@ -14,6 +14,7 @@ import sqlite3
 import time
 import uuid
 import urllib.error
+from datetime import datetime, timezone
 import urllib.request
 from enum import Enum
 from typing import Any
@@ -43,6 +44,10 @@ SPEECHKIT_FOLDER_ID = os.getenv("SPEECHKIT_FOLDER_ID", AI_FOLDER_ID).strip()
 SPEECHKIT_SAMPLE_RATE = int(os.getenv("SPEECHKIT_SAMPLE_RATE", "16000"))
 STORE_WEBHOOK_SECRET = os.getenv("STORE_WEBHOOK_SECRET", "").strip()
 MEMORY_RETENTION_DAYS = int(os.getenv("MEMORY_RETENTION_DAYS", "90"))
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+REDIS_URL = os.getenv("REDIS_URL", "").strip()
+AI_DAILY_REQUEST_LIMIT = int(os.getenv("AI_DAILY_REQUEST_LIMIT", "250"))
+SPEECHKIT_DAILY_SECONDS_LIMIT = int(os.getenv("SPEECHKIT_DAILY_SECONDS_LIMIT", "120"))
 
 
 class Action(str, Enum):
@@ -252,7 +257,58 @@ def call_language_model(payload: InterpretRequest) -> InterpretResult:
         raise HTTPException(status_code=502, detail={"code": "provider_error", "message": "AI interpretation failed"})
 
 
-def _device_db() -> sqlite3.Connection:
+class _PostgresCompat:
+    def __init__(self, connection: Any):
+        self.connection = connection
+
+    def execute(self, query: str, params: tuple = ()):
+        return self.connection.execute(query.replace("?", "%s"), params)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        try:
+            if exc_type is None:
+                self.connection.commit()
+            else:
+                self.connection.rollback()
+        finally:
+            self.connection.close()
+
+
+def _device_db():
+    if DATABASE_URL:
+        if not DATABASE_URL.startswith(("postgresql://", "postgres://")):
+            raise RuntimeError("DATABASE_URL must use PostgreSQL in production")
+        try:
+            import psycopg
+        except ImportError as exc:
+            raise RuntimeError("Install psycopg[binary] to use PostgreSQL") from exc
+        raw = psycopg.connect(DATABASE_URL, connect_timeout=10)
+        connection = _PostgresCompat(raw)
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS devices (
+                device_id TEXT PRIMARY KEY, serial TEXT NOT NULL UNIQUE,
+                token_hash TEXT NOT NULL, companion_name TEXT NOT NULL,
+                personality_json TEXT NOT NULL, memory_json TEXT NOT NULL DEFAULT '{}',
+                created_at BIGINT NOT NULL, revoked_at BIGINT
+            )
+        """)
+        connection.execute("ALTER TABLE devices ADD COLUMN IF NOT EXISTS memory_json TEXT NOT NULL DEFAULT '{}'")
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS enrollment_grants (
+                grant_hash TEXT PRIMARY KEY, order_id TEXT NOT NULL UNIQUE,
+                created_at BIGINT NOT NULL, expires_at BIGINT NOT NULL, used_at BIGINT
+            )
+        """)
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS store_orders (
+                order_id TEXT PRIMARY KEY, event_id TEXT NOT NULL UNIQUE, created_at BIGINT NOT NULL
+            )
+        """)
+        raw.commit()
+        return connection
     connection = sqlite3.connect(DEVICE_DB_PATH, timeout=10)
     connection.execute("""
         CREATE TABLE IF NOT EXISTS devices (
