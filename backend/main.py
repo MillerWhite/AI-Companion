@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import secrets
 import struct
 import asyncio
@@ -177,6 +178,28 @@ def validate_model_result(raw: Any) -> InterpretResult:
     if not result.addressed_to_companion and result.memory_updates:
         raise ValueError("Unaddressed speech cannot update companion memory")
     return result
+
+_SENSITIVE_MEMORY_MARKERS = (
+    "болезн", "диагноз", "лечени", "лекарств", "медицин", "симптом",
+    "религи", "церков", "молитв", "полит", "парт", "выбор",
+    "зарплат", "доход", "долг", "кредит", "банк", "счет",
+    "парол", "password", "api key", "token", "секрет", "ключ ",
+    "адрес", "улиц", "квартира", "дом номер", "телефон", "почт",
+    "email", "сексуал", "ориентац", "беремен", "наркот", "судим",
+    "преступ", "националь", "этнич"
+)
+
+
+def safe_memory_update(update: MemoryUpdate) -> bool:
+    """Conservative server-side guard; model instructions alone are not a privacy boundary."""
+    value = " ".join(update.value.casefold().split())
+    if not value or len(value) > 100:
+        return False
+    if any(marker in value for marker in _SENSITIVE_MEMORY_MARKERS):
+        return False
+    if re.search(r"(?:\\+?\\d[\\d ()-]{7,}\\d)|[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}", update.value, re.I):
+        return False
+    return True
 
 
 def make_system_prompt(name: str, personality: dict[str, Any], memory_facts: list[MemoryUpdate] | None = None) -> str:
@@ -863,6 +886,21 @@ def get_device_memory(authorization: str | None = Header(default=None)) -> dict[
     return {"device_id": device["device_id"], "memory": device["memory"], "retention_days": MEMORY_RETENTION_DAYS}
 
 
+@app.get("/api/device/memory/export")
+def export_device_memory(authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    """Return an authenticated, portable JSON export of the owner's stored memory."""
+    device = _authenticated_device(authorization)
+    return {
+        "format": "ai-companion-memory-v1",
+        "exported_at": int(time.time()),
+        "retention_days": MEMORY_RETENTION_DAYS,
+        "device_id": device["device_id"],
+        "companion_name": device["companion_name"],
+        "personality": device["personality"],
+        "memory": device["memory"],
+    }
+
+
 @app.delete("/api/device/memory")
 def reset_device_memory(authorization: str | None = Header(default=None)) -> dict[str, str]:
     device = _authenticated_device(authorization)
@@ -937,9 +975,9 @@ def interpret_for_device(
     cutoff = int(time.time()) - MEMORY_RETENTION_DAYS * 86400
     facts = [item for item in facts if int(item.get("timestamp", 0)) >= cutoff]
     if result.addressed_to_companion and result.understood:
-        for update in result.memory_updates:
-            if update.confidence < 0.85:
-                continue
+        accepted_updates = [update for update in result.memory_updates if update.confidence >= 0.85 and safe_memory_update(update)]
+        result.memory_updates = accepted_updates
+        for update in accepted_updates:
             facts = [item for item in facts if not (item.get("kind") == update.kind.value and item.get("value") == update.value)]
             facts.append({"kind": update.kind.value, "value": update.value, "confidence": update.confidence, "timestamp": now})
     with _device_db() as connection:
