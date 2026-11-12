@@ -1,3 +1,7 @@
+# Статус реализации AI Companion
+
+> **Обновлённая продуктовая концепция:** AI Companion — электронный друг, а не тамагочи. Голод, кормление и обязательный уход не являются целевыми механиками. Новая веб-консоль работает с теми командами, которые уже поддерживает USB-протокол. Карта функциональности и оставшихся работ: [PRODUCT_DIRECTION.md](PRODUCT_DIRECTION.md).
+
 # AI Companion — implementation status 2.2
 
 This is a code-level status, not a claim of hardware or production acceptance. A feature is not release-ready until its CI and physical acceptance checks pass.
