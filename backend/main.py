@@ -584,6 +584,47 @@ allowed_hosts = [
 ]
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
+def _purge_expired_memories() -> int:
+    cutoff = int(time.time()) - MEMORY_RETENTION_DAYS * 86400
+    purged = 0
+    with _device_db() as connection:
+        rows = connection.execute(
+            "SELECT device_id, memory_json FROM devices WHERE revoked_at IS NULL"
+        ).fetchall()
+        for row in rows:
+            try:
+                memory = json.loads(row[1] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                memory = {"recent_context": [], "facts": []}
+            original = json.dumps(memory, ensure_ascii=False, sort_keys=True)
+            memory["recent_context"] = [
+                item for item in memory.get("recent_context", [])
+                if int(item.get("timestamp", 0)) >= cutoff
+            ][-8:]
+            memory["facts"] = [
+                item for item in memory.get("facts", [])
+                if int(item.get("timestamp", 0)) >= cutoff
+            ][-20:]
+            if json.dumps(memory, ensure_ascii=False, sort_keys=True) != original:
+                connection.execute(
+                    "UPDATE devices SET memory_json = ? WHERE device_id = ? AND revoked_at IS NULL",
+                    (json.dumps(memory, ensure_ascii=False), row[0]),
+                )
+                purged += 1
+    return purged
+
+
+async def _memory_cleanup_loop() -> None:
+    while True:
+        try:
+            count = await asyncio.to_thread(_purge_expired_memories)
+            if count:
+                logger.info("Memory retention purged %s device records", count)
+        except Exception:
+            logger.exception("Memory retention cleanup failed")
+        await asyncio.sleep(86400)
+
+
 @app.on_event("startup")
 def validate_production_configuration() -> None:
     if APP_ENV != "production":
@@ -614,6 +655,27 @@ def validate_production_configuration() -> None:
     client = _redis()
     if client is None:
         raise RuntimeError("Production Redis is required")
+
+
+_memory_cleanup_task: asyncio.Task | None = None
+
+
+@app.on_event("startup")
+async def start_memory_cleanup() -> None:
+    global _memory_cleanup_task
+    _memory_cleanup_task = asyncio.create_task(_memory_cleanup_loop())
+
+
+@app.on_event("shutdown")
+async def stop_memory_cleanup() -> None:
+    global _memory_cleanup_task
+    if _memory_cleanup_task:
+        _memory_cleanup_task.cancel()
+        try:
+            await _memory_cleanup_task
+        except asyncio.CancelledError:
+            pass
+        _memory_cleanup_task = None
 
 
 @app.middleware("http")
