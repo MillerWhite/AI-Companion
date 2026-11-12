@@ -23,7 +23,13 @@ static int retry_count;
 static bool provisioning_finished;
 static esp_timer_handle_t reconnect_timer;
 
-static void reconnect_timer_callback(void *arg)\n{\n    (void)arg;\n    esp_wifi_connect();\n}\n\nstatic void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, void *data)
+static void reconnect_timer_callback(void *arg)
+{
+    (void)arg;
+    esp_wifi_connect();
+}
+
+static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, void *data)
 {
     (void)arg;
     if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
@@ -44,6 +50,7 @@ static void reconnect_timer_callback(void *arg)\n{\n    (void)arg;\n    esp_wifi
     } else if (base == WIFI_PROV_EVENT && id == WIFI_PROV_CRED_FAIL) {
         ESP_LOGW(TAG, "Wi-Fi credentials rejected; retry provisioning after reboot/reset");
     } else if (base == WIFI_PROV_EVENT && id == WIFI_PROV_END) {
+        provisioning_finished = true;
         wifi_prov_mgr_deinit();
     }
 }
@@ -53,7 +60,9 @@ esp_err_t companion_wifi_start(char *setup_code, size_t setup_code_size)
     if (!setup_code || setup_code_size < 9) return ESP_ERR_INVALID_ARG;
     wifi_events = xEventGroupCreate();
     if (!wifi_events) return ESP_ERR_NO_MEM;
-    esp_timer_create_args_t timer_args = {.callback = reconnect_timer_callback, .name = "wifi_reconnect"};\n    ESP_RETURN_ON_ERROR(esp_timer_create(&timer_args, &reconnect_timer), TAG, "reconnect timer");\n    ESP_RETURN_ON_ERROR(esp_netif_init(), TAG, "netif init");
+    esp_timer_create_args_t timer_args = {.callback = reconnect_timer_callback, .name = "wifi_reconnect"};
+    ESP_RETURN_ON_ERROR(esp_timer_create(&timer_args, &reconnect_timer), TAG, "reconnect timer");
+    ESP_RETURN_ON_ERROR(esp_netif_init(), TAG, "netif init");
     ESP_RETURN_ON_ERROR(esp_event_loop_create_default(), TAG, "event loop init");
     esp_netif_create_default_wifi_sta();
     esp_netif_create_default_wifi_ap();
@@ -74,7 +83,8 @@ esp_err_t companion_wifi_start(char *setup_code, size_t setup_code_size)
     if (provisioned) {
         ESP_LOGI(TAG, "Stored Wi-Fi credentials found; starting station");
         wifi_prov_mgr_deinit();
-        provisioning_finished = true;\n        ESP_RETURN_ON_ERROR(esp_wifi_set_mode(WIFI_MODE_STA), TAG, "station mode");
+        provisioning_finished = true;
+        ESP_RETURN_ON_ERROR(esp_wifi_set_mode(WIFI_MODE_STA), TAG, "station mode");
         ESP_RETURN_ON_ERROR(esp_wifi_start(), TAG, "station start");
         ESP_RETURN_ON_ERROR(esp_wifi_connect(), TAG, "station connect");
         setup_code[0] = '\0';
