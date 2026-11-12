@@ -37,7 +37,7 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 <button class="main" onclick="randomEmotion()">Случайная эмоция</button>
 </div></div>
 <div class="stats">
-<div class="stat"><b id="emotionCount">30+</b><span>базовых состояний</span></div>
+<div class="stat"><b id="emotionCount">35</b><span>базовых состояний</span></div>
 <div class="stat"><b id="comboCount">1 134 000</b><span>комбинаций параметров*</span></div>
 <div class="stat"><b id="soundCount">1 750</b><span>вариантов звука · 35 × 50</span></div>
 </div>
@@ -107,10 +107,10 @@ function playSound(type,force=false){
  const key=moods.find(m=>m[2]===type)?.[0]||({happy:'joy',excited:'delight',curious:'curiosity',surprised:'surprise',shy:'shyness',love:'affection',neutral:'calm',sleep:'sleep',sad:'sadness',angry:'annoyance'}[type]||'joy');
  const idx=chooseSoundVariant(key);playEmotionSound(key,idx);
 }
-function setMood(key,why='реакция компаньона',sound=true){current=key;const map={happy:'радуется',excited:'в восторге',curious:'с любопытством наблюдает',surprised:'удивлён',shy:'смущается',love:'проявляет нежность',neutral:'спокойно наблюдает',sleep:'засыпает',sad:'немного грустит',angry:'недоволен'};
-orb.className='orb '+(key==='neutral'?'':key);$('status').textContent=map[key]||key;$('substatus').textContent=why+' · интенсивность '+intensity+'/10';if(sound)playSound(key);log(($('name').value||'Компаньон')+': '+(map[key]||key))}
+function setMood(key,why='реакция компаньона',sound=true,soundEmotionKey=null){current=key;const map={happy:'радуется',excited:'в восторге',curious:'с любопытством наблюдает',surprised:'удивлён',shy:'смущается',love:'проявляет нежность',neutral:'спокойно наблюдает',sleep:'засыпает',sad:'немного грустит',angry:'недоволен'};
+orb.className='orb '+(key==='neutral'?'':key);$('status').textContent=map[key]||key;$('substatus').textContent=why+' · интенсивность '+intensity+'/10';if(sound)playSound(soundEmotionKey||key);log(($('name').value||'Компаньон')+': '+(map[key]||key))}
 function trigger(key){if(key==='sleep'){setMood('sleep','переходит в режим отдыха');return}if(key==='neutral'){setMood('neutral','проснулся и огляделся',false);return}setMood(key,key==='happy'?'приятное прикосновение':key==='curious'?'заметил внимание владельца':'неожиданное событие');setTimeout(()=>{if(current===key)setMood('neutral','возвращается к спокойному состоянию',false)},2400)}
-function randomEmotion(){let candidates=moods.filter(x=>!['sleep','sleepiness','fear','jealousy'].includes(x[0]));let m=candidates[Math.floor(Math.random()*candidates.length)];let key=m[2];intensity=+$('intensity').value;setMood(key,'смешанная эмоция: '+m[1]+' · '+m[0]);}
+function randomEmotion(){let candidates=moods.filter(x=>!['sleep','sleepiness','fear','jealousy'].includes(x[0]));let m=candidates[Math.floor(Math.random()*candidates.length)];let key=m[2];intensity=+$('intensity').value;setMood(key,'смешанная эмоция: '+m[1]+' · '+m[0],true,m[0]);}
 function makeProfile(){profile={temper:$('temper').value,initiative:$('initiative').value,bond:$('bond').value,quirk:$('quirk').value};let n=$('name').value.trim()||'Milo';let dict={temper:{calm:'спокойный',playful:'игривый',shy:'стеснительный',energetic:'энергичный',dreamy:'мечтательный'},initiative:{low:'редко проявляет инициативу',medium:'иногда проявляет инициативу',high:'часто ищет контакт'},bond:{gentle:'ласковый',friendly:'дружелюбный',independent:'независимый',mischief:'озорной'},quirk:{curious:'любит всё разглядывать',sleepy:'часто сонный',dramatic:'ярко выражает эмоции',bouncy:'непоседливый',shy:'смущается от внимания'}};
 let desc=`${dict.temper[profile.temper]}, ${dict.bond[profile.bond]}; ${dict.initiative[profile.initiative]}. Особенность: ${dict.quirk[profile.quirk]}.`;
 $('profile').innerHTML='<strong></strong><p></p><div class="chips"></div>';$('profile').querySelector('strong').textContent=n+' · личность';$('profile').querySelector('p').textContent=desc;[dict.temper[profile.temper],dict.bond[profile.bond],dict.quirk[profile.quirk]].forEach(v=>{let s=document.createElement('span');s.className='chip';s.textContent=v;$('profile').querySelector('.chips').append(s)});log('Сгенерирован индивидуальный профиль '+n);trigger('happy')}
