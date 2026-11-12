@@ -18,3 +18,9 @@ esp_err_t companion_cloud_claim(const char *api_base,
                                 const char *enrollment_grant,
                                 char *device_id,
                                 size_t device_id_capacity);
+
+esp_err_t companion_cloud_owner_request(esp_http_client_method_t method,
+                                        const char *path,
+                                        const char *json_body,
+                                        char *response,
+                                        size_t response_capacity);
