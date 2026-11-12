@@ -11,6 +11,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "nvs.h"
+#include "companion_power.h"
 
 #define USB_LINE_CAPACITY 192
 #define USB_FIRMWARE_VERSION "2.1.0"
@@ -71,8 +72,20 @@ static void send_config(void)
 
 static void send_status(void)
 {
-    static const char status[] = "@S {\"usb\":true}\n";
-    usb_write_line(status);
+    cJSON *json = cJSON_CreateObject();
+    if (!json) return;
+    cJSON_AddBoolToObject(json, "usb", true);
+    cJSON_AddBoolToObject(json, "vbus", companion_power_vbus_present());
+    cJSON_AddBoolToObject(json, "charging", companion_power_is_charging());
+    const int battery = companion_power_battery_percent();
+    if (battery >= 0) cJSON_AddNumberToObject(json, "battery", battery);
+    char *payload = cJSON_PrintUnformatted(json);
+    cJSON_Delete(json);
+    if (!payload) return;
+    char line[256];
+    int written = snprintf(line, sizeof(line), "@S %s\\n", payload);
+    cJSON_free(payload);
+    if (written > 0 && (size_t)written < sizeof(line)) usb_write_line(line);
 }
 
 static bool save_name(const char *name)
@@ -136,7 +149,8 @@ static void process_command(char *line)
 
     if (!strcmp(line, "sleep") || !strcmp(line, "wake") ||
         !strcmp(line, "pet") || !strcmp(line, "play") ||
-        !strcmp(line, "wifi-reset")) {
+        !strcmp(line, "wifi-reset") || !strncmp(line, "emotion ", 8) ||
+        !strncmp(line, "sound ", 6)) {
         if (command_handler) command_handler(line);
         send_status();
         return;
