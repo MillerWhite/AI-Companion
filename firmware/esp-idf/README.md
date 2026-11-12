@@ -82,3 +82,10 @@ GitHub Actions workflow `.github/workflows/firmware-build.yml` attempts this bui
 ## Not yet verified
 
 The Waveshare board has not been physically tested in this development session. No successful ESP-IDF build, firmware flash, mic capture, speaker playback, Wi-Fi provisioning, IMU read, current draw, thermal or long-run test is claimed. The first successful CI build and a physical smoke test are release gates.
+
+
+## Quick QR on AMOLED
+The four Quick QR entries are read from NVS keys `qr0`..`qr3`. Each entry may be stored as `title|https://address` or as a plain URL. The QR button on the face opens a full-screen QR view; horizontal swipes navigate the four slots and CLOSE returns to the face. QR encoding uses Project Nayuki's MIT-licensed QR Code generator (license header retained in source).
+
+## BLE remote
+The firmware includes a BLE HID Consumer Control peripheral named `AI Companion Remote`. After pairing with a computer, swipe left/right on the face for next/previous media, up for play/pause and down for mute. The HID stack uses ESP-IDF's NimBLE host and `esp_hid`. The iPhone ANCS notification client and AMS media-session client are not yet implemented; BLE HID and iPhone accessory services are separate GATT roles and must be integrated carefully.
