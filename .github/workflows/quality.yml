@@ -3,6 +3,11 @@ name: AI Companion quality checks
 on:
   push:
     branches: [main]
+    paths:
+      - "backend/**"
+      - "firmware/**"
+      - "web/installer/**"
+      - ".github/workflows/quality.yml"
   workflow_dispatch:
 
 permissions:
