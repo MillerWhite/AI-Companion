@@ -49,8 +49,9 @@ static bool audio_available;
 static bool imu_available;
 static char setup_info[128];
 static char owner_setup_pin[16];
-static lv_obj_t *qr_view, *qr_title_label, *qr_count_label, *qr_button;
+static lv_obj_t *qr_view, *qr_title_label, *qr_count_label, *qr_button, *remote_button;
 static bool qr_mode;
+static bool remote_mode;
 static uint8_t qr_index;
 static char qr_titles[4][40], qr_urls[4][180];
 static uint8_t qr_temp[qrcodegen_BUFFER_LEN_MAX], qr_code[qrcodegen_BUFFER_LEN_MAX];
@@ -549,19 +550,43 @@ static void on_remote_gesture(lv_event_t *event)
 {
     if (lv_event_get_code(event) != LV_EVENT_GESTURE || qr_mode) return;
     const lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_active());
-    companion_ble_key_t key;
-    if (dir == LV_DIR_LEFT) key = COMPANION_BLE_NEXT;
-    else if (dir == LV_DIR_RIGHT) key = COMPANION_BLE_PREVIOUS;
-    else if (dir == LV_DIR_TOP) key = COMPANION_BLE_PLAY_PAUSE;
-    else if (dir == LV_DIR_BOTTOM) key = COMPANION_BLE_MUTE;
-    else return;
-    esp_err_t err = companion_ble_send_key(key);
+    esp_err_t err = ESP_OK;
+    if (remote_mode) {
+        /* In mouse mode, swipe moves the host cursor and vertical swipe scrolls. */
+        if (dir == LV_DIR_LEFT) err = companion_ble_send_mouse(-36, 0, 0, 0);
+        else if (dir == LV_DIR_RIGHT) err = companion_ble_send_mouse(36, 0, 0, 0);
+        else if (dir == LV_DIR_TOP) err = companion_ble_send_mouse(0, 0, 2, 0);
+        else if (dir == LV_DIR_BOTTOM) err = companion_ble_send_mouse(0, 0, -2, 0);
+        else return;
+    } else {
+        companion_ble_key_t key;
+        if (dir == LV_DIR_LEFT) key = COMPANION_BLE_PRESENTATION_NEXT;
+        else if (dir == LV_DIR_RIGHT) key = COMPANION_BLE_PRESENTATION_PREVIOUS;
+        else if (dir == LV_DIR_TOP) key = COMPANION_BLE_PLAY_PAUSE;
+        else if (dir == LV_DIR_BOTTOM) key = COMPANION_BLE_MUTE;
+        else return;
+        err = companion_ble_send_key(key);
+    }
     if (err != ESP_OK) ESP_LOGW(TAG, "BLE remote unavailable: %s", esp_err_to_name(err));
+}
+
+static void remote_button_event(lv_event_t *event)
+{
+    if (lv_event_get_code(event) != LV_EVENT_CLICKED) return;
+    remote_mode = !remote_mode;
+    lv_label_set_text(remote_button, remote_mode ? "MOUSE ON" : "REMOTE");
+    lv_label_set_text(status_label, remote_mode ? "Mouse mode · swipe to move · tap to click" : "Remote mode · swipe to control");
 }
 
 static void on_face_long_press(lv_event_t *event)
 {
     (void)event;
+    if (remote_mode) {
+        remote_mode = false;
+        lv_label_set_text(remote_button, "REMOTE");
+        lv_label_set_text(status_label, "Remote mode disabled");
+        return;
+    }
     lv_label_set_text(status_label, "Resetting Wi-Fi…");
     companion_wifi_reset();
 }
@@ -570,6 +595,11 @@ static void on_face_tap(lv_event_t *event)
 {
     (void)event;
     if (qr_mode) return;
+    if (remote_mode) {
+        esp_err_t err = companion_ble_mouse_click(false);
+        if (err != ESP_OK) ESP_LOGW(TAG, "BLE mouse click unavailable: %s", esp_err_to_name(err));
+        return;
+    }
     if (sleeping) sleeping = false;
     manual_sleep = false;
     last_activity_us = esp_timer_get_time();
@@ -859,6 +889,13 @@ void app_main(void)
     lv_obj_set_style_text_color(qr_count_label, lv_color_hex(0x91A6BB), 0);
     lv_obj_align(qr_count_label, LV_ALIGN_BOTTOM_MID, 0, -48);
     lv_obj_add_flag(qr_count_label, LV_OBJ_FLAG_HIDDEN);
+    remote_button = lv_label_create(screen);
+    lv_label_set_text(remote_button, "REMOTE");
+    lv_obj_set_style_text_color(remote_button, lv_color_hex(0xA8D9FF), 0);
+    lv_obj_align(remote_button, LV_ALIGN_BOTTOM_LEFT, 18, -18);
+    lv_obj_add_flag(remote_button, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(remote_button, remote_button_event, LV_EVENT_CLICKED, NULL);
+
     qr_button = lv_label_create(screen);
     lv_label_set_text(qr_button, "QR");
     lv_obj_set_style_text_color(qr_button, lv_color_hex(0xA8D9FF), 0);
