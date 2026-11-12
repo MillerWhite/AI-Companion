@@ -12,6 +12,7 @@
 #include "host/ble_hs.h"
 #include "host/ble_gap.h"
 #include "host/ble_gatt.h"
+#include "host/ble_att.h"
 #include "host/ble_uuid.h"
 #include "host/ble_store.h"
 #include "host/ble_hs_adv.h"
@@ -21,7 +22,7 @@ static const char *TAG = "companion_iphone";
 static uint16_t s_conn = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t s_ancs_end, s_ancs_ns, s_ancs_cp, s_ancs_ds;
 static uint16_t s_ams_end, s_ams_remote, s_ams_entity_update, s_ams_entity_attr;
-static bool s_ancs_ready, s_ams_ready, s_ams_started;
+static bool s_ancs_ready, s_ams_ready, s_ams_started, s_mtu_pending;
 static uint8_t s_ancs_desc_pending;
 static uint8_t s_pending_entity, s_pending_attribute;
 static struct { uint8_t entity, attribute; } s_attr_queue[8];
@@ -348,7 +349,19 @@ static int iphone_gap_event(struct ble_gap_event *event, void *arg)
         return 0;
     case BLE_GAP_EVENT_ENC_CHANGE:
         if (event->enc_change.conn_handle == s_conn && event->enc_change.status == 0) {
-            ESP_LOGI(TAG, "Encrypted link ready; discovering ANCS and AMS");
+            ESP_LOGI(TAG, "Encrypted link ready; negotiating ATT MTU");
+            int mtu_rc = ble_gattc_exchange_mtu(s_conn, NULL, NULL);
+            if (mtu_rc == 0) s_mtu_pending = true;
+            else {
+                ESP_LOGW(TAG, "ATT MTU exchange unavailable (%d); continuing with default MTU", mtu_rc);
+                (void)ble_gattc_disc_svc_by_uuid(s_conn, &UUID_ANCS.u, discover_ancs, NULL);
+            }
+        }
+        return 0;
+    case BLE_GAP_EVENT_MTU:
+        if (event->mtu.conn_handle == s_conn && s_mtu_pending) {
+            s_mtu_pending = false;
+            ESP_LOGI(TAG, "ATT MTU negotiated: %u", event->mtu.value);
             (void)ble_gattc_disc_svc_by_uuid(s_conn, &UUID_ANCS.u, discover_ancs, NULL);
         }
         return 0;
@@ -391,6 +404,8 @@ static int iphone_gap_event(struct ble_gap_event *event, void *arg)
 
 void companion_iphone_init(void)
 {
+    int mtu_rc = ble_att_set_preferred_mtu(BLE_ATT_MTU_MAX);
+    if (mtu_rc) ESP_LOGW(TAG, "Could not set preferred ATT MTU: %d", mtu_rc);
     if (!s_listener_registered) {
         int rc = ble_gap_event_listener_register(&s_listener, iphone_gap_event, NULL);
         if (rc == 0) s_listener_registered = true;
