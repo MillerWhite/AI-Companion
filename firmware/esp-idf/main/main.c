@@ -396,26 +396,12 @@ static void on_usb_command(const char *command)
         set_emotion(COMPANION_EXCITED, false);
         if (audio_available) companion_audio_play_sound(VOICE_NOM, false);
         save_state();
-    } else if (!strcmp(command, "feed")) {
-        sleeping = false;
-        manual_sleep = false;
-        companion_emotion_interaction(&state, "charge");
-        set_emotion(COMPANION_HAPPY, false);
-        if (audio_available) companion_audio_play_sound(VOICE_NOM, false);
-        save_state();
     } else if (!strcmp(command, "call")) {
         sleeping = false;
         manual_sleep = false;
         companion_emotion_interaction(&state, "call");
         set_emotion(COMPANION_CURIOUS, false);
         if (audio_available) companion_audio_play_sound(VOICE_TICK, false);
-        save_state();
-    } else if (!strcmp(command, "clean")) {
-        sleeping = false;
-        manual_sleep = false;
-        companion_emotion_interaction(&state, "clean");
-        set_emotion(COMPANION_AFFECTIONATE, false);
-        if (audio_available) companion_audio_play_sound(VOICE_PURR, false);
         save_state();
     } else if (!strncmp(command, "emotion ", 8)) {
         const companion_emotion_t emotion = parse_emotion(command + 8);
@@ -488,10 +474,7 @@ static void autonomous_timer(lv_timer_t *timer)
         const uint32_t chance = state.initiative == 1 ? 42U : (state.initiative == 2 ? 12U : 25U);
         if ((esp_random() % 100U) >= chance) { save_state(); return; }
     }
-    if (sleeping && !manual_sleep && state.energy >= 68.0f) {
-        sleeping = false;
-        render_emotion(COMPANION_HAPPY);
-    } else if (!sleeping) {
+    if (!sleeping) {
         const time_t now = time(NULL);
         struct tm local = {0};
         localtime_r(&now, &local);
@@ -601,9 +584,9 @@ static void power_task(void *arg)
     while (true) {
         const uint32_t events = companion_power_poll();
         if (events & COMPANION_POWER_CHARGER_CONNECTED) {
-            companion_emotion_interaction(&state, "feed");
+            companion_emotion_interaction(&state, "charge");
             set_emotion(COMPANION_HAPPY, false);
-            if (audio_available) companion_audio_play_sound(VOICE_NOM, false);
+            if (audio_available) companion_audio_play_sound(VOICE_OH, false);
             save_state();
         }
         vTaskDelay(pdMS_TO_TICKS(1000));
