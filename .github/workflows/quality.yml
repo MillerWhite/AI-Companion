@@ -115,7 +115,7 @@ jobs:
           assert 'id="weatherCanvas"' in html and 'companion-weather.js' in html, "Atmospheric weather renderer missing"
           assert "deviceorientation" in html and "e.alpha" in html and "e.beta" in html and "e.gamma" in html, "Full-axis browser orientation missing"
           assert "orientationZero" in html and "alpha-orientationZero.alpha" in html and "function spring(state,target,stiff,zeta,dt)" in html, "Calibrated orientation and damped spring pose missing"
-          assert "setSharedPupilGaze" in html and "(i?1:-1)" not in html, "Both pupils must share one gaze vector"
+          assert "setSharedPupilGaze" in html and "captureEyeShapeTarget" in html and "eyeShapeTarget" in html and "(i?1:-1)" not in html, "Both pupils and paired eye shapes must share one target"
           assert "rotateX(var(--head-pitch" in html and "rotateY(var(--head-yaw" in html and "rotateZ(var(--head-roll" in html, "Spring-driven three-axis head pose missing"
           assert "@keyframes pet-float" in html and "var(--eye-h,78px)" in html, "Shared living face motion and eye geometry missing"
           assert ".orb.sad{" in html and ".orb.angry{" in html and ".orb.curious{" in html and ".orb.affectionate" in html and ".orb.playful{" in html and ".orb.confused{" in html, "Emotion-specific paired-eye shapes missing"
