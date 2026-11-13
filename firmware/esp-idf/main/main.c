@@ -161,11 +161,6 @@ static void face_apply_emotion(companion_emotion_t emotion)
         e->h = h;
         e->depth = 78.0f;
         e->yaw = 0; e->pitch = 0; e->roll = (i ? -1.0f : 1.0f) * (emotion==COMPANION_SAD ? -.12f : (emotion==COMPANION_ANGRY ? .16f : .015f));
-        if (!face_shapes_initialized) {
-            face_model.eye[i]=*e;
-            const float initial[15]={e->w,e->h,e->roll,e->taper,e->lid,e->tilt,e->smile,e->pw,e->ph,e->square,e->heart,e->glint,e->spiral,e->veins,e->wet};
-            for(int k=0;k<15;k++) face_shape_spring[i][k].x=initial[k];
-        }
         e->taper = emotion==COMPANION_ANGRY ? .30f : (emotion==COMPANION_CONCERNED ? .12f : 0);
         e->lid = lid + (i ? .035f : 0);
         e->tilt = i ? -tilt : tilt;
@@ -175,6 +170,11 @@ static void face_apply_emotion(companion_emotion_t emotion)
         e->pw = pw; e->ph = ph; e->square = 0;
         e->heart = heart; e->wobble = .85f; e->wob_t = 0;
         e->glint = .9f; e->spiral = spiral; e->veins = veins; e->wet = wet;
+        if (!face_shapes_initialized) {
+            face_model.eye[i]=*e;
+            const float initial[15]={e->w,e->h,e->roll,e->taper,e->lid,e->tilt,e->smile,e->pw,e->ph,e->square,e->heart,e->glint,e->spiral,e->veins,e->wet};
+            for(int k=0;k<15;k++) face_shape_spring[i][k].x=initial[k];
+        }
     }
     face_gaze_target_x = gaze_x;
     face_gaze_target_y = gaze_y;
