@@ -108,7 +108,7 @@ jobs:
           assert "width:var(--eye-w,58px)!important;height:var(--eye-h,78px)!important" in html, "Both eyes must use one shared size target"
           assert "animation:none!important" in html and "translate:0 0!important" in html, "Independent eye drift must be disabled"
           assert "Math.random()<.55?0:1" not in html and "setSharedPupilGaze" in html, "Both pupils must use the same gaze target"
-          assert "third_party/Pip-KeyPet/ui/pip.c" in Path(".").joinpath("third_party/Pip-KeyPet/ui/pip.c").as_posix(), "Upstream animation source missing"
+          assert Path("third_party/Pip-KeyPet/ui/pip.c").exists(), "Upstream animation source missing"
           assert Path("third_party/Pip-KeyPet/LICENSE").exists() and Path("third_party/Pip-KeyPet/ui/face.c").exists(), "MIT attribution and upstream face renderer source missing"
           assert 'weatherScene' in html and "faceKey==='sad'" not in html, "Weather must not be driven by sadness"
           PY
