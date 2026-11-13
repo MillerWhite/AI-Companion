@@ -1,36 +1,56 @@
 # Pip-KeyPet upstream source
 
-This directory contains the upstream Pip-KeyPet files copied from
-https://github.com/NovikovVisuals/Pip-KeyPet at commit
-`37bc39da2104ea8445da8605d441d1ba1456ab96`.
+This directory contains source copied from the MIT-licensed upstream project:
+https://github.com/NovikovVisuals/Pip-KeyPet
+Upstream revision: `37bc39da2104ea8445da8605d441d1ba1456ab96`.
 
-The upstream project is licensed under MIT. The original license is included at
-`LICENSE`; retain it with these source files.
+The original MIT license is retained at `LICENSE`. Keep the copyright and
+license notice with redistributed copies and substantial portions.
 
-## Imported source
+## Imported modules
 
-- `ui/face.c` and `ui/face.h`: original procedural 3D ellipsoid eye renderer.
-- `ui/pip.c` and `ui/pip.h`: original mood table, animation spring system,
-  gaze, blink/wink, head pose, reactions and pet behavior.
-- `ui/moods.h`: complete upstream mood identifiers.
-- `ui/doodle.c` and `ui/doodle.h`: original procedural scene doodles and rain cloud.
+- `ui/face.c`, `ui/face.h`: procedural shaded ellipsoid eye renderer.
+- `ui/pip.c`, `ui/pip.h`, `ui/moods.h`: eye animation, mood shapes,
+  gaze, blink/wink, head pose, reactions and interaction logic.
+- `ui/doodle.c`, `ui/doodle.h`: procedural scene effects.
+- `ui/apps.c`: clock, badge, Quick QR, notifications, music, remote,
+  camera, timer, noise meter, games and other app screens.
+- `ui/phone.c`, `ui/phone.h`: iPhone notifications/media UI and computer
+  remote UI contracts.
+- `ui/shell.c`, `ui/shell.h`: app navigation and hardware-button routing.
+- `ui/theme.c`, `ui/theme.h`: visual themes, typography and UI primitives.
+- `ui/profile.c`, `ui/profile.h`: badge identity and four Quick QR links.
+- `ui/voice.c`, `ui/voice.h`: procedural nonverbal voice synthesis.
+- `ui/imu.c`, `ui/imu.h`: shake, tilt, face-down and step classifier.
+- `ui/mic.c`, `ui/mic.h`: sound level and blow detection.
+- `ui/maze.c`, `ui/maze.h`: maze game physics.
+- `docs/index.html`: upstream browser control panel reference.
 
-## Integration in AI Companion
+## AI Companion port boundary
 
-- `firmware/esp-idf/main/companion_face_renderer.c` is the upstream
-  `ui/face.c` renderer with only its header include renamed to the local
-  `companion_face_renderer.h`.
-- The firmware animation loop uses the same paired-eye concepts: shared
-  head pose, curved eye placement, far-eye foreshortening, 120 Hz substepped
-  damped springs, shared gaze and synchronized blink.
-- `AI_Companion_Emotional_Engine.html` uses one shared eye-size target per
-  emotion, a shared pupil vector and a single three-axis head transform.
-- `pip.c` is retained verbatim as the complete upstream reference engine.
-  It is not compiled into the firmware as-is because it is the original
-  LVGL application layer and depends on Pip-KeyPet's own pet, IMU, mic,
-  theme, voice and UI modules. AI Companion keeps its own voice, memory,
-  cloud, BLE, iPhone and device services; those services must not be replaced
-  by Pip's unrelated application code.
+These are retained as upstream source/reference modules. They are not all
+compiled into AI Companion's production firmware yet. The upstream LVGL app
+stack has its own board glue, fonts, application shell, BLE host and pet-state
+model. Directly replacing AI Companion's `main.c` or build manifest with
+Pip's would break the existing Waveshare setup, owner memory/personality,
+cloud speech path, AI Companion USB protocol and service modules.
 
-This is an integration/port, not a claim that the two applications have
-identical surrounding architecture.
+The production eye renderer at
+`firmware/esp-idf/main/companion_face_renderer.c` is already based on the
+upstream procedural `ui/face.c`. AI Companion's current firmware continues to
+own its display, audio, Wi-Fi, BLE, iPhone, USB, QR and cloud services.
+
+## Explicit exclusions
+
+Pip's food/energy/fun/love depletion, feeding, care timers and punishment for
+being left alone are not part of AI Companion. The upstream `pet.c` and
+`pet.h` are intentionally not imported into the production firmware. The
+friend's reactions are driven by interaction, sensors, owner-configured
+personality and AI events instead.
+
+## Status
+
+This is a source import and integration foundation, not a claim that every
+upstream app has already been ported to the device. Production integration
+must adapt the app/phone/shell contracts to AI Companion's existing modules
+and must be verified with CI and the physical Waveshare board.
