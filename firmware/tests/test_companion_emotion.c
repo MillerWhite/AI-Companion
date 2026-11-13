@@ -12,6 +12,7 @@ static void test_defaults(void)
     assert(state.playfulness == 35.0f);
     assert(state.calmness == 35.0f);
     assert(state.responsiveness == 30.0f);
+    assert(state.irritation == 0.0f);
     assert(companion_emotion_initiative_chance(&state) == 25);
 }
 
@@ -45,6 +46,20 @@ static void test_personality_and_initiative_bounds(void)
     assert(state.temperament == 0 && state.initiative == 0 && state.quirk == 0);
 }
 
+static void test_frustration_is_event_driven_and_angry_is_named(void)
+{
+    companion_state_t state;
+    companion_emotion_init(&state);
+    companion_emotion_interaction(&state, "frustration");
+    assert(state.irritation == 18.0f);
+    assert(strcmp(companion_emotion_name(COMPANION_ANGRY), "злость") == 0);
+    float irritation = state.irritation;
+    companion_emotion_tick(&state, 86400U, false);
+    assert(state.irritation == irritation);
+    companion_emotion_interaction(&state, "pet");
+    assert(state.irritation < irritation);
+}
+
 static void test_emotion_selection_is_valid(void)
 {
     companion_state_t state;
@@ -61,6 +76,7 @@ int main(void)
     test_relationship_is_event_driven();
     test_personality_and_initiative_bounds();
     test_emotion_selection_is_valid();
+    test_frustration_is_event_driven_and_angry_is_named();
     puts("companion emotion core: all tests passed");
     return 0;
 }
