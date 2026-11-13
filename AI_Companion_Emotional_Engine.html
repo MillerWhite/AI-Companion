@@ -12,25 +12,25 @@ h1{font-size:clamp(27px,4vw,42px);line-height:1.04;letter-spacing:-.045em;margin
 .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}.panel{border:1px solid var(--line);border-radius:21px;background:linear-gradient(145deg,#141e2dF2,#0c121dF5);padding:18px;box-shadow:0 18px 50px #0005}
 .stage{min-height:365px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden}.orb{width:min(270px,68vw);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;position:relative;background:#000;border:1px solid #17171b;box-shadow:0 0 0 1px #ffffff05;transition:transform .35s,filter .35s}.orb:before{content:none}
 .face{display:flex;gap:29px;align-items:center;position:relative;transition:.2s}.eye{width:58px;height:78px;border-radius:50%;background:#fff;box-shadow:0 0 7px #ffffff66,0 0 22px #ffffff22;position:relative;transition:all .22s}.eye:after{content:"";position:absolute;top:12px;left:13px;width:15px;height:15px;border-radius:50%;background:#fff;opacity:.0}
-.mouth{position:absolute;top:calc(50% + 66px);left:50%;transform:translateX(-50%);width:20px;height:7px;border-bottom:2px solid #ffffffaa;border-radius:0 0 50% 50%;transition:all .2s}
-.orb.blink .eye{transform:scaleY(.07)}.orb.sleep .eye{height:7px;border-radius:9px}.orb.happy .eye{height:52px;border-radius:50% 50% 44% 44%}.orb.excited .eye{height:94px;width:67px}.orb.sad{box-shadow:inset 0 0 52px #102c43aa,0 0 34px #63b9ed22}.orb.sad .face{transform:translateY(13px) scale(.94)}.orb.sad .eye{height:55px;width:55px;border-radius:48% 48% 45% 45%;background:#eaf6ff;box-shadow:inset 0 9px 0 #b7cddd,0 0 12px #9bdcff66,0 0 25px #70bde933;filter:none}.orb.sad .eye:first-child{transform:rotate(-7deg) translateY(8px)}.orb.sad .eye:last-child{transform:rotate(7deg) translateY(8px)}.orb.sad .eye:before{content:"";position:absolute;display:block;top:-13px;left:4px;width:47px;height:9px;border-radius:9px 9px 3px 3px;background:#d9eafa;opacity:1;transform:rotate(-17deg);box-shadow:0 2px 5px #0005}.orb.sad .eye:last-child:before{transform:rotate(17deg)}.orb.sad .eye:after{opacity:1;top:38px;left:34px;width:10px;height:18px;border-radius:55% 45% 65% 65%;background:linear-gradient(180deg,#f4fcff 0%,#8bdcff 55%,#54aee9 100%);box-shadow:0 0 10px #75cfffaa}.orb.sad .eye:last-child:after{left:10px;top:39px;width:8px;height:14px;opacity:.88}.orb.sad .mouth{top:calc(50% + 76px);width:34px;height:17px;border:0;border-top:4px solid #dcefff;border-radius:50% 50% 0 0;transform:translateX(-50%) translateY(5px);filter:drop-shadow(0 0 5px #8bcfff66)}.orb.surprised .eye{height:101px;width:68px}.orb.shy .eye{height:58px;transform:scaleY(.83)}.orb.curious .eye:first-child{transform:translateY(-8px) scale(.93)}.orb.curious .eye:last-child{transform:translateY(5px) scale(1.05)}.orb.angry .eye{height:45px;transform:rotate(-12deg);filter:hue-rotate(330deg)}.orb.love .eye{filter:hue-rotate(305deg);border-radius:42% 58% 48% 52%}.orb.gaze-left .face{transform:translateX(-8px)}.orb.gaze-right .face{transform:translateX(8px)}.orb.gaze-up .face{transform:translateY(-6px)}.orb.gaze-down .face{transform:translateY(6px)}.orb.gaze-center .face{transform:translate(0,0)}
 
-.mouth{transform-origin:center;will-change:transform,height,width,border-radius;filter:drop-shadow(0 0 4px #ffffff22)}
-.mouth.neutral{width:22px;height:4px;border:0;border-bottom:2px solid #f4f8ff;border-radius:0 0 50% 50%;opacity:.82}
-.mouth.happy,.mouth.love{width:30px;height:13px;border:0;border-bottom:4px solid #fff;border-radius:0 0 55% 55%;transform:translateX(-50%) translateY(-2px)}
-.mouth.excited{width:22px;height:25px;border:2px solid #fff;background:#ffffff18;border-radius:45% 45% 52% 52%;box-shadow:inset 0 -5px 0 #ffffff22}
-.mouth.surprised,.mouth.curious{width:13px;height:17px;border:2px solid #fff;border-radius:50%;background:#ffffff0c}
-.mouth.sad{top:calc(50% + 76px);width:34px;height:17px;border:0;border-top:4px solid #e7f6ff;border-radius:50% 50% 0 0;transform:translateX(-50%) translateY(5px);filter:drop-shadow(0 0 5px #8bcfff66)}
-.mouth.angry{width:27px;height:8px;border:0;border-top:4px solid #fff;border-radius:0 0 45% 45%;transform:translateX(-50%) rotate(5deg)}
-.mouth.shy{width:15px;height:7px;border:0;border-bottom:3px solid #fff;border-radius:50%;opacity:.8}
-.mouth.sleep{width:18px;height:3px;border:0;border-bottom:2px solid #ffffff99;border-radius:50%}
-.mouth.pulse{animation:mouth-chirp .46s cubic-bezier(.2,.8,.25,1) both}
-@keyframes mouth-chirp{0%{scale:1 1}18%{scale:1.28 1.75}42%{scale:.88 .72}68%{scale:1.12 1.28}100%{scale:1 1}}
+.orb.blink .eye{transform:scaleY(.07)}.orb.sleep .eye{height:7px;border-radius:9px}.orb.happy .eye{height:52px;border-radius:50% 50% 44% 44%}.orb.excited .eye{height:94px;width:67px}.orb.sad{box-shadow:inset 0 0 52px #102c43aa,0 0 34px #63b9ed22}.orb.sad .face{transform:translateY(13px) scale(.94)}.orb.sad .eye{height:55px;width:55px;border-radius:48% 48% 45% 45%;background:#eaf6ff;box-shadow:inset 0 9px 0 #b7cddd,0 0 12px #9bdcff66,0 0 25px #70bde933;filter:none}.orb.sad .eye:first-child{transform:rotate(-7deg) translateY(8px)}.orb.sad .eye:last-child{transform:rotate(7deg) translateY(8px)}.orb.sad .eye:before{content:"";position:absolute;display:block;top:-13px;left:4px;width:47px;height:9px;border-radius:9px 9px 3px 3px;background:#d9eafa;opacity:1;transform:rotate(-17deg);box-shadow:0 2px 5px #0005}.orb.sad .eye:last-child:before{transform:rotate(17deg)}.orb.sad .eye:after{opacity:1;top:38px;left:34px;width:10px;height:18px;border-radius:55% 45% 65% 65%;background:linear-gradient(180deg,#f4fcff 0%,#8bdcff 55%,#54aee9 100%);box-shadow:0 0 10px #75cfffaa}.orb.sad .eye:last-child:after{left:10px;top:39px;width:8px;height:14px;opacity:.88}.orb.sad .orb.surprised .eye{height:101px;width:68px}.orb.shy .eye{height:58px;transform:scaleY(.83)}.orb.curious .eye:first-child{transform:translateY(-8px) scale(.93)}.orb.curious .eye:last-child{transform:translateY(5px) scale(1.05)}.orb.angry .eye{height:45px;transform:rotate(-12deg);filter:hue-rotate(330deg)}.orb.love .eye{filter:hue-rotate(305deg);border-radius:42% 58% 48% 52%}.orb.gaze-left .face{transform:translateX(-8px)}.orb.gaze-right .face{transform:translateX(8px)}.orb.gaze-up .face{transform:translateY(-6px)}.orb.gaze-down .face{transform:translateY(6px)}.orb.gaze-center .face{transform:translate(0,0)}
+
+
+
+
+
+
+
+
+
+
+
+18%{scale:1.28 1.75}42%{scale:.88 .72}68%{scale:1.12 1.28}100%{scale:1 1}}
 @keyframes orb-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.012)}}
 @keyframes face-drift{0%,100%{translate:0 0}50%{translate:0 -2px}}
 .orb:not(.sleep){animation:orb-breathe 6.5s ease-in-out infinite}
 .orb:not(.sleep) .face{animation:face-drift 5.2s ease-in-out infinite}
-.orb.sleep .mouth{animation:none}
+.orb.sleep 
 .eye{will-change:transform,translate;transition:height .28s,width .28s,border-radius .28s,filter .28s,translate .18s,scale .12s}.eye.micro-left{translate:var(--mx,0px) var(--my,0px)}.eye.micro-right{translate:var(--mx,0px) var(--my,0px)}.eye.blink-one{scale:1 .06}.eye.blink-two{scale:1 .06}
 .voicebar{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;margin-top:11px}.voicebar button{font-size:12px}.voice-state{font-size:11px;color:#aaa;max-width:100%;text-align:center}.voice-state.active{color:#f4f4f5}.daypart{font-size:10px;color:#85858d;margin-top:5px;text-align:center}
 .status{margin-top:18px;color:#d4e8f8;font-size:13px}.substatus{font-size:11px;color:var(--muted);margin-top:4px}.controls{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:14px}
@@ -40,7 +40,7 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 .profile{background:#0a0a0b;border:1px solid #29292d;border-radius:13px;padding:12px;margin-top:12px}.profile strong{font-size:13px}.profile p{font-size:12px;color:#afafb6;margin:6px 0 0}.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.chip{font-size:10px;padding:4px 7px;border-radius:20px;border:1px solid #3b3b42;color:#eee;background:#171719}.meter{height:7px;background:#1a1a1d;border-radius:9px;overflow:hidden}.meter i{display:block;height:100%;background:#f2f2f2;border-radius:9px;transition:width .5s}.field label b{float:right;color:#fff}
 .soundgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.soundgrid button{font-size:12px;padding:10px 6px}.cloud-settings{margin:12px auto 0;width:min(100%,420px);padding:12px;border:1px solid #29292d;border-radius:13px;background:#08090c;text-align:left}.cloud-title{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;font-weight:700}.cloud-toggle{display:flex;align-items:center;gap:8px;color:#d7d7dc;font-size:12px;margin:9px 0}.cloud-toggle input{accent-color:#fff}.cloud-settings input[type=url]{width:100%;padding:10px;border-radius:8px;border:1px solid #333;background:#111;color:#fff;font:12px system-ui}.cloud-help{font-size:10px;color:#8b8b94;margin-top:7px;line-height:1.4}.soundnote{font-size:11px;color:var(--muted);margin:9px 0 0}.log{border-top:1px solid #2a394e;margin-top:14px;padding-top:10px}.logtop{display:flex;justify-content:space-between;font-size:11px;color:#aebed2}.logbody{height:85px;overflow:auto;font-size:11px;color:#8799b1}.logbody div{padding:4px 0;border-bottom:1px solid #ffffff08}
 
-/* Procedural mouthless companion face — aligned with the firmware renderer. */
+/* Procedural eye-only companion face — aligned with the firmware renderer. */
 .orb{isolation:isolate;overflow:hidden;background:radial-gradient(circle at 50% 45%,#111 0,#030303 58%,#000 100%)}
 .face{z-index:2;gap:25px;transform:translate(var(--gaze-x,0px),var(--gaze-y,0px)) rotate(var(--head-roll,0deg));transition:transform .24s cubic-bezier(.2,.75,.2,1)}
 .eye{width:76px;height:94px;position:relative;overflow:hidden;border-radius:48% 48% 45% 45%;background:radial-gradient(ellipse at 42% 34%,#fff 0 36%,#e9f0f7 72%,#cbd5df 100%);box-shadow:inset 0 -7px 12px #64718133,0 0 16px #fff3;transform-origin:50% 50%;transition:height .28s,width .28s,border-radius .28s,transform .22s,filter .25s}
@@ -65,7 +65,7 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 @keyframes rain-fall{0%{translate:0 -8px;opacity:0}25%{opacity:1}100%{translate:5px 18px;opacity:0}}
 .weather-control{width:min(100%,420px);margin:10px auto 0;padding:10px 12px;border:1px solid #29292d;border-radius:12px;background:#08090c;text-align:left}
 .weather-control label{display:block;color:#aaa;font-size:11px;margin-bottom:5px}.weather-control select{width:100%;background:#111;color:#eee;border:1px solid #34343a;border-radius:8px;padding:8px}.weather-control span{display:block;color:#888;font-size:10px;margin-top:6px}
-.mouth{display:none!important}
+
 
 @media(max-width:780px){.grid{grid-template-columns:1fr}.panel{padding:15px}.stage{min-height:350px}}
 </style>
@@ -144,7 +144,6 @@ function makeEmotionSoundSet(moodKey,family){const variants=[];const familyNotes
 const emotionSoundLibrary=Object.fromEntries(soundCategories.map(m=>[m.key,makeEmotionSoundSet(m.key,m.family)]));
 function initSoundSelector(){const select=$('soundEmotion');if(!select)return;soundCategories.forEach(m=>{const o=document.createElement('option');o.value=m.key;o.textContent=m.label;select.append(o)});for(let i=1;i<=50;i++){const o=document.createElement('option');o.value=String(i-1);o.textContent='Вариант '+i;$('soundVariant').append(o)};select.value='joy';$('soundVariant').value='0';updateSoundInfo();}
 function updateSoundInfo(){const key=$('soundEmotion').value,m=soundCategories.find(x=>x.key===key),family=m?.family||'warm';$('soundInfo').querySelector('strong').textContent=(m?m.label:key)+' · 50 вариантов';$('soundInfo').querySelector('p').textContent='Звуковой характер: '+(soundNames[family]||family)+'. Варианты имеют разные мелодические контуры, число нот, паузы, темп, частоты, длительность и тембр.';}
-function pulseMouth(){/* No mouth: vocal expression is carried by eye motion and sound. */}
 function playEmotionSound(moodKey,variantIndex){const c=audio();if(!c){log('Web Audio API недоступен');return}const set=emotionSoundLibrary[moodKey]||emotionSoundLibrary.joy;const v=set[variantIndex%50],t=c.currentTime;v.notes.forEach(n=>tone(c,t+n.delay,n.freq,n.duration,v.wave,n.volume,n.ending,n.attack));if(v.noise)noise(c,t+.02,Math.min(.22,v.tail*.55),v.noiseVol,v.noiseFreq);const m=soundCategories.find(x=>x.key===moodKey);log('Звук «'+(m?m.label:moodKey)+'» · вариант '+(variantIndex+1)+'/50');}
 function chooseSoundVariant(key){const recent=soundMemory[key]||(soundMemory[key]=[]);let idx;if($('soundMode')?.value==='ordered'){idx=orderedSoundIndex++%50;}else{const candidates=Array.from({length:50},(_,i)=>i).filter(i=>!recent.includes(i));idx=candidates[Math.floor(Math.random()*candidates.length)]??Math.floor(Math.random()*50);}recent.push(idx);if(recent.length>10)recent.shift();return idx;}
 function playSelectedSound(){const key=$('soundEmotion').value,idx=+$('soundVariant').value;playEmotionSound(key,idx);}
