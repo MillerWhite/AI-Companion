@@ -144,3 +144,14 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 - GitHub Pages workflow currently fails at Configure Pages; source is committed, but live deployment is not confirmed.
 - No production backend host or live provider credentials are configured by this code change.
 - Hardware-dependent acceptance (AMOLED frame pacing, IMU orientation, microphone, speaker, iPhone ANCS/AMS, BLE/USB HID, power and thermals) remains blocked until physical board and host devices are available.
+
+
+## Full-axis face response and visual parity — 13.11.2026
+
+- Browser simulator eye geometry, glow, pupil size/highlight, spacing, idle float and emotion poses now use the same visual values as the installer preview. The old independent eye CSS and the broken three-element weather overlay were removed.
+- Weather is now a separate canvas atmosphere layer behind the eyes: drifting clouds, soft sun/sky glow, wind-driven rain, snow particles and occasional lightning; auto mode cycles demo weather independently of mood. This is a visual demo, not a live weather feed.
+- Browser DeviceOrientation now maps alpha (yaw), beta (pitch) and gamma (roll), compensating for screen orientation.
+- QMI8658 firmware now enables its gyroscope and fuses acceleration + angular velocity into pitch, roll and relative yaw. The renderer receives all three orientation axes.
+- Pip-KeyPet is MIT-licensed; its original license is retained at third_party/Pip-KeyPet-LICENSE.txt and the adapted renderer carries a source attribution. The repository's UI/face renderer contains no weather-scene implementation, so the new weather canvas is an original atmospheric layer rather than a copied competitor weather module.
+- CI now checks the new weather renderer and tests the 3-axis orientation math.
+- Still requires physical board validation for sensor-axis calibration, drift, animation pacing and OLED visuals.
