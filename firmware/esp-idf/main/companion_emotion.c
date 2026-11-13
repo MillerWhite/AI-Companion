@@ -20,6 +20,7 @@ void companion_emotion_init(companion_state_t *state)
         .playfulness = 35.0f,
         .calmness = 35.0f,
         .responsiveness = 30.0f,
+        .irritation = 0.0f,
         .temperament = 0,
         .initiative = 0,
         .quirk = 0
@@ -53,6 +54,7 @@ void companion_emotion_interaction(companion_state_t *state, const char *kind)
         const bool long_pet = !strcmp(kind, "long_pet");
         state->pet_count++;
         state->trust = clamp100(state->trust + (long_pet ? 3.0f : 1.8f));
+        state->irritation = clamp100(state->irritation - 4.0f);
         state->calmness = clamp100(state->calmness + (long_pet ? 1.4f : 0.7f));
         state->playfulness = clamp100(state->playfulness + 0.2f);
     } else if (!strcmp(kind, "call")) {
@@ -60,6 +62,7 @@ void companion_emotion_interaction(companion_state_t *state, const char *kind)
         state->trust = clamp100(state->trust + 1.0f);
         state->curiosity = clamp100(state->curiosity + 2.5f);
         state->responsiveness = clamp100(state->responsiveness + 1.7f);
+        state->irritation = clamp100(state->irritation - 2.0f);
     } else if (!strcmp(kind, "charge")) {
         /* Power is environmental context, not a consumable need. */
         state->trust = clamp100(state->trust + 0.2f);
@@ -71,6 +74,10 @@ void companion_emotion_interaction(companion_state_t *state, const char *kind)
         state->curiosity = clamp100(state->curiosity + 1.5f);
     } else if (!strcmp(kind, "rest")) {
         state->calmness = clamp100(state->calmness + 0.8f);
+        state->irritation = clamp100(state->irritation - 1.5f);
+    } else if (!strcmp(kind, "frustration")) {
+        state->irritation = clamp100(state->irritation + 18.0f);
+        state->surprise_count++;
     }
 }
 
@@ -93,7 +100,7 @@ static companion_emotion_t choose_weighted(const companion_state_t *s,
                                             uint32_t roll)
 {
     /* Weight table is deterministic and can be exercised in host-side tests. */
-    uint8_t calm = 25, curious = 22, happy = 18, shy = 10, sleepy = 5, affectionate = 8, excited = 7, surprised = 5;
+    uint8_t calm = 25, curious = 22, happy = 18, shy = 10, sleepy = 5, affectionate = 8, excited = 7, surprised = 5, angry = (uint8_t)(2.0f + s->irritation / 5.0f);
     if (s->temperament == 1) { calm += 22; happy -= 5; excited -= 5; }
     else if (s->temperament == 2) { excited += 15; happy += 10; calm -= 12; }
     else if (s->temperament == 3) { shy += 20; calm += 5; excited -= 5; }
@@ -108,15 +115,15 @@ static companion_emotion_t choose_weighted(const companion_state_t *s,
     if (s->calmness > 70.0f) calm += 8;
     if (s->responsiveness > 65.0f) happy += 5;
 
-    int weights[8] = {calm, curious, happy, shy, sleepy, affectionate, excited, surprised};
+    int weights[9] = {calm, curious, happy, shy, sleepy, affectionate, excited, surprised, angry};
     int total = 0;
-    for (size_t i = 0; i < 8; ++i) { if (weights[i] < 1) weights[i] = 1; total += weights[i]; }
+    for (size_t i = 0; i < 9; ++i) { if (weights[i] < 1) weights[i] = 1; total += weights[i]; }
     int pick = (int)(roll % (uint32_t)total);
     for (size_t i = 0; i < 8; ++i) {
         if (pick < weights[i]) {
-            static const companion_emotion_t map[8] = {
+            static const companion_emotion_t map[9] = {
                 COMPANION_CALM, COMPANION_CURIOUS, COMPANION_HAPPY, COMPANION_SHY,
-                COMPANION_SLEEPY, COMPANION_AFFECTIONATE, COMPANION_EXCITED, COMPANION_SURPRISED
+                COMPANION_SLEEPY, COMPANION_AFFECTIONATE, COMPANION_EXCITED, COMPANION_SURPRISED, COMPANION_ANGRY
             };
             return map[i];
         }
@@ -144,7 +151,7 @@ const char *companion_emotion_name(companion_emotion_t emotion)
 {
     static const char *names[COMPANION_EMOTION_COUNT] = {
         "спокойствие", "радость", "любопытство", "сонливость", "грусть",
-        "нежность", "восторг", "удивление", "испуг", "беспокойство", "смущение", "головокружение", "зажмуривание"
+        "нежность", "восторг", "удивление", "испуг", "беспокойство", "смущение", "головокружение", "зажмуривание", "злость"
     };
     return emotion < COMPANION_EMOTION_COUNT ? names[emotion] : names[COMPANION_CALM];
 }
