@@ -78,6 +78,11 @@ class Emotion(str, Enum):
     calm = "calm"
     excited = "excited"
     concerned = "concerned"
+    angry = "angry"
+    shy = "shy"
+    scared = "scared"
+    dizzy = "dizzy"
+    flinch = "flinch"
 
 
 class ContextTurn(BaseModel):
@@ -221,7 +226,7 @@ def make_system_prompt(name: str, personality: dict[str, Any], memory_facts: lis
         "If it is addressed to the companion, set addressed_to_companion=true and interpret the request. "
         "Allowed action values: " + ", ".join(item.value for item in Action) + ". "
         "Allowed emotion values: " + ", ".join(item.value for item in Emotion) + ". "
-        "Never generate speech, TTS, spoken dialogue, code, sound commands, hardware commands, "
+        "Use angry only for clear frustration or boundary-setting, shy for embarrassment, scared for genuine startle, and dizzy only for motion context. Never turn ordinary neutral speech into negative emotion. Never generate speech, TTS, spoken dialogue, code, sound commands, hardware commands, "
         "or arbitrary actions. nonverbal_cue is a short visual/behavioral description only. "
         "memory_updates may contain up to three durable, clearly stated, non-sensitive preferences only, "
         "using kinds favorite_activity, interaction_preference, nickname, display_preference. "
