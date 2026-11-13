@@ -94,76 +94,60 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 .orb.trust .eye{height:72px;border-radius:48% 48% 56% 56%}.orb.trust .pupil{background:radial-gradient(ellipse at 35% 25%,#586b83 0 8%,#182435 25%,#05070a 75%)}
 .orb.serene .eye{height:58px;border-radius:48% 48% 58% 58%}.orb.serene .eye:before{top:-76%}
 
-/* Unified expressive eye rig: mood shape + shared gaze + spring-driven head pose. */
-.orb{perspective:720px;transform-style:preserve-3d;animation:pet-breathe 5.8s ease-in-out infinite;}
+/* Pip-KeyPet-compatible paired-eye rig. One shared shape per mood; no independent eye drift. */
+.orb{perspective:720px;transform-style:preserve-3d;animation:pet-breathe 5.8s ease-in-out infinite}
 .orb.sleep{animation:none}
 .orb .face{
-  display:flex;align-items:center;justify-content:center;gap:var(--eye-gap,28px);
-  transform-style:preserve-3d;transform:translate3d(0,0,0)
-    rotateX(var(--head-pitch,0deg)) rotateY(var(--head-yaw,0deg)) rotateZ(var(--head-roll,0deg));
-  transform-origin:50% 55%;animation:pet-float 4.8s ease-in-out infinite;
-  transition:gap .35s cubic-bezier(.2,.8,.2,1);
+ display:flex;align-items:center;justify-content:center;gap:var(--eye-gap,29px);
+ transform-style:preserve-3d;transform:rotateX(var(--head-pitch,0deg)) rotateY(var(--head-yaw,0deg)) rotateZ(var(--head-roll,0deg));
+ transform-origin:50% 55%;animation:pet-float 4.8s ease-in-out infinite;
 }
 .orb.sleep .face{animation:none}
 .orb .eye,.orb .eye:first-child,.orb .eye:last-child{
-  flex:0 0 auto;width:var(--eye-w,42px);height:var(--eye-h,64px);
-  min-width:0;border-radius:var(--eye-radius,52% 52% 48% 48%);
-  position:relative;overflow:visible;
-  background:linear-gradient(145deg,#fff 0%,#fbfff3 58%,#e7efd9 100%);
-  box-shadow:0 0 8px #fff9,0 0 24px #fff5,inset 0 -3px 7px #cbd7c455;
-  filter:var(--eye-filter,none);
-  transform:translate3d(var(--eye-x,0px),var(--eye-y,0px),0)
-    rotate(var(--eye-rot,0deg)) scale(var(--eye-sx,1),var(--eye-sy,1));
-  transform-origin:50% 52%;
-  transition:width .32s cubic-bezier(.2,.8,.2,1),height .32s cubic-bezier(.2,.8,.2,1),
-    border-radius .32s,background .32s,box-shadow .32s,filter .32s,transform .28s;
-  animation:eye-alive 6.2s ease-in-out infinite;
+ box-sizing:border-box!important;flex:0 0 auto!important;
+ width:var(--eye-w,58px)!important;height:var(--eye-h,78px)!important;
+ min-width:0!important;max-width:none!important;
+ border-radius:var(--eye-radius,50%)!important;
+ position:relative!important;overflow:visible!important;
+ background:var(--eye-fill,linear-gradient(145deg,#fff 0%,#fbfff3 58%,#e7efd9 100%))!important;
+ box-shadow:var(--eye-shadow,0 0 8px #fff9,0 0 24px #fff5,inset 0 -3px 7px #cbd7c455)!important;
+ filter:var(--eye-filter,none)!important;
+ transform:rotate(var(--eye-rot,0deg)) scaleY(var(--blink-scale,1))!important;
+ transform-origin:50% 52%!important;translate:0 0!important;scale:1 1!important;
+ animation:none!important;
+ transition:width .30s cubic-bezier(.2,.8,.2,1),height .30s cubic-bezier(.2,.8,.2,1),
+ border-radius .30s,background .30s,box-shadow .30s,filter .30s,transform .12s linear!important;
 }
-.orb .eye:last-child{animation-delay:-.7s}
 .orb .eye:before{
-  content:"";position:absolute;display:block;left:50%;top:var(--pupil-top,48%);
-  width:var(--pupil-w,17px);height:var(--pupil-h,23px);border-radius:var(--pupil-radius,48%);
-  background:var(--pupil-fill,radial-gradient(ellipse at 35% 24%,#66717b 0 7%,#101820 26%,#020407 78%));
-  box-shadow:0 1px 2px #0008;
-  transform:translate(calc(-50% + var(--pupil-x,0px)),calc(-50% + var(--pupil-y,0px)));
-  transition:width .25s,height .25s,top .25s,border-radius .25s,transform .12s linear;
+ content:"";position:absolute;display:block;left:50%;top:var(--pupil-top,48%);
+ width:var(--pupil-w,17px);height:var(--pupil-h,23px);border-radius:var(--pupil-radius,48%);
+ background:var(--pupil-fill,radial-gradient(ellipse at 35% 24%,#66717b 0 7%,#101820 26%,#020407 78%));
+ box-shadow:0 1px 2px #0008;
+ transform:translate(calc(-50% + var(--pupil-x,0px)),calc(-50% + var(--pupil-y,0px)));
+ transition:width .25s,height .25s,top .25s,border-radius .25s,transform .10s linear;
 }
 .orb .eye:after{
-  content:"";position:absolute;display:block;left:calc(50% - 7px);top:12px;width:8px;height:10px;
-  border-radius:50%;background:#fff;opacity:.95;box-shadow:4px 8px 0 -3px #ffffffc9;
-  transform:translate(var(--pupil-x,0px),var(--pupil-y,0px));transition:transform .12s linear;
+ content:"";position:absolute;display:block;left:calc(50% - 7px);top:12px;width:8px;height:10px;
+ border-radius:50%;background:#fff;opacity:.95;box-shadow:4px 8px 0 -3px #ffffffc9;
+ transform:translate(var(--pupil-x,0px),var(--pupil-y,0px));transition:transform .10s linear;
 }
-.orb .eye.blink-one,.orb .eye.blink-two,.orb.blink .eye{
-  transform:scaleY(.055) !important;transition:transform 75ms ease-in !important;
-}
-.orb.happy .eye{--eye-h:51px;--eye-w:48px;--eye-radius:52% 52% 44% 44%;--eye-sy:1.04}
-.orb.excited .eye,.orb.surprised .eye,.orb.fear .eye{--eye-h:86px;--eye-w:53px;--pupil-w:13px;--pupil-h:18px;--eye-sy:1.06}
-.orb.surprised .eye{--eye-h:94px;--eye-w:58px;--pupil-w:12px;--pupil-h:17px}
-.orb.sleep .eye,.orb.sleepy .eye{--eye-h:10px;--eye-w:47px;--eye-radius:12px;--pupil-top:50%;--eye-sy:.7;animation:none}
-.orb.sad .eye,.orb.disappointed .eye,.orb.lonely .eye{--eye-h:59px;--eye-w:48px;--eye-radius:48% 48% 42% 42%;--eye-filter:brightness(.9)}
-.orb.sad .eye:first-child{--eye-rot:-8deg;--eye-y:5px}
-.orb.sad .eye:last-child{--eye-rot:8deg;--eye-y:5px}
-.orb.shy .eye{--eye-h:56px;--eye-sy:.82;--pupil-top:57%}
-.orb.love .eye,.orb.trust .eye{--eye-h:62px;--eye-w:49px;--pupil-fill:radial-gradient(ellipse at 35% 24%,#ffb8d1 0 8%,#7c173d 28%,#210513 78%)}
-.orb.curious .eye:first-child{--eye-h:72px;--eye-y:-5px;--eye-sy:1.04}
-.orb.curious .eye:last-child{--eye-h:65px;--eye-y:3px;--eye-sy:.96}
-.orb.angry .eye,.orb.jealous .eye{--eye-h:48px;--eye-w:50px;--eye-radius:45% 45% 48% 48%;--eye-filter:brightness(.88) saturate(.8)}
-.orb.angry .eye:first-child,.orb.jealous .eye:first-child{--eye-rot:12deg;--eye-y:5px}
-.orb.angry .eye:last-child,.orb.jealous .eye:last-child{--eye-rot:-12deg;--eye-y:5px}
-.orb.playful .eye:first-child,.orb.mischief .eye:first-child,.orb.sly .eye:first-child{--eye-h:45px;--eye-sy:.78;--eye-rot:-8deg;--eye-y:5px}
-.orb.playful .eye:last-child,.orb.mischief .eye:last-child,.orb.sly .eye:last-child{--eye-h:68px;--eye-rot:4deg;--eye-y:-2px}
-.orb.bored .eye{--eye-h:39px;--eye-radius:48% 48% 35% 35%;--eye-sy:.82;--pupil-top:60%}
-.orb.confused .eye:first-child{--eye-h:78px;--eye-rot:-7deg;--eye-y:-4px}
-.orb.confused .eye:last-child{--eye-h:57px;--eye-rot:8deg;--eye-y:5px}
-.orb.focused .eye{--eye-h:60px;--eye-w:47px;--pupil-w:13px;--pupil-h:19px;--pupil-top:43%}
-.orb.anticipation .eye{--eye-h:78px;--eye-w:51px}
-.orb.relief .eye,.orb.serene .eye{--eye-h:55px;--eye-radius:48% 48% 58% 58%;--eye-sy:.88}
-.orb.proud .eye{--eye-h:61px;--eye-sy:.92;--pupil-top:43%}
-
+.orb.blink .eye,.orb .eye.blink,.orb .eye.blink-one,.orb .eye.blink-two{--blink-scale:.045}
+.orb.happy,.orb.excited,.orb.surprised,.orb.sad,.orb.angry,.orb.curious,.orb.shy,.orb.sleep,.orb.sleepy,.orb.affectionate,.orb.scared,.orb.concerned,.orb.dizzy,.orb.flinch{--eye-w:58px;--eye-h:78px}
+.orb.happy,.orb.content{--eye-h:65px;--eye-radius:52% 52% 43% 43%}
+.orb.excited,.orb.surprised,.orb.scared{--eye-w:61px;--eye-h:91px;--pupil-w:14px;--pupil-h:19px}
+.orb.surprised{--eye-w:64px;--eye-h:96px;--pupil-w:12px;--pupil-h:17px}
+.orb.sad{--eye-h:67px;--eye-radius:48% 48% 42% 42%;--eye-fill:linear-gradient(145deg,#edf8ff,#dcebf5);--eye-shadow:inset 0 8px 0 #b7cddd,0 0 12px #9bdcff66,0 0 25px #70bde933;--pupil-top:58%}
+.orb.sleep,.orb.sleepy{--eye-h:12px;--eye-radius:9px;--pupil-top:50%;--pupil-h:0px}
+.orb.shy{--eye-h:61px;--pupil-top:56%}
+.orb.curious{--eye-h:84px;--pupil-w:18px;--pupil-h:25px}
+.orb.angry{--eye-h:53px;--eye-radius:42% 42% 50% 50%;--eye-filter:brightness(.88) saturate(.85)}
+.orb.concerned{--eye-h:65px;--eye-radius:48% 48% 42% 42%;--pupil-top:53%}
+.orb.affectionate,.orb.love{--eye-h:68px;--pupil-fill:radial-gradient(ellipse at 35% 24%,#ffb8d1 0 8%,#7c173d 28%,#210513 78%)}
+.orb.dizzy{--pupil-w:19px;--pupil-h:19px}
+.orb.flinch{--eye-h:13px;--eye-radius:8px;--pupil-h:0px}
 @keyframes pet-breathe{0%,100%{scale:1}50%{scale:1.012}}
-@keyframes pet-float{0%,100%{translate:0 0}50%{translate:0 -2.5px}}
-@keyframes eye-alive{0%,100%{translate:0 0}45%{translate:0 -1px}65%{translate:0 0}}
-@media(prefers-reduced-motion:reduce){.orb,.face,.eye{animation:none!important;transition:none!important}}
+@keyframes pet-float{0%,100%{translate:0 0}50%{translate:0 -2px}}
+@media(prefers-reduced-motion:reduce){.orb,.orb .face,.orb .eye{animation:none!important;transition:none!important}}
 
 </style>
 </head>
