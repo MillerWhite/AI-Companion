@@ -23,3 +23,13 @@ typedef struct {
 } companion_motion_state_t;
 
 uint32_t companion_motion_feed(companion_motion_state_t *state, float ax_g, float ay_g, float az_g, float elapsed_seconds);
+
+typedef struct {
+    float pitch, roll, yaw; /* radians; yaw is gyro-integrated and gently recentres */
+    bool initialized;
+} companion_orientation_t;
+
+void companion_orientation_feed(companion_orientation_t *state,
+    float ax_g, float ay_g, float az_g,
+    float gx_rad_s, float gy_rad_s, float gz_rad_s,
+    float elapsed_seconds);
