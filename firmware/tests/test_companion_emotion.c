@@ -59,6 +59,13 @@ static void test_frustration_is_event_driven_and_angry_is_named(void)
     assert(state.irritation == irritation);
     companion_emotion_interaction(&state, "pet");
     assert(state.irritation < irritation);
+
+    state.irritation = 100.0f;
+    unsigned angry_count = 0;
+    for (uint32_t roll = 0; roll < 1000; ++roll) {
+        if (companion_emotion_choose(&state, 12, roll, COMPANION_CALM) == COMPANION_ANGRY) angry_count++;
+    }
+    assert(angry_count > 0);
 }
 
 static void test_emotion_selection_is_valid(void)
