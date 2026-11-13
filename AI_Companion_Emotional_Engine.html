@@ -333,7 +333,15 @@ function playSound(emotionKey,force=false){
 function updateWeatherScene(){const mode=$('weatherMode')?.value||'auto';weatherScene?.setMode(mode);const captions={auto:'Демонстрационный цикл погоды · не связан с настроением.',clear:'Ясное небо · мягкое солнце и атмосферное свечение.',cloudy:'Облака медленно проходят над экраном.',rain:'Дождь с ветром и каплями.',storm:'Гроза · дождь и редкие вспышки молнии.',snow:'Снегопад · хлопья плавно дрейфуют по ветру.'};const c=$('weatherCaption');if(c)c.textContent=captions[mode]||captions.auto;}
 $('weatherMode')?.addEventListener('change',()=>{updateWeatherScene();behavior?.setProfile({weather:$('weatherMode').value});});
 const facePose={yaw:{x:0,v:0},pitch:{x:0,v:0},roll:{x:0,v:0},gazeX:{x:0,v:0},gazeY:{x:0,v:0}};
+const eyeShape={w:{x:58,v:0},h:{x:78,v:0},gap:{x:29,v:0},pupilW:{x:17,v:0},pupilH:{x:23,v:0},pupilTop:{x:48,v:0}};
+let eyeShapeTarget={w:58,h:78,gap:29,pupilW:17,pupilH:23,pupilTop:48};
 let orientationZero=null,lastOrientationAt=0,lastPoseFrame=performance.now(),pointerTilt=null;
+function captureEyeShapeTarget(){
+ const props=['--eye-w','--eye-h','--eye-gap','--pupil-w','--pupil-h','--pupil-top'];
+ props.forEach(p=>orb.style.removeProperty(p));
+ const cs=getComputedStyle(orb),read=(p,fallback)=>{const n=parseFloat(cs.getPropertyValue(p));return Number.isFinite(n)?n:fallback;};
+ eyeShapeTarget={w:read('--eye-w',58),h:read('--eye-h',78),gap:read('--eye-gap',29),pupilW:read('--pupil-w',17),pupilH:read('--pupil-h',23),pupilTop:read('--pupil-top',48)};
+}
 function clampUnit(v){return Math.max(-1,Math.min(1,v));}
 function wrapDegrees(v){return ((v+180)%360+360)%360-180;}
 function spring(state,target,stiff,zeta,dt){
@@ -358,8 +366,20 @@ function renderFacePose(now){
   spring(facePose.roll,poseRoll,30,.6,stepDt);
   spring(facePose.gazeX,facePose.targetGazeX||0,900,.65,stepDt);
   spring(facePose.gazeY,facePose.targetGazeY||0,900,.65,stepDt);
+  spring(eyeShape.w,eyeShapeTarget.w,220,.5,stepDt);
+  spring(eyeShape.h,eyeShapeTarget.h,220,.5,stepDt);
+  spring(eyeShape.gap,eyeShapeTarget.gap,220,.5,stepDt);
+  spring(eyeShape.pupilW,eyeShapeTarget.pupilW,220,.5,stepDt);
+  spring(eyeShape.pupilH,eyeShapeTarget.pupilH,220,.5,stepDt);
+  spring(eyeShape.pupilTop,eyeShapeTarget.pupilTop,220,.5,stepDt);
  }
  const face=$('face');
+ orb.style.setProperty('--eye-w',eyeShape.w.x.toFixed(2)+'px');
+ orb.style.setProperty('--eye-h',eyeShape.h.x.toFixed(2)+'px');
+ orb.style.setProperty('--eye-gap',eyeShape.gap.x.toFixed(2)+'px');
+ orb.style.setProperty('--pupil-w',eyeShape.pupilW.x.toFixed(2)+'px');
+ orb.style.setProperty('--pupil-h',eyeShape.pupilH.x.toFixed(2)+'px');
+ orb.style.setProperty('--pupil-top',eyeShape.pupilTop.x.toFixed(2)+'%');
  setSharedPupilGaze(facePose.gazeX.x,facePose.gazeY.x);
  face.style.setProperty('--gaze-x',(facePose.gazeX.x*2).toFixed(2)+'px');
  face.style.setProperty('--gaze-y',(facePose.gazeY.x*2).toFixed(2)+'px');
@@ -401,7 +421,7 @@ requestAnimationFrame(renderFacePose);
 
 
 function setMood(faceKey,why='реакция компаньона',sound=true,soundEmotionKey='calm',duration=2600){current=faceKey;lastOwnerInputAt=Date.now();const behaviorFace={disappointed:'sad',lonely:'sad',playful:'happy',anticipation:'curious',relief:'happy',proud:'happy',confused:'curious',focused:'curious',fear:'scared',jealous:'angry',bored:'sleep',trust:'love',serene:'neutral'}[faceKey]||faceKey;behavior?.setMood(behaviorFace,Date.now(),duration);currentEmotionKey=soundEmotionKey;const map={happy:'радуется',excited:'в восторге',curious:'с любопытством наблюдает',surprised:'удивлён',shy:'смущается',love:'проявляет нежность',neutral:'спокойно наблюдает',sleep:'засыпает',sad:'грустит: взгляд опущен, веки наклонены, на глазах появляются слёзы',angry:'недоволен'};
-orb.className='orb '+(faceKey==='neutral'?'':faceKey);updateWeatherScene(faceKey);$('status').textContent=map[faceKey]||why;const moodLabel=soundCategories.find(m=>m.key===soundEmotionKey)?.label||soundEmotionKey;$('substatus').textContent=why+' · состояние: '+moodLabel+' · сила '+intensity+'/10';if(sound)playSound(soundEmotionKey,true);log(($('name').value||'Компаньон')+': '+(map[faceKey]||faceKey));if(returnTimer)clearTimeout(returnTimer);if(duration>0&&faceKey!=='sleep'&&faceKey!=='neutral'){returnTimer=setTimeout(()=>returnToBaseline(),duration);}} 
+orb.className='orb '+(faceKey==='neutral'?'':faceKey);captureEyeShapeTarget();updateWeatherScene(faceKey);$('status').textContent=map[faceKey]||why;const moodLabel=soundCategories.find(m=>m.key===soundEmotionKey)?.label||soundEmotionKey;$('substatus').textContent=why+' · состояние: '+moodLabel+' · сила '+intensity+'/10';if(sound)playSound(soundEmotionKey,true);log(($('name').value||'Компаньон')+': '+(map[faceKey]||faceKey));if(returnTimer)clearTimeout(returnTimer);if(duration>0&&faceKey!=='sleep'&&faceKey!=='neutral'){returnTimer=setTimeout(()=>returnToBaseline(),duration);}} 
 function returnToBaseline(){setMood('neutral','возвращается к спокойному состоянию',false,'calm',0);}
 function trigger(key){lastOwnerInputAt=Date.now();if(key==='sleep'){recordAction('rest',0);setMood('sleep','устроился отдохнуть',true,'sleep',0);return}if(key==='neutral'){recordAction('wake',0);setMood('neutral','просыпается и оглядывается',true,'greeting',2200);return}if(key==='happy'){memory.petCount++;recordAction('pet',2);setMood('happy','приятное прикосновение',true,'touch',2600);return}if(key==='curious'){memory.callCount++;recordAction('call',1);setMood('curious','услышал знакомый зов',true,'acknowledge',2400);return}if(key==='surprised'){recordAction('surprise',0);setMood('surprised','неожиданное событие',true,'surprise',2100);return}if(key==='angry'){recordAction('surprise',0);setMood('angry','резко нахмурился и недоволен',false,'annoyance',2600);return}}
 function randomEmotion(){let candidates=moods.filter(x=>!['sleep','sleepiness','fear','jealousy'].includes(x[0]));let m=candidates[Math.floor(Math.random()*candidates.length)];intensity=+$('intensity').value;setMood(m[2],'самостоятельно выбранная эмоция: '+m[1],true,m[0]);}
