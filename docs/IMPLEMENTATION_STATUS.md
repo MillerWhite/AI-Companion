@@ -19,7 +19,7 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 
 | Task | Code status | Remaining acceptance gate |
 |---|---|---|
-| Full emotional transitions and facial expressions | Implemented in firmware/browser code: thirteen mood states, mouthless procedural eye geometry, gaze, asymmetric blink, tilt response and event-driven transitions | ESP-IDF build; physical display smoothness and emotional clarity test |
+| Full emotional transitions and facial expressions | Implemented in firmware/browser code: fourteen mood states, mouthless procedural eye geometry, gaze, asymmetric blink, tilt response and event-driven transitions | ESP-IDF build; physical display smoothness and emotional clarity test |
 | Unique personality and long-term development | Implemented foundation: temperament, initiative, selectable quirks, trust/curiosity/playfulness, persistent local state and safe durable preference facts | Broader traits/quirks, multi-month progression tuning and owner data export review |
 | Physical speaker sound system | Implemented driver path: ES8311 BSP handle, soft procedural motifs, low gain and cooldown | Board test, audio calibration, echo/feedback and listening-quality review |
 | Microphone speech recognition | Implemented pipeline: ES7210 BSP capture, VAD, mono 16 kHz PCM, backend OpenAI audio transcription route | Board microphone slot mapping, Russian/noise tests, live OpenAI audio transcription credentials and quota test |
@@ -135,3 +135,12 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 - Автономные инициативы прошивки ограничены cooldown: 90 секунд для высокой, 180 для средней и 300 для низкой инициативы; неудачный шанс тоже начинает паузу. Это убирает повторные попытки каждые 8 секунд.
 - Добавлены Node-тесты общего runtime и C-тесты раздражения/восстановления.
 - Не завершено/не подтверждено: реальная погода на устройстве (нет источника геоданных/погодного сервиса и транспортного протокола), полноценная синхронизация анимаций между JS и C renderer, iOS/HID/аудио аппаратная приёмка, production backend и выпуск firmware binary. Проверка CI для текущего HEAD ожидается.
+
+
+## Приёмка большого прохода — 13.11.2026
+
+- Quality workflow на HEAD 9e8217e0a44d5cd29aa55b112f8b3c7497cf70e1: SUCCESS — native C tests, backend tests, installer JavaScript syntax, browser emotional engine syntax.
+- ESP-IDF firmware build for commit 718b1d7938ae689a55867ec5726a83501cf7ee5f: still running at last inspection; no firmware release asset exists yet.
+- GitHub Pages workflow currently fails at Configure Pages; source is committed, but live deployment is not confirmed.
+- No production backend host or live provider credentials are configured by this code change.
+- Hardware-dependent acceptance (AMOLED frame pacing, IMU orientation, microphone, speaker, iPhone ANCS/AMS, BLE/USB HID, power and thermals) remains blocked until physical board and host devices are available.
