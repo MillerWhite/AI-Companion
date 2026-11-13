@@ -89,6 +89,8 @@ jobs:
           print(f"Found {len(scripts)} inline script(s)")
           PY
           for file in /tmp/emotional-engine-*.js; do node --check "$file"; done
+          node --check web/installer/companion-runtime.js
+          node web/installer/tests/companion-runtime.test.cjs
           python - <<'PY'
           from pathlib import Path
           html = Path("AI_Companion_Emotional_Engine.html").read_text(encoding="utf-8")
