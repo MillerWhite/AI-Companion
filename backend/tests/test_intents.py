@@ -45,6 +45,11 @@ class IntentValidationTests(unittest.TestCase):
         self.assertFalse(result.addressed_to_companion)
         self.assertEqual(result.action, Action.idle)
 
+    def test_accepts_new_facial_emotions(self):
+        for emotion in ("angry", "shy", "scared", "dizzy", "flinch"):
+            result = validate_model_result(valid_result(emotion=emotion))
+            self.assertEqual(result.emotion.value, emotion)
+
     def test_rejects_unknown_action(self):
         with self.assertRaises(ValidationError):
             validate_model_result(valid_result(action="execute_shell"))
