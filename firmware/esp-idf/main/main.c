@@ -41,7 +41,8 @@ static lv_obj_t *status_label, *setup_label, *screen_face, *face_canvas;
 static face_t face_model;
 static uint16_t *face_pixels;
 static float face_gaze_x, face_gaze_y, face_gaze_target_x, face_gaze_target_y, face_base_lid;
-static float face_eye_base_roll[2];
+static float face_eye_base_roll[2], face_eye_base_w[2], face_eye_base_h[2];
+static float face_gaze_vx, face_gaze_vy;
 static float face_pose_yaw, face_pose_pitch, face_pose_roll;
 static float face_pose_yaw_v, face_pose_pitch_v, face_pose_roll_v;
 static void face_spring(float *x,float *v,float target,float stiffness,float zeta,float dt)
@@ -158,6 +159,8 @@ static void face_apply_emotion(companion_emotion_t emotion)
         e->depth = 78.0f;
         e->yaw = 0; e->pitch = 0; e->roll = (i ? -1.0f : 1.0f) * (emotion==COMPANION_SAD ? -.12f : (emotion==COMPANION_ANGRY ? .16f : .015f));
         face_eye_base_roll[i] = e->roll;
+        face_eye_base_w[i] = e->w;
+        face_eye_base_h[i] = e->h;
         e->taper = emotion==COMPANION_ANGRY ? .30f : (emotion==COMPANION_CONCERNED ? .12f : 0);
         e->lid = lid + (i ? .035f : 0);
         e->tilt = i ? -tilt : tilt;
@@ -213,8 +216,8 @@ static void face_animation_timer(lv_timer_t *timer)
         eye_t *e=&face_model.eye[i];
         e->x=233.0f+head_radius*sinf(phi)*cosf(head_roll);
         e->y=165.0f+240.0f*sinf(head_pitch)+head_radius*sinf(phi)*sinf(head_roll);
-        e->w=fmaxf(1.0f,e->w)*foreshorten;
-        e->h=fmaxf(1.0f,e->h)*foreshorten;
+        e->w=face_eye_base_w[i]*foreshorten;
+        e->h=face_eye_base_h[i]*foreshorten;
         e->yaw=head_yaw+side*spread*.5f;
         e->pitch=head_pitch;
         e->roll=head_roll-face_eye_base_roll[i];
