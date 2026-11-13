@@ -44,7 +44,7 @@ static face_shape_spring_t face_shape_spring[2][15];
 static bool face_shapes_initialized;
 static uint16_t *face_pixels;
 static float face_gaze_x, face_gaze_y, face_gaze_target_x, face_gaze_target_y, face_base_lid;
-static float face_eye_base_roll[2], face_eye_base_w[2], face_eye_base_h[2];
+
 static float face_gaze_vx, face_gaze_vy;
 static float face_pose_yaw, face_pose_pitch, face_pose_roll;
 static float face_pose_yaw_v, face_pose_pitch_v, face_pose_roll_v;
@@ -161,9 +161,6 @@ static void face_apply_emotion(companion_emotion_t emotion)
         e->h = h;
         e->depth = 78.0f;
         e->yaw = 0; e->pitch = 0; e->roll = (i ? -1.0f : 1.0f) * (emotion==COMPANION_SAD ? -.12f : (emotion==COMPANION_ANGRY ? .16f : .015f));
-        face_eye_base_roll[i] = e->roll;
-        face_eye_base_w[i] = e->w;
-        face_eye_base_h[i] = e->h;
         if (!face_shapes_initialized) {
             face_model.eye[i]=*e;
             const float initial[15]={e->w,e->h,e->roll,e->taper,e->lid,e->tilt,e->smile,e->pw,e->ph,e->square,e->heart,e->glint,e->spiral,e->veins,e->wet};
@@ -181,7 +178,6 @@ static void face_apply_emotion(companion_emotion_t emotion)
     }
     face_gaze_target_x = gaze_x;
     face_gaze_target_y = gaze_y;
-    face_base_lid = lid;
     face_shapes_initialized=true;
     face_model.color=face_target.color; face_model.pupil_color=face_target.pupil_color;
     face_model.heart_color=face_target.heart_color; face_model.blush_color=face_target.blush_color;
@@ -250,7 +246,7 @@ static void face_animation_timer(lv_timer_t *timer)
         e->look_x=fmaxf(-.85f,fminf(.85f,face_gaze_x-e->yaw));
         e->look_y=fmaxf(-.70f,fminf(.70f,face_gaze_y-head_pitch));
 
-        const int64_t blink_age = now - face_blink_start_us - (i ? 38000LL : 0LL);
+        const int64_t blink_age = now - face_blink_start_us;
         float blink = 0.0f;
         if (face_blink_start_us && blink_age >= 0 && blink_age < 150000LL) {
             const float phase = (float)blink_age / 150000.0f;
