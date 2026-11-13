@@ -38,7 +38,9 @@
 
 static const char *TAG = "ai_companion";
 static lv_obj_t *status_label, *setup_label, *screen_face, *face_canvas;
-static face_t face_model;
+static face_t face_model, face_target;
+typedef struct { float x, v; } face_shape_spring_t;
+static face_shape_spring_t face_shape_spring[2][15];
 static uint16_t *face_pixels;
 static float face_gaze_x, face_gaze_y, face_gaze_target_x, face_gaze_target_y, face_base_lid;
 static float face_eye_base_roll[2], face_eye_base_w[2], face_eye_base_h[2];
@@ -141,17 +143,17 @@ static void face_apply_emotion(companion_emotion_t emotion)
         case COMPANION_ANGRY: w=114; h=114; lid=.30f; tilt=.45f; pw=.20f; ph=.40f; break;
         default: break;
     }
-    face_model.color = white;
-    face_model.pupil_color = pupil;
-    face_model.heart_color = 0xF9B2;
-    face_model.blush_color = 0xF2B6;
-    face_model.vein_color = 0xE8A2;
-    face_model.water_color = 0x9F3F;
-    face_model.shading = .72f;
-    face_model.blush = blush;
-    face_model.swapped = 0;
+    face_target.color = white;
+    face_target.pupil_color = pupil;
+    face_target.heart_color = 0xF9B2;
+    face_target.blush_color = 0xF2B6;
+    face_target.vein_color = 0xE8A2;
+    face_target.water_color = 0x9F3F;
+    face_target.shading = .72f;
+    face_target.blush = blush;
+    face_target.swapped = 0;
     for (int i=0;i<2;i++) {
-        eye_t *e=&face_model.eye[i];
+        eye_t *e=&face_target.eye[i];
         e->x = i ? 316.0f : 150.0f;
         e->y = 158.0f;
         e->w = w * (i ? .98f : 1.0f);
@@ -161,6 +163,7 @@ static void face_apply_emotion(companion_emotion_t emotion)
         face_eye_base_roll[i] = e->roll;
         face_eye_base_w[i] = e->w;
         face_eye_base_h[i] = e->h;
+        memset(&face_shape_spring[i],0,sizeof(face_shape_spring[i]));
         e->taper = emotion==COMPANION_ANGRY ? .30f : (emotion==COMPANION_CONCERNED ? .12f : 0);
         e->lid = lid + (i ? .035f : 0);
         e->tilt = i ? -tilt : tilt;
@@ -174,6 +177,10 @@ static void face_apply_emotion(companion_emotion_t emotion)
     face_gaze_target_x = gaze_x;
     face_gaze_target_y = gaze_y;
     face_base_lid = lid;
+    face_model.color=face_target.color; face_model.pupil_color=face_target.pupil_color;
+    face_model.heart_color=face_target.heart_color; face_model.blush_color=face_target.blush_color;
+    face_model.vein_color=face_target.vein_color; face_model.water_color=face_target.water_color;
+    face_model.shading=face_target.shading; face_model.swapped=face_target.swapped;
 }
 
 static void face_animation_timer(lv_timer_t *timer)
@@ -214,15 +221,31 @@ static void face_animation_timer(lv_timer_t *timer)
         const float phi=head_yaw+side*spread;
         const float foreshorten=1.0f+.35f*(cosf(phi)-.8525245f);
         eye_t *e=&face_model.eye[i];
+        const eye_t *target=&face_target.eye[i];
+        float *dst=(float *)&e->depth;
+        const float *src=(const float *)&target->depth;
+        for(int k=0;k<15;k++) face_spring(&dst[k],&face_shape_spring[i][k].v,src[k],220.0f,.5f,dt);
         e->x=233.0f+head_radius*sinf(phi)*cosf(head_roll);
         e->y=165.0f+240.0f*sinf(head_pitch)+head_radius*sinf(phi)*sinf(head_roll);
-        e->w=face_eye_base_w[i]*foreshorten;
-        e->h=face_eye_base_h[i]*foreshorten;
+        e->w=face_shape_spring[i][0].x*foreshorten;
+        e->h=face_shape_spring[i][1].x*foreshorten;
         e->yaw=head_yaw+side*spread*.5f;
         e->pitch=head_pitch;
-        e->roll=head_roll-face_eye_base_roll[i];
+        e->roll=head_roll+face_shape_spring[i][2].x;
+        e->taper=face_shape_spring[i][3].x;
+        e->lid=face_shape_spring[i][4].x;
+        e->tilt=face_shape_spring[i][5].x;
+        e->smile=face_shape_spring[i][6].x;
         e->look_x=fmaxf(-.85f,fminf(.85f,face_gaze_x-e->yaw));
         e->look_y=fmaxf(-.70f,fminf(.70f,face_gaze_y-head_pitch));
+        e->pw=face_shape_spring[i][7].x;
+        e->ph=face_shape_spring[i][8].x;
+        e->square=face_shape_spring[i][9].x;
+        e->heart=face_shape_spring[i][10].x;
+        e->glint=face_shape_spring[i][11].x;
+        e->spiral=face_shape_spring[i][12].x;
+        e->veins=face_shape_spring[i][13].x;
+        e->wet=face_shape_spring[i][14].x;
         const int64_t blink_age = now - face_blink_start_us - (i ? 38000LL : 0LL);
         float blink = 0.0f;
         if (face_blink_start_us && blink_age >= 0 && blink_age < 150000LL) {
@@ -230,7 +253,7 @@ static void face_animation_timer(lv_timer_t *timer)
             blink = sinf(phase * 3.14159265f) * .94f;
         }
         e->lid = face_base_lid + blink * (1.0f-face_base_lid);
-        e->wob_t += dt;
+        e->wobble=target->wobble; e->wob_t += dt;
     }
     face_draw(&face_model,face_pixels,466,330);
     /* A quiet rainy scene is part of the character's gloomy expression, not a status icon. */
