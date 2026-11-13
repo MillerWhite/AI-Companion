@@ -376,6 +376,7 @@ static void apply_cloud_intent(const char *json_text)
         next = COMPANION_CURIOUS;
     }
 
+    if (next == COMPANION_ANGRY && !kind) kind = "frustration";
     if (kind) companion_emotion_interaction(&state, kind);
     if (strcmp(verb, "sleep") != 0) {
         sleeping = false;
