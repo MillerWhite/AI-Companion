@@ -104,7 +104,7 @@ jobs:
           assert "setSharedPupilGaze" in html and "(i?1:-1)" not in html, "Both pupils must share one gaze vector"
           assert ".orb .eye{transform:translate3d" in html and ".orb .eye:before{top:var(--pupil-y" in html, "Central eye transform ownership missing"
           assert ".orb .eye:first-child" in html and "width:36px !important;height:52px !important" in html, "Both eyes must use identical geometry"
-          assert "Math.random()<.55?0:1" not in html and "eyes.forEach(eye=>{eye.classList.add('blink-one')" in html, "Blink must be synchronized across both eyes"
+          assert "Math.random()<.55?0:1" not in html and "eyes.forEach(eye=>{eye.classList.remove('blink-one','blink-two')" in html, "Blink must be synchronized across both eyes"
           assert "animation:none !important" in html and "translate:0 0 !important" in html, "Legacy eye animations/translations must be disabled"
           assert 'weatherScene' in html and "faceKey==='sad'" not in html, "Weather must not be driven by sadness"
           PY
