@@ -157,8 +157,8 @@ static void face_apply_emotion(companion_emotion_t emotion)
         eye_t *e=&face_target.eye[i];
         e->x = i ? 316.0f : 150.0f;
         e->y = 158.0f;
-        e->w = w * (i ? .98f : 1.0f);
-        e->h = h * (i ? 1.0f : .98f);
+        e->w = w;
+        e->h = h;
         e->depth = 78.0f;
         e->yaw = 0; e->pitch = 0; e->roll = (i ? -1.0f : 1.0f) * (emotion==COMPANION_SAD ? -.12f : (emotion==COMPANION_ANGRY ? .16f : .015f));
         face_eye_base_roll[i] = e->roll;
@@ -231,7 +231,8 @@ static void face_animation_timer(lv_timer_t *timer)
         float *dst[15]={&e->w,&e->h,&e->roll,&e->taper,&e->lid,&e->tilt,&e->smile,&e->pw,&e->ph,&e->square,&e->heart,&e->glint,&e->spiral,&e->veins,&e->wet};
         const float src[15]={target->w,target->h,target->roll,target->taper,target->lid,target->tilt,target->smile,target->pw,target->ph,target->square,target->heart,target->glint,target->spiral,target->veins,target->wet};
         for(int k=0;k<15;k++) {
-            face_spring(&face_shape_spring[i][k].x,&face_shape_spring[i][k].v,src[k],220.0f,.5f,dt);
+            for(int n=0;n<(substeps>0?substeps:1);n++)
+                face_spring(&face_shape_spring[i][k].x,&face_shape_spring[i][k].v,src[k],220.0f,.5f,subdt);
             *dst[k]=face_shape_spring[i][k].x;
         }
         e->depth=target->depth;
