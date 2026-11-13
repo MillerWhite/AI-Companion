@@ -15,6 +15,9 @@
 #include "nimble/nimble_port_freertos.h"
 #include "store/config/ble_store_config.h"
 
+/* Exported by the ESP-IDF NimBLE store-config component; not declared in its public header. */
+void ble_store_config_init(void);
+
 static const char *TAG = "companion_ble";
 static esp_hidd_dev_t *s_hid;
 static volatile bool s_connected;
