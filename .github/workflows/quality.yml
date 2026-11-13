@@ -103,9 +103,13 @@ jobs:
           assert "orientationZero" in html and "alpha-orientationZero.alpha" in html and "function spring(state,target,stiff,zeta,dt)" in html, "Calibrated orientation and damped spring pose missing"
           assert "setSharedPupilGaze" in html and "(i?1:-1)" not in html, "Both pupils must share one gaze vector"
           assert "rotateX(var(--head-pitch" in html and "rotateY(var(--head-yaw" in html and "rotateZ(var(--head-roll" in html, "Spring-driven three-axis head pose missing"
-          assert "@keyframes eye-alive" in html and "@keyframes pet-float" in html and "var(--eye-h,64px)" in html, "Living eye and expression animation missing"
-          assert ".orb.mischief .eye" in html and ".orb.sad .eye" in html and ".orb.angry .eye" in html, "Distinct emotion shapes missing"
-          assert "Math.random()<.55?0:1" not in html and "eyes.forEach(eye=>{eye.classList.remove('blink-one','blink-two')" in html, "Blink must be synchronized across both eyes"
+          assert "@keyframes pet-float" in html and "var(--eye-h,78px)" in html, "Shared living face motion and eye geometry missing"
+          assert ".orb.sad{" in html and ".orb.angry{" in html and ".orb.curious{" in html and ".orb.affectionate" in html, "Emotion-specific paired-eye shapes missing"
+          assert "width:var(--eye-w,58px)!important;height:var(--eye-h,78px)!important" in html, "Both eyes must use one shared size target"
+          assert "animation:none!important" in html and "translate:0 0!important" in html, "Independent eye drift must be disabled"
+          assert "Math.random()<.55?0:1" not in html and "setSharedPupilGaze" in html, "Both pupils must use the same gaze target"
+          assert "third_party/Pip-KeyPet/ui/pip.c" in Path(".").joinpath("third_party/Pip-KeyPet/ui/pip.c").as_posix(), "Upstream animation source missing"
+          assert Path("third_party/Pip-KeyPet/LICENSE").exists() and Path("third_party/Pip-KeyPet/ui/face.c").exists(), "MIT attribution and upstream face renderer source missing"
           assert 'weatherScene' in html and "faceKey==='sad'" not in html, "Weather must not be driven by sadness"
           PY
 
