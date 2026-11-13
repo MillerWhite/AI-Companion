@@ -6,6 +6,7 @@ on:
     paths:
       - "backend/**"
       - "firmware/**"
+      - "third_party/Pip-KeyPet/**"
       - "web/installer/**"
       - "AI_Companion_Emotional_Engine.html"
       - ".github/workflows/quality.yml"
@@ -66,6 +67,19 @@ jobs:
             firmware/esp-idf/tests/companion_motion_test.c \
             -lm -o /tmp/companion_motion_test
           /tmp/companion_motion_test
+      - name: Verify upstream renderer provenance and paired spring rig
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          upstream = Path("third_party/Pip-KeyPet/ui/face.c").read_text()
+          local = Path("firmware/esp-idf/main/companion_face_renderer.c").read_text()
+          assert upstream.replace('#include "face.h"', '#include "companion_face_renderer.h"') == local
+          main = Path("firmware/esp-idf/main/main.c").read_text()
+          assert "face_shape_spring[2][15]" in main
+          assert "for(int n=0;n<(substeps>0?substeps:1);n++)" in main
+          assert "e->w = w;" in main and "e->h = h;" in main
+          assert "blink_age = now - face_blink_start_us;" in main
+          PY
 
   emotional-engine:
     name: Browser emotional engine syntax
