@@ -21,7 +21,7 @@
       interactionCount++;
       if(kind==='touch'||kind==='pet'||kind==='long_pet'){trust=clamp(trust+(kind==='long_pet'?3:1.5),0,100);calmness=clamp(calmness+1,0,100);setMood(kind==='long_pet'?'love':'happy',now,2600);}
       else if(kind==='call'||kind==='name'){curiosity=clamp(curiosity+2,0,100);setMood('curious',now,2300);}
-      else if(kind==='shake'){setMood('surprised',now,1800);}
+      else if(kind==='shake'||kind==='surprise'){setMood('surprised',now,1800);}
       else if(kind==='drop'||kind==='impact'){setMood('scared',now,1400);}
       else if(kind==='comfort'){setMood('love',now,3000);}
       else if(kind==='rest'){setMood('sleep',now,0);}
