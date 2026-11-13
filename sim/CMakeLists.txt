@@ -1,0 +1,45 @@
+cmake_minimum_required(VERSION 3.16)
+project(pipsim C CXX)
+
+set(LV_BUILD_CONF_PATH ${CMAKE_CURRENT_SOURCE_DIR}/lv_conf.h CACHE PATH "" FORCE)
+set(CONFIG_LV_BUILD_DEMOS OFF CACHE BOOL "" FORCE)
+set(CONFIG_LV_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(CONFIG_LV_USE_THORVG_INTERNAL OFF CACHE BOOL "" FORCE)
+add_subdirectory(../third_party/lvgl lvgl)
+
+file(GLOB THEME_FONTS ../ui/fonts/font_*_*.c)
+set(UI ../ui/face.c ../ui/imu.c ../ui/pip.c ../ui/doodle.c ../ui/pet.c ../ui/shell.c ../ui/apps.c ../ui/voice.c ../ui/profile.c
+       ../ui/theme.c ../ui/phone.c ../ui/mic.c ../ui/maze.c ${THEME_FONTS})
+
+# the owner's own extras, kept out of the public repo (private/ is gitignored): the AITU mark on the badge
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../private/aitu_mark.c)
+    list(APPEND UI ../private/aitu_mark.c)
+    add_compile_definitions(KEYPET_AITU)
+endif()
+
+if(EMSCRIPTEN)
+    # emcmake cmake -S sim -B build-web && cmake --build build-web  ->  sim/web/pip.js + pip.wasm
+    set(APP pip)
+    add_executable(pip wasm.c fakephone.c ${UI})
+    set_target_properties(pip PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/web)
+    target_link_options(pip PRIVATE -sMODULARIZE -sEXPORT_ES6 -sENVIRONMENT=web -sALLOW_MEMORY_GROWTH
+                        -sEXPORTED_RUNTIME_METHODS=HEAPU8,HEAPU16,UTF8ToString)
+else()
+    set(APP pipsim)
+    add_executable(pipsim main.c fakephone.c ${UI})
+    add_executable(face_test face_test.c ../ui/face.c)
+    target_include_directories(face_test PRIVATE ../ui)
+    target_link_libraries(face_test PRIVATE m)
+    add_executable(voice_test voice_test.c ../ui/voice.c)
+    target_include_directories(voice_test PRIVATE ../ui)
+    target_link_libraries(voice_test PRIVATE m)
+    add_executable(maze_test maze_test.c ../ui/maze.c)
+    target_include_directories(maze_test PRIVATE ../ui)
+    target_link_libraries(maze_test PRIVATE m)
+    add_executable(pet_test pet_test.c ../ui/pet.c)
+    target_include_directories(pet_test PRIVATE ../ui)
+    target_link_libraries(pet_test PRIVATE m)
+endif()
+target_include_directories(${APP} PRIVATE ../ui)
+target_compile_options(${APP} PRIVATE -O2 -Wall -Wextra)
+target_link_libraries(${APP} PRIVATE lvgl m)

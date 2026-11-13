@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KeyPet Simulator</title>
+<style>
+  :root {
+    --bg: #131417; --panel: #1b1c21; --line: #2b2d34; --btn: #262830; --btn-hover: #30333c;
+    --text: #e9e9ee; --dim: #8a8c96; --accent: #6ee7d2; --warn: #ff8a65;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; height: 100vh; display: flex; overflow: hidden; background: var(--bg); color: var(--text);
+         font: 13px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
+  #view { flex: 1; position: relative; min-width: 0; }
+  #view canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+  #view canvas.screen { cursor: pointer; }
+  #hint { position: absolute; left: 16px; bottom: 14px; color: var(--dim); font-size: 12px; pointer-events: none; }
+  #panel { width: 400px; flex: none; background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; padding: 14px 16px 24px; }
+  /* a narrow window (a side pane, a phone): the keychain on top, the panel below it */
+  @media (max-width: 900px) {
+    body { flex-direction: column; height: auto; min-height: 100vh; overflow: auto; }
+    #view { flex: none; height: min(70vh, 100vw); min-height: 300px; }
+    #hint { display: none; }
+    #panel { width: auto; border-left: 0; border-top: 1px solid var(--line); overflow: visible; }
+    #pad { width: 150px; height: 150px; }
+  }
+  h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); margin: 18px 0 8px; }
+  .row { display: flex; gap: 12px; align-items: center; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .grid.two { grid-template-columns: repeat(2, 1fr); }
+  button { background: var(--btn); color: var(--text); border: 1px solid #353844; border-radius: 8px; padding: 7px 6px;
+           font: inherit; cursor: pointer; transition: background .1s; }
+  button:hover { background: var(--btn-hover); }
+  button.on { background: var(--accent); border-color: var(--accent); color: #0b0c0e; }
+  button.cur { border-color: var(--accent); }
+  #mood { font-size: 22px; font-weight: 600; }
+  #reaction { color: var(--accent); min-height: 18px; }
+  #preview { width: 132px; height: 132px; border-radius: 50%; background: #000; flex: none; box-shadow: 0 0 0 3px #3a3c44; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; background: #141519; border-radius: 8px;
+          padding: 8px 10px; white-space: pre; color: #c9cad2; }
+  #pad { width: 180px; height: 180px; border-radius: 50%; flex: none; position: relative; touch-action: none; cursor: crosshair;
+         background: radial-gradient(circle, #23252c 0 30%, #1d1f25 30% 60%, #191a1f 60%); border: 1px solid var(--line); }
+  #pad::before, #pad::after { content: ""; position: absolute; background: #2c2f37; }
+  #pad::before { left: 50%; top: 8px; bottom: 8px; width: 1px; }
+  #pad::after { top: 50%; left: 8px; right: 8px; height: 1px; }
+  #dot { position: absolute; width: 18px; height: 18px; margin: -9px; border-radius: 50%; background: var(--accent);
+         box-shadow: 0 0 12px var(--accent); left: 50%; top: 50%; z-index: 1; }
+  .side { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .note { color: var(--dim); font-size: 12px; margin-top: 6px; }
+  #err { color: var(--warn); }
+  #filter { width: 100%; margin-bottom: 8px; padding: 7px 10px; border-radius: 8px; border: 1px solid #353844;
+            background: #141519; color: var(--text); font: inherit; }
+  #moods button { font-size: 12px; padding: 6px 4px; }
+  .need { display: grid; grid-template-columns: 110px 1fr 38px; gap: 8px; align-items: center; margin: 3px 0; font-size: 12px; }
+  .bar { height: 8px; border-radius: 4px; background: #262830; overflow: hidden; position: relative; }
+  .bar > i { position: absolute; top: 0; bottom: 0; left: 0; background: var(--accent); border-radius: 4px; }
+  .bar.low > i { background: var(--warn); }
+  .val { color: var(--dim); text-align: right; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div id="view"><div id="hint">Мышь на экране — палец: свайп по Пипу — меню, двойной тап по пустому месту в меню — к Пипу, свайп вниз в приложении — назад · тяни за корпус — наклон · колесо — зум · боковые кнопки: верхняя — меню / открыть, нижняя — назад / знакомство</div></div>
+<div id="panel">
+  <div class="row">
+    <canvas id="preview" width="476" height="476"></canvas>
+    <div>
+      <div id="mood">…</div>
+      <div id="reaction"></div>
+      <div class="note" id="err"></div>
+    </div>
+  </div>
+  <h2>Датчики</h2>
+  <div class="mono" id="readout"></div>
+
+  <h2>Виртуальный гироскоп</h2>
+  <div class="row">
+    <div id="pad" title="Наклон: тяни точку"><div id="dot"></div></div>
+    <div class="side">
+      <button id="shake">Встряхнуть</button>
+      <button id="flip">Экраном вниз</button>
+      <button id="walk">Ходьба</button>
+      <button id="level">Ровно</button>
+    </div>
+  </div>
+  <div class="note">Точка — куда опущен край брелока. Глаза «скатываются» под наклон и через пару секунд привыкают к новому положению руки.</div>
+
+  <h2>Стиль</h2>
+  <div class="grid two" id="themes"></div>
+  <div class="note">Меняет меню и приложения (Пип остаётся прежним). На брелоке — приложение «Стиль» в меню.</div>
+
+  <h2>iPhone (поддельный)</h2>
+  <div class="grid" id="phone">
+    <button data-k="L" data-a="1">Сопряжение</button>
+    <button data-k="L" data-a="2">Подключить</button>
+    <button data-k="L" data-a="0">Отключить</button>
+    <button data-k="N" data-a="0">Уведомление</button>
+    <button data-k="C" data-a="1">Звонок</button>
+    <button data-k="C" data-a="0">Положить трубку</button>
+    <button data-k="M" data-a="1">Играет трек</button>
+    <button data-k="M" data-a="0">Музыка стоп</button>
+  </div>
+  <div class="mono" id="phonelog">брелок → iPhone: —</div>
+  <h2>Компьютер (поддельный)</h2>
+  <div class="grid" id="host">
+    <button data-k="X" data-a="1">Сопряжение</button>
+    <button data-k="X" data-a="2">Подключить</button>
+    <button data-k="X" data-a="0">Отключить</button>
+  </div>
+  <div class="mono" id="hostlog">брелок → компьютер: —</div>
+  <div class="note">Приложение «Пульт»: кнопки листают слайды (Page Down / Page Up), зажатая нижняя + наклон — скролл, палец на экране + поворот брелока — указка. «Музыка» с подключённым компьютером управляет его медиа. С зажатым Shift нажмите на экран и тяните: палец остаётся на месте, а брелок поворачивается (указка). Так же с нижней кнопкой — скролл.</div>
+  <div class="note">Так будет вести себя настоящий iPhone по Bluetooth: уведомления и звонки (ANCS), музыка (AMS), затвор камеры (клавиша «громкость +»). Приложение на телефоне не нужно.</div>
+
+  <h2>Тамагочи</h2>
+  <div id="needs"></div>
+  <div class="mono" id="petinfo"></div>
+  <div class="grid" style="margin-top:8px">
+    <button id="feed">Покормить</button>
+    <button id="play">Поиграть</button>
+    <button id="auto" class="on">Авто-настроение</button>
+  </div>
+  <div class="grid" style="margin-top:6px" id="speeds">
+    <button data-speed="1" class="on">время ×1</button>
+    <button data-speed="60">×60</button>
+    <button data-speed="600">×600</button>
+    <button id="plus1">+1 час</button>
+    <button id="plus8">+8 часов</button>
+    <button id="newpet">Новый питомец</button>
+  </div>
+  <div class="note">Пип сохраняется в браузере и живёт, пока вкладка закрыта: вернёшься через час — он проголодается.</div>
+
+  <h2>Голос</h2>
+  <div class="grid" id="voices"></div>
+  <div class="grid two" style="margin-top:6px"><button id="mute" class="on">Звук включён</button></div>
+  <div class="note" id="audio-note">Звук включится после первого клика по странице (так требует браузер).</div>
+
+  <h2>Жесты</h2>
+  <div class="grid">
+    <button id="poke">Тык</button>
+    <button id="poke3">Тык ×3</button>
+    <button id="pet">Погладить</button>
+  </div>
+
+  <h2>Кнопки корпуса</h2>
+  <div class="grid two">
+    <button id="pwr">Верхняя · меню / открыть</button>
+    <button id="boot">Нижняя · назад / знакомство</button>
+    <button id="menustyle">Меню: соты</button>
+  </div>
+
+  <h2>Настроение</h2>
+  <input id="filter" placeholder="поиск: злость, страх…" autocomplete="off">
+  <div class="grid" id="moods"></div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const S = 466, TEX = 476, OFF = (TEX - S) / 2; /* the glass is barely wider than the round panel */
+const RU = {
+  neutral: 'спокойный', happy: 'радость', sad: 'грусть', angry: 'злость', surprised: 'удивление', sleepy: 'сонный',
+  asleep: 'спит', skeptical: 'скептичный', curious: 'любопытство', love: 'влюблён', dizzy: 'кружится голова', ouch: 'ай!',
+  stoned: 'накуренный', pinkeye: 'конъюнктивит', nauseous: 'тошнит', sick: 'заболел', tired: 'устал', exhausted: 'истощение',
+  annoyed: 'раздражение', furious: 'бешенство', rage: 'ярость (красная)', swearing: 'маты', indignant: 'возмущение',
+  belligerent: 'воинственность', hurt: 'обида', disgusted: 'отвращение',
+  suspicious: 'подозрительность', cynical: 'цинизм', afraid: 'страх', nervous: 'нервозность',
+  despondent: 'уныние', lonely: 'одиночество', gloomy: 'мрачность', dull: 'отсталость', shy: 'застенчивость', smug: 'самодовольство',
+  bored: 'скука', shocked: 'шок', dismayed: 'смятение', puzzled: 'озадаченность',
+  amazed: 'изумление', cheeky: 'дерзость', content: 'удовлетворённость', comfy: 'комфорт', yes: 'согласие', no: 'отказ',
+  meet: 'знакомится…', 'likes you': 'ты ему понравился', 'dislikes you': 'ты ему не понравился', wary: 'насторожился',
+  poke: 'тык', 'fed up': 'надоели тычки', 'shaken silly': 'растрясли', "time's up": 'время вышло!', yum: 'ням!', 'too full': 'объелся',
+  enough: 'хватит кормить!', play: 'играем!', 'worn out': 'нет сил играть', 'woken up': 'разбудили', pet: 'гладят',
+  'face down': 'лежит экраном вниз', 'woke up': 'проснулся', bang: 'громкий звук!', dropped: 'уронили!', 'upside down': 'вверх ногами',
+  flood: 'много уведомлений', answered: 'ответили на звонок', declined: 'отклонили звонок', 'missed call': 'пропущенный звонок',
+  paired: 'телефон подключён', 'glad you\'re back': 'рад, что вернулись', sulks: 'обиделся, что долго не заходили',
+  won: 'выиграл у тебя', lost: 'проиграл', record: 'рекорд!', };
+
+// always the fresh build: the browser happily caches pip.js/pip.wasm across rebuilds
+const bust = '?v=' + Date.now();
+const { default: createPip } = await import('./pip.js' + bust);
+const M = await createPip({ locateFile: p => p + bust });
+M._sim_init((Math.random() * 2 ** 31) >>> 0);
+
+/* ---------- the pet: a wall clock (with fast-forward) and persistence in localStorage ---------- */
+const TZ = -new Date().getTimezoneOffset();
+const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } },
+                set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
+                del: k => { try { localStorage.removeItem(k); } catch {} } };
+let clockOffset = +(store.get('keypet.clockOffset') || 0), timeSpeed = 1;
+const simNow = () => Date.now() / 1000 + clockOffset;
+const saved = store.get('keypet.pet');
+if (saved) {
+  const bytes = Uint8Array.from(atob(saved), c => c.charCodeAt(0));
+  M.HEAPU8.set(bytes, M._sim_pet_buf());
+  if (!M._sim_pet_restore(bytes.length)) console.warn('saved pet is from another version, starting fresh');
+}
+M._sim_time(simNow(), TZ); // catches up whatever happened while the tab was closed
+function savePet() {
+  const n = M._sim_pet_save(), p = M._sim_pet_buf();
+  store.set('keypet.pet', btoa(String.fromCharCode(...M.HEAPU8.subarray(p, p + n))));
+  store.set('keypet.clockOffset', String(clockOffset));
+}
+setInterval(savePet, 3000);
+addEventListener('pagehide', savePet);
+
+/* ---------- screen texture: the wasm framebuffer, RGB565 -> RGBA ---------- */
+const screenCanvas = document.getElementById('preview');
+const sctx = screenCanvas.getContext('2d');
+sctx.fillStyle = '#000'; sctx.fillRect(0, 0, TEX, TEX);
+const img = sctx.createImageData(S, S);
+const px32 = new Uint32Array(img.data.buffer);
+const lut5 = Array.from({ length: 32 }, (_, i) => Math.round(i * 255 / 31));
+const lut6 = Array.from({ length: 64 }, (_, i) => Math.round(i * 255 / 63));
+function blitScreen() {
+  if (!M._sim_display_on()) { sctx.fillStyle = '#000'; sctx.fillRect(0, 0, TEX, TEX); return; } /* face down: the panel sleeps */
+  const fb = new Uint16Array(M.HEAPU16.buffer, M._sim_fb(), S * S);
+  for (let i = 0; i < S * S; i++) {
+    const c = fb[i];
+    px32[i] = 0xff000000 | lut5[c & 31] << 16 | lut6[(c >> 5) & 63] << 8 | lut5[c >> 11];
+  }
+  sctx.putImageData(img, OFF, OFF);
+  /* the panel is round: pixels outside its circle don't exist */
+  sctx.beginPath();
+  sctx.rect(0, 0, TEX, TEX);
+  sctx.arc(TEX / 2, TEX / 2, S / 2, 0, Math.PI * 2, true);
+  sctx.fill('evenodd');
+}
+
+/* ---------- 3D device ---------- */
+const view = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(devicePixelRatio);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+view.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x131417);
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+const camera = new THREE.PerspectiveCamera(26, 1, 1, 2000);
+let camDist = 175;
+const key = new THREE.DirectionalLight(0xffffff, 1.2);
+key.position.set(-60, 90, 120);
+scene.add(key);
+
+// sizes in mm: the 1.75" AMOLED is 44.45 mm across, the glass a hair wider (check the real border on the board)
+const GLASS_R = 44.45 / 2 * TEX / S, R = GLASS_R + 3.4, BACK = -6.5, SIDE_TOP = 3.6, GLASS_Z = 5.0;
+function arc(cx, cy, r, a0, a1, n = 10) {
+  return Array.from({ length: n + 1 }, (_, i) => {
+    const a = a0 + (a1 - a0) * i / n;
+    return new THREE.Vector2(cx + r * Math.cos(a), cy + r * Math.sin(a));
+  });
+}
+const lathe = (pts, mat) => {
+  const m = new THREE.Mesh(new THREE.LatheGeometry(pts, 160), mat);
+  m.rotation.x = Math.PI / 2; // lathe axis (y) -> device z, front faces the camera
+  return m;
+};
+const brushed = new THREE.MeshPhysicalMaterial({ color: 0xc4c6cc, metalness: 1, roughness: 0.34 });
+const polished = new THREE.MeshPhysicalMaterial({ color: 0xd8d9de, metalness: 1, roughness: 0.12 });
+const dev = new THREE.Group();
+// LatheGeometry wants points from the axis outward in order; y here is depth (back -> front)
+dev.add(lathe([new THREE.Vector2(0, BACK), ...arc(R - 3, BACK + 3, 3, -Math.PI / 2, 0), new THREE.Vector2(R, SIDE_TOP)], brushed));
+dev.add(lathe([...arc(R - 2.2, SIDE_TOP, 2.2, 0, Math.PI * 0.62, 14), new THREE.Vector2(GLASS_R + 0.15, GLASS_Z + 0.1),
+  new THREE.Vector2(GLASS_R, GLASS_Z)], polished));
+
+const screenTex = new THREE.CanvasTexture(screenCanvas);
+screenTex.colorSpace = THREE.SRGBColorSpace;
+screenTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+const glassMat = new THREE.MeshPhysicalMaterial({ color: 0x000000, roughness: 0.04,
+  emissive: 0xffffff, emissiveMap: screenTex, envMapIntensity: 0.05, specularIntensity: 0.5 });
+glassMat.toneMapped = false; // the panel's own colors, not the scene's tone curve
+const screen = new THREE.Mesh(new THREE.CircleGeometry(GLASS_R, 160), glassMat);
+screen.position.z = GLASS_Z;
+dev.add(screen);
+
+// side buttons on the right edge: PWR higher, BOOT lower (check against the real board)
+const buttons = [];
+for (const [id, deg] of [[0, 34], [1, -20]]) {
+  const b = new THREE.Mesh(new THREE.CapsuleGeometry(1.5, 2.4, 6, 16), polished);
+  const a = THREE.MathUtils.degToRad(deg);
+  b.userData = { id, rest: new THREE.Vector3(Math.cos(a) * (R + 0.5), Math.sin(a) * (R + 0.5), -1.5), dir: new THREE.Vector3(Math.cos(a), Math.sin(a), 0) };
+  b.position.copy(b.userData.rest);
+  b.rotation.z = a; // capsule lies along the rim
+  dev.add(b);
+  buttons.push(b);
+}
+scene.add(dev);
+
+function resize() {
+  const w = view.clientWidth, h = view.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+new ResizeObserver(resize).observe(view); /* the pane can change size without a window resize */
+resize();
+
+/* ---------- device pose (virtual gyroscope) ---------- */
+const tgt = { pitch: 0, yaw: 0, roll: 0 }, cur = { ...tgt };
+let shakeLeft = 0, walking = false, faceDown = false, simTime = 0;
+
+const pad = document.getElementById('pad'), dot = document.getElementById('dot');
+const PAD_MAX = 1.1; // rad at the pad edge
+function syncDot() {
+  let u = -tgt.roll / PAD_MAX, v = tgt.pitch / PAD_MAX;
+  const l = Math.hypot(u, v);
+  if (l > 1) { u /= l; v /= l; }
+  dot.style.left = (50 + u * 45) + '%';
+  dot.style.top = (50 + v * 45) + '%';
+}
+function padMove(e) {
+  const r = pad.getBoundingClientRect();
+  let u = (e.clientX - r.left) / r.width * 2 - 1, v = (e.clientY - r.top) / r.height * 2 - 1;
+  const l = Math.hypot(u, v);
+  if (l > 1) { u /= l; v /= l; }
+  tgt.roll = -u * PAD_MAX;   // dot right = right side down = clockwise from the front
+  tgt.pitch = v * PAD_MAX;   // dot down = top edge comes toward you
+  faceDown = false; flipBtn.classList.remove('on');
+  syncDot();
+}
+pad.addEventListener('pointerdown', e => { pad.setPointerCapture(e.pointerId); padMove(e); });
+pad.addEventListener('pointermove', e => { if (e.buttons) padMove(e); });
+
+const flipBtn = document.getElementById('flip');
+flipBtn.onclick = () => {
+  faceDown = !faceDown;
+  Object.assign(tgt, faceDown ? { pitch: Math.PI / 2, roll: 0 } : { pitch: 0, roll: 0 });
+  flipBtn.classList.toggle('on', faceDown);
+  syncDot();
+};
+document.getElementById('level').onclick = () => {
+  Object.assign(tgt, { pitch: 0, yaw: 0, roll: 0 });
+  faceDown = false; flipBtn.classList.remove('on'); syncDot();
+};
+document.getElementById('shake').onclick = () => { shakeLeft = 1.6; };
+const walkBtn = document.getElementById('walk');
+walkBtn.onclick = () => { walking = !walking; walkBtn.classList.toggle('on', walking); };
+
+/* ---------- mouse: finger on the glass, otherwise rotate the device ---------- */
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+let drag = null, touch = null, held = null;
+function hit(e) {
+  const r = renderer.domElement.getBoundingClientRect();
+  ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  return ray.intersectObjects([screen, ...buttons, ...dev.children], false)[0];
+}
+function screenPoint(h) {
+  return [Math.round(h.uv.x * TEX - OFF), Math.round((1 - h.uv.y) * TEX - OFF)];
+}
+function pressButton(b, hold) { /* hold: let go by releaseButton (the remote scrolls while the bottom one is held) */
+  M._sim_button(b.userData.id);
+  b.position.copy(b.userData.rest).addScaledVector(b.userData.dir, -0.7);
+  if (hold) held = b;
+  else setTimeout(() => releaseButton(b), 150);
+}
+function releaseButton(b) {
+  M._sim_button_up(b.userData.id);
+  b.position.copy(b.userData.rest);
+  if (held === b) held = null;
+}
+const canvas = renderer.domElement;
+canvas.addEventListener('pointerdown', e => {
+  canvas.setPointerCapture(e.pointerId);
+  const h = hit(e);
+  if (h && h.object === screen) {
+    touch = screenPoint(h);
+    M._sim_touch(touch[0], touch[1], 1);
+    if (e.shiftKey) drag = { x: e.clientX, y: e.clientY }; /* Shift: the finger stays put and the hand turns (the remote's pointer) */
+  } else if (h && buttons.includes(h.object)) {
+    pressButton(h.object, true);
+    if (e.shiftKey) drag = { x: e.clientX, y: e.clientY }; /* Shift: the key stays down and the hand turns */
+  } else {
+    drag = { x: e.clientX, y: e.clientY };
+    canvas.style.cursor = 'grabbing';
+  }
+});
+canvas.addEventListener('pointermove', e => {
+  if (touch && !drag) {
+    const h = hit(e);
+    if (h && h.object === screen) { touch = screenPoint(h); M._sim_touch(touch[0], touch[1], 1); }
+  } else if (drag) {
+    tgt.yaw += (e.clientX - drag.x) * 0.008;
+    tgt.pitch += (e.clientY - drag.y) * 0.008;
+    drag = { x: e.clientX, y: e.clientY };
+    syncDot();
+  } else {
+    const h = hit(e);
+    canvas.classList.toggle('screen', !!h && (h.object === screen || buttons.includes(h.object)));
+  }
+});
+const release = () => {
+  if (touch) M._sim_touch(touch[0], touch[1], 0);
+  if (held) releaseButton(held);
+  touch = drag = null;
+  canvas.style.cursor = '';
+};
+canvas.addEventListener('pointerup', release);
+canvas.addEventListener('pointercancel', release);
+canvas.addEventListener('wheel', e => { e.preventDefault(); camDist = Math.min(320, Math.max(90, camDist * Math.exp(e.deltaY * 0.001))); }, { passive: false });
+
+/* ---------- scripted gestures go through the same touch path as the mouse ---------- */
+const later = (ms, fn) => setTimeout(fn, ms);
+function poke(at = 0) {
+  later(at, () => M._sim_touch(233, 233, 1));
+  later(at + 80, () => M._sim_touch(233, 233, 0));
+}
+document.getElementById('poke').onclick = () => poke();
+document.getElementById('poke3').onclick = () => { poke(0); poke(260); poke(520); };
+document.getElementById('pet').onclick = () => {
+  M._sim_touch(150, 240, 1);
+  for (let i = 1; i <= 70; i++) later(i * 50, () => M._sim_touch(i % 8 < 4 ? 320 : 150, 240 + (i % 3) * 6, 1));
+  later(71 * 50, () => M._sim_touch(150, 240, 0));
+};
+document.getElementById('pwr').onclick = () => pressButton(buttons[0]);
+document.getElementById('boot').onclick = () => pressButton(buttons[1]);
+const styleBtn = document.getElementById('menustyle');
+const MENU_STYLES = ['Меню: соты', 'Меню: карусель', 'Меню: список'];
+const showStyle = () => { styleBtn.textContent = MENU_STYLES[M._sim_menu_style()]; };
+styleBtn.onclick = () => { M._sim_set_menu_style((M._sim_menu_style() + 1) % 3); showStyle(); };
+showStyle();
+const THEMES = [[1, 'Приборка'], [3, 'Диагностика']]; /* Тишина (0) and Apple (2) are hidden for now: they lag on the board */
+const themesEl = document.getElementById('themes');
+const showTheme = () => { [...themesEl.children].forEach((b, k) => b.classList.toggle('on', THEMES[k][0] === M._sim_theme())); showStyle(); };
+THEMES.forEach(([i, name]) => {
+  const b = document.createElement('button');
+  b.textContent = name;
+  b.onclick = () => { M._sim_set_theme(i); store.set('keypet.theme', String(i)); showTheme(); };
+  themesEl.append(b);
+});
+const savedTheme = +(store.get('keypet.theme') || 1);
+M._sim_set_theme(THEMES.some(([i]) => i === savedTheme) ? savedTheme : 1); /* Приборка by default */
+showTheme();
+
+document.querySelectorAll('#phone button, #host button').forEach((b) => (b.onclick = () => M._sim_phone(b.dataset.k.charCodeAt(0), +b.dataset.a)));
+const phoneLog = document.getElementById('phonelog');
+let phoneLast = '';
+const hostLog = document.getElementById('hostlog');
+let hostLast = '';
+setInterval(() => { /* what the keychain asked the phone to do */
+  const last = M.UTF8ToString(M._sim_phone_last()), shots = M._sim_phone_shots();
+  const text = `брелок → iPhone: ${last || '—'}   снимков: ${shots}`;
+  if (text !== phoneLast) phoneLog.textContent = phoneLast = text;
+  const h = Object.fromEntries(M.UTF8ToString(M._sim_host_report()).split(' ').map(kv => kv.split('=')));
+  const htext = `брелок → компьютер: ${{ on: 'подключён', pairing: 'сопряжение', off: 'нет' }[h.host]}   дальше: ${h.nexts}   назад: ${h.prevs}   кликов: ${h.clicks}   указка: ${h.mx}, ${h.my}   скролл: ${h.scroll}   медиа: ${h.media}`;
+  if (htext !== hostLast) hostLog.textContent = hostLast = htext;
+}, 200);
+
+const SCREENS = { pair: 'сопряжение', call: 'звонок', banner: 'уведомление', style: 'стиль', pip: 'Пип', menu: 'меню', stopwatch: 'секундомер', badge: 'бейдж', clock: 'часы', care: 'Пип: забота', qr: 'Quick QR', timer: 'таймер',
+  torch: 'фонарик', ball: 'шарик', notify: 'уведомления', music: 'музыка', camera: 'камера', remote: 'пульт', maze: 'лабиринт',
+  games: 'игры', xo: 'крестики-нолики', eight: 'шар-восьмёрка', coin: 'монетка', dice: 'кубик', noise: 'шумомер' };
+const NEEDS = [['food', 'Еда'], ['energy', 'Энергия'], ['fun', 'Веселье'], ['love', 'Внимание'], ['walk', 'Прогулки'], ['dayMood', 'Настроение дня']];
+const needsEl = document.getElementById('needs');
+needsEl.innerHTML = NEEDS.map(([k, t]) => `<div class="need"><span>${t}</span><div class="bar" id="bar-${k}"><i></i></div><span class="val" id="val-${k}"></span></div>`).join('');
+document.getElementById('feed').onclick = () => M._sim_action(0);
+document.getElementById('play').onclick = () => M._sim_action(1);
+const autoBtn = document.getElementById('auto');
+autoBtn.onclick = () => M._sim_auto(1);
+for (const b of document.querySelectorAll('#speeds [data-speed]')) b.onclick = () => {
+  timeSpeed = +b.dataset.speed;
+  for (const o of document.querySelectorAll('#speeds [data-speed]')) o.classList.toggle('on', o === b);
+};
+document.getElementById('plus1').onclick = () => { clockOffset += 3600; };
+document.getElementById('plus8').onclick = () => { clockOffset += 8 * 3600; };
+document.getElementById('newpet').onclick = () => {
+  if (!confirm('Начать с новым Пипом? Текущий забудется.')) return;
+  store.del('keypet.pet'); store.del('keypet.clockOffset'); removeEventListener('pagehide', savePet); location.reload();
+};
+const moodsEl = document.getElementById('moods'), filter = document.getElementById('filter');
+for (let i = 0; i < M._sim_mood_count(); i++) {
+  const name = M.UTF8ToString(M._sim_mood_name(i));
+  const b = document.createElement('button');
+  b.textContent = RU[name] || name;
+  b.title = name;
+  b.dataset.mood = name;
+  b.onclick = () => M._sim_set_mood(i);
+  moodsEl.append(b);
+}
+filter.oninput = () => {
+  const q = filter.value.trim().toLowerCase();
+  for (const b of moodsEl.children) b.hidden = q && !(b.textContent + ' ' + b.title).toLowerCase().includes(q);
+};
+addEventListener('keydown', e => { if (e.key.length === 1 && e.target !== filter) M._sim_key(e.key.charCodeAt(0)); });
+
+/* ---------- Pip's voice: an AudioContext pulling PCM from the wasm synth ---------- */
+const VOICE_RU = { poke: 'ип!', happy: 'радость', sad: 'грусть', growl: 'рычание', oh: 'ой!?', love: 'любовь', purr: 'мурчание',
+  nom: 'ням-ням', burp: 'отрыжка', yawn: 'зевок', dizzy: 'кружится', derp: 'тупит', hm: 'хм?', censor: 'маты (пиии)',
+  alarm: 'песенка таймера', hmph: 'фу' };
+let audioCtx = null;
+function startAudio() {
+  if (audioCtx) { if (audioCtx.state === 'suspended') audioCtx.resume(); return; }
+  audioCtx = new AudioContext();
+  M._sim_voice_init(audioCtx.sampleRate);
+  const node = audioCtx.createScriptProcessor(1024, 0, 1);
+  node.onaudioprocess = e => {
+    const out = e.outputBuffer.getChannelData(0);
+    const pcm = new Int16Array(M.HEAPU16.buffer, M._sim_audio(out.length), out.length);
+    for (let i = 0; i < out.length; i++) out[i] = pcm[i] / 32768;
+  };
+  node.connect(audioCtx.destination);
+  document.getElementById('audio-note').textContent = 'Звук идёт в динамики компьютера. На брелоке — встроенный динамик.';
+}
+addEventListener('pointerdown', startAudio);
+addEventListener('keydown', startAudio);
+const voicesEl = document.getElementById('voices');
+for (let i = 0; i < M._sim_voice_count(); i++) {
+  const name = M.UTF8ToString(M._sim_voice_name(i)), b = document.createElement('button');
+  b.textContent = VOICE_RU[name] || name;
+  b.onclick = () => { startAudio(); M._sim_say(i); };
+  voicesEl.append(b);
+}
+const muteBtn = document.getElementById('mute');
+muteBtn.onclick = () => M._sim_volume(M._sim_get_volume() > 0 ? 0 : 0.8);
+
+/* ---------- main loop ---------- */
+const readout = document.getElementById('readout'), moodEl = document.getElementById('mood'), reactEl = document.getElementById('reaction');
+const accel = new THREE.Vector3(), qInv = new THREE.Quaternion(), qPrev = new THREE.Quaternion(), dq = new THREE.Quaternion();
+let last = performance.now(), msCarry = 0, wasmMs = 0, fps = 60, statusAt = 0;
+
+function tick(now) {
+  const dt = Math.min((now - last) / 1000, 0.1);
+  last = now;
+  simTime += dt;
+  const k = 1 - Math.exp(-dt * 10);
+  for (const a of ['pitch', 'yaw', 'roll']) cur[a] += (tgt[a] - cur[a]) * k;
+
+  // shaking and walking: visible motion plus the matching linear acceleration
+  const env = Math.min(shakeLeft, 0.4) / 0.4;
+  shakeLeft = Math.max(0, shakeLeft - dt);
+  const sh = Math.sin(simTime * 2 * Math.PI * 7) * env;
+  const wb = walking ? Math.sin(simTime * 2 * Math.PI * 1.8) : 0;
+  dev.rotation.set(cur.pitch, cur.yaw, cur.roll + sh * 0.22, 'YXZ');
+  dev.position.set(sh * 4, wb * 2.5, 0);
+  dev.updateMatrixWorld();
+
+  // accelerometer reads "up" (1 g) plus linear acceleration, in device axes
+  accel.set(0, 1 + 0.35 * wb, 0).applyQuaternion(qInv.copy(dev.quaternion).invert());
+  accel.x += 2.5 * sh;
+  M._sim_imu(accel.x, accel.y, accel.z, dt);
+  // gyroscope: the turn since the last frame in device axes, deg/s (small angle: the angle times the axis = 2 xyz)
+  dq.copy(qPrev).invert().multiply(dev.quaternion);
+  qPrev.copy(dev.quaternion);
+  const gk = (dq.w < 0 ? -2 : 2) * 180 / Math.PI / Math.max(dt, 1e-3);
+  M._sim_gyro(dq.x * gk, dq.y * gk, dq.z * gk, dt);
+
+  msCarry += dt * 1000;
+  const ms = Math.floor(msCarry);
+  msCarry -= ms;
+  clockOffset += dt * (timeSpeed - 1);
+  M._sim_time(simNow(), TZ);
+  const t0 = performance.now();
+  M._sim_frame(ms);
+  wasmMs += (performance.now() - t0 - wasmMs) * 0.05;
+  fps += (1 / Math.max(dt, 1e-3) - fps) * 0.05;
+  blitScreen();
+  screenTex.needsUpdate = true;
+
+  camera.position.set(0, camDist * 0.16, camDist);
+  camera.lookAt(0, 0, 0);
+  renderer.render(scene, camera);
+
+  if (now - statusAt > 100) {
+    statusAt = now;
+    const st = JSON.parse(M.UTF8ToString(M._sim_status()));
+    moodEl.textContent = RU[st.mood] || st.mood;
+    reactEl.textContent = st.reaction ? '↳ ' + (RU[st.reaction] || st.reaction) : '';
+    for (const b of moodsEl.children) b.classList.toggle('cur', b.dataset.mood === st.mood);
+    autoBtn.classList.toggle('on', st.auto);
+    const on = M._sim_get_volume() > 0;
+    muteBtn.classList.toggle('on', on);
+    muteBtn.textContent = on ? 'Звук включён' : 'Звук выключен';
+    for (const [k] of NEEDS) {
+      const v = st[k], frac = k === 'dayMood' ? (v + 1) / 2 : v;
+      document.querySelector(`#bar-${k} > i`).style.width = (frac * 100).toFixed(1) + '%';
+      document.getElementById('bar-' + k).classList.toggle('low', frac < 0.25);
+      document.getElementById('val-' + k).textContent = k === 'dayMood' ? (v >= 0 ? '+' : '') + v.toFixed(2) : Math.round(v * 100) + '%';
+    }
+    const clock = new Date(simNow() * 1000).toLocaleString('ru-RU', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+    document.getElementById('petinfo').textContent =
+      `время Пипа  ${clock}${timeSpeed > 1 ? '  (×' + timeSpeed + ')' : ''}\n` +
+      `состояние   ${st.asleep ? 'спит' : 'не спит'}, ${RU[st.mood] || st.mood}${st.auto ? '' : ' (выбрано вручную)'}\n` +
+      `экран       ${SCREENS[st.screen] || st.screen}`;
+    const f = v => (v >= 0 ? ' ' : '') + v.toFixed(2);
+    readout.textContent =
+      `акселерометр  x${f(accel.x)}  y${f(accel.y)}  z${f(accel.z)} g\n` +
+      `наклон        x${f(st.tilt[0])}  y${f(st.tilt[1])}\n` +
+      `тряска        ${st.shake.toFixed(2)} g   экраном вниз: ${st.faceDown ? 'да' : 'нет'}\n` +
+      `шаги          ${st.steps}\n` +
+      `кадр UI       ${wasmMs.toFixed(2)} мс (wasm)   ${fps.toFixed(0)} fps`;
+  }
+}
+const frame = now => { tick(now); requestAnimationFrame(frame); };
+requestAnimationFrame(frame);
+// console/testing hook: run the sim for `secs` without waiting for the browser (works in a hidden tab)
+const advance = secs => { for (let t = 0; t < secs; t += 1 / 60) tick(last + 1000 / 60); };
+window.sim = { M, tgt, cur, dev, advance };
+</script>
+</body>
+</html>

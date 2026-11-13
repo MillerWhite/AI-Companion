@@ -1,0 +1,34 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "keypet-sim",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "sim/serve.py",
+        "8466"
+      ],
+      "port": 8466
+    },
+    {
+      "name": "pipdebug",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "tools/pipdebug.py"
+      ],
+      "port": 8765
+    },
+    {
+      "name": "pip-panel",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8770",
+        "--directory",
+        "docs"
+      ],
+      "port": 8770
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+# Waveshare ESP32-S3-Touch-AMOLED-1.75C: ESP32-S3R8 (8 MB octal PSRAM), 32 MB flash
+CONFIG_IDF_TARGET="esp32s3"
+CONFIG_ESPTOOLPY_FLASHSIZE_32MB=y
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+CONFIG_FREERTOS_HZ=1000
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+
+# LVGL: keep in sync with sim/lv_conf.h
+CONFIG_LV_COLOR_DEPTH_16=y
+CONFIG_LV_USE_CLIB_MALLOC=y
+CONFIG_LV_USE_CLIB_STRING=y
+CONFIG_LV_USE_CLIB_SPRINTF=y
+CONFIG_LV_DEF_REFR_PERIOD=16
+CONFIG_LV_FONT_MONTSERRAT_24=y
+CONFIG_LV_FONT_MONTSERRAT_48=y
+CONFIG_LV_USE_QRCODE=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_LV_USE_ARCLABEL=y
+
+# Pip's face render is a large hot loop on both cores: bigger caches keep code and the frame from thrashing
+# the flash/PSRAM bus the two cores share
+CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB=y
+CONFIG_ESP32S3_DATA_CACHE_64KB=y
+CONFIG_ESP32S3_DATA_CACHE_LINE_64B=y
+
+# The iPhone link: NimBLE, host memory in PSRAM, bonds kept in NVS, room for ANCS replies in one packet;
+# three connections: the phone, the debug page and a computer for the remote
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+CONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL=y
+CONFIG_BT_NIMBLE_NVS_PERSIST=y
+CONFIG_BT_NIMBLE_MAX_CONNECTIONS=3
+CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU=185
+CONFIG_BT_NIMBLE_SVC_GAP_DEVICE_NAME="Pip"
+CONFIG_BT_NIMBLE_LOG_LEVEL_WARNING=y
+
+# malloc puts anything over 2 KB in PSRAM (the default 16 KB kept the menu's row masks in internal RAM, which BLE,
+# FreeRTOS and the display DMA need)
+CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=2048
+# subscriptions remembered per bonded peer: the iPhone, a computer and the debug page each keep several (HID reports,
+# battery, debug, service changed); 8 in all ran out (ble_store_config_write_cccd rc=27)
+CONFIG_BT_NIMBLE_MAX_BONDS=6
+CONFIG_BT_NIMBLE_MAX_CCCDS=40

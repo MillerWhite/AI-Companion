@@ -1,27 +1,15 @@
-# Local secrets
-.env
-.env.*
-!.env.example
-backend/.env
-backend/.env.*
-!backend/.env.example
-!backend/.env.production.example
-
-# Python development
-.venv/
-venv/
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.mypy_cache/
-
-# Local logs and runtime data
-*.log
-*.db
-*.sqlite
-*.sqlite3
+build/
+build-web/
+out/
+sim/web/pip.js
+sim/web/pip.wasm
+firmware/build/
+firmware/managed_components/
+firmware/sdkconfig
+firmware/sdkconfig.old
+backup/
+private/
 .DS_Store
-Thumbs.db
-
-# Production database backups
-backend/backups/
+pip video/
+firmware/build-release/
+build-pub/

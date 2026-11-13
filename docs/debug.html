@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pip debug</title>
+<style>
+:root{--bg:#0b0b0c;--panel:#151517;--line:#26262a;--text:#e8e6e1;--dim:#9a978f;--acc:#ff5a1f;--good:#34c759;--warn:#ff9f0a;--bad:#ff453a;--blue:#5aa9ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:13px/1.4 ui-monospace,"JetBrains Mono",Menlo,monospace}
+header{display:flex;gap:20px;align-items:baseline;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:2;flex-wrap:wrap}
+header .mood{font-size:26px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+header .k{color:var(--dim)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--bad);display:inline-block}
+.dot.on{background:var(--good)}
+main{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;padding:16px 20px}
+@media (max-width:1000px){main{grid-template-columns:1fr}}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+h2{margin:0 0 10px;font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:1.5px;font-weight:600}
+.node{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;opacity:.45}
+.node.hit{opacity:1;border-color:var(--acc)}
+.node.pass{opacity:.8}
+.node b{font-weight:700}
+.q{display:flex;justify-content:space-between;gap:10px}
+.res{color:var(--acc);text-transform:uppercase}
+.urge{display:grid;grid-template-columns:76px 1fr 150px 120px;gap:8px;align-items:center;margin:3px 0}
+.urge.win{color:var(--acc)}
+.bar{position:relative;height:10px;background:#222;border-radius:5px;overflow:hidden}
+.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--dim);border-radius:5px}
+.bar u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--bad)}
+.gauge{position:relative;height:14px;background:linear-gradient(90deg,#444 0%,#666 45%,#4a8 70%,var(--good) 100%);border-radius:7px;margin:10px 0 18px}
+.gauge u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--text)}
+.gauge u span{position:absolute;top:18px;left:-14px;font-size:10px;color:var(--dim);white-space:nowrap}
+.gauge b{position:absolute;top:-5px;width:6px;height:24px;margin-left:-3px;background:var(--acc);border-radius:3px}
+.small{color:var(--dim);font-size:11px}
+canvas{width:100%;height:220px;display:block;background:#0f0f11;border-radius:6px}
+.strip{height:14px;margin-top:4px;border-radius:3px;overflow:hidden;display:flex}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+button{background:#1f1f22;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font:inherit;cursor:pointer}
+button:hover{border-color:var(--dim)}
+button.on{background:var(--acc);border-color:var(--acc);color:#000}
+button.sel{border-color:var(--acc);color:var(--acc)}
+.moods{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:5px;max-height:260px;overflow:auto}
+.moods button{text-align:left;padding:5px 8px;font-size:12px}
+.sl{display:grid;grid-template-columns:120px 1fr 48px;gap:8px;align-items:center;margin:3px 0}
+input[type=range]{width:100%;accent-color:var(--acc)}
+input[type=number],select{background:#1f1f22;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 6px;font:inherit;width:70px}
+select{width:auto}
+#tip{position:fixed;pointer-events:none;background:#000;border:1px solid var(--line);padding:6px 8px;border-radius:6px;font-size:11px;display:none;z-index:5}
+</style>
+</head>
+<body>
+<header>
+  <span><span id="conn" class="dot"></span> <span id="via" class="k">—</span></span>
+  <button id="usb">USB</button>
+  <button id="bt">Bluetooth</button>
+  <span class="mood" id="mood">—</span>
+  <span><span class="k">реакция</span> <span id="react">—</span></span>
+  <span><span class="k">режим</span> <span id="mode">—</span></span>
+  <span><span class="k">экран</span> <span id="scr">—</span></span>
+  <span><span class="k">час</span> <span id="hour">—</span></span>
+  <span><span class="k">батарея</span> <span id="bat">—</span></span>
+  <span><span class="k">микрофон</span> <span id="db">—</span></span>
+  <span><span class="k">шаги</span> <span id="steps">—</span></span>
+  <span><span class="k">кадр</span> <span id="fms">—</span></span>
+</header>
+<main>
+<div>
+  <section>
+    <h2>Почему такое настроение</h2>
+    <div class="node" id="n0"><div class="q"><span><b>1.</b> Спит?</span><span class="res">→ asleep</span></div></div>
+    <div class="node" id="n1"><div class="q"><span><b>2.</b> Редкая карточка (stoned / pinkeye, примерно раз в месяц)</span><span class="res" id="n1r"></span></div><div class="small" id="n1d"></div></div>
+    <div class="node" id="n2"><div class="q"><span><b>3.</b> Тело: батарея без зарядки</span><span class="res" id="n2r"></span></div><div class="small" id="n2d"></div></div>
+    <div class="node" id="n3"><div class="q"><span><b>4.</b> Послевкусие недавнего события</span><span class="res" id="n3r"></span></div><div class="small" id="n3d"></div></div>
+    <div class="node" id="n4"><div class="q"><span><b>5.</b> Какая нужда ниже своей черты сильнее всех</span><span class="res" id="n4r"></span></div><div id="urges"></div>
+      <div class="small" id="n4d"></div></div>
+    <div class="node" id="n5"><div class="q"><span><b>6.</b> Ночь (22–6) и энергия &lt; 0.5?</span><span class="res">→ sleepy</span></div><div class="small" id="n5d"></div></div>
+    <div class="node" id="n6"><div class="q"><span><b>7.</b> Чем занят: проснулся, гуляет, на зарядке</span><span class="res" id="n6r"></span></div><div class="small" id="n6d"></div></div>
+    <div class="node" id="n7"><div class="q"><span><b>8.</b> Как в целом живётся (валентность) → палитра дня</span><span class="res" id="n7r"></span></div>
+      <div class="gauge" id="gauge"></div>
+      <div class="small" id="vexp"></div>
+      <div class="small" id="pools"></div>
+    </div>
+    <div class="small">Поверх этого — реакции на секунды: погладили, тычки (angry → furious → rage → swearing), тряска, подули, громкий звук,
+      уронили, вверх ногами, знакомство (love / shy / suspicious / angry / belligerent), звонок (yes / no / puzzled), игры, кормёжка.</div>
+  </section>
+  <section style="margin-top:16px">
+    <h2>Последние сутки <button id="loadh" style="margin-left:10px">загрузить</button> <span class="small" id="hinfo"></span></h2>
+    <canvas id="chart" width="1200" height="440"></canvas>
+    <div class="strip" id="strip"></div>
+    <div class="small" style="margin-top:6px">
+      <span style="color:#ff9f0a">■ еда</span> <span style="color:#5aa9ff">■ энергия</span> <span style="color:#bf5af2">■ веселье</span>
+      <span style="color:#ff375f">■ внимание</span> <span style="color:#34c759">■ прогулки</span> <span style="color:#e8e6e1">■ валентность</span> ·
+      полоса: <span style="color:#bf5af2">карточка</span> <span style="color:#ff9f0a">тело</span> <span style="color:#ffd60a">послевкусие</span>
+      <span style="color:#ff453a">нужда</span> <span style="color:#5aa9ff">ночь</span> <span style="color:#64d2ff">занят</span> <span style="color:#34c759">хорошо</span>
+      <span style="color:#8e8e93">так себе</span> <span style="color:#555">плохо</span> <span style="color:#333">спит</span>.
+      История в памяти платы, с последней перезагрузки, раз в минуту.
+    </div>
+  </section>
+</div>
+<div>
+  <section>
+    <h2>Эмоции</h2>
+    <div class="row"><button id="auto">авто</button><span class="small">клик — закрепить · shift+клик — реакция на 3 с · alt+клик — в показ</span></div>
+    <div class="moods" id="moods"></div>
+    <div class="row" style="margin-top:10px">
+      <span>показ</span><input type="number" id="dsec" value="3" min="1"> <span class="small">с на эмоцию</span>
+      <button id="dall">все</button><button id="dsel">выбранные</button><button id="dstop">стоп</button>
+    </div>
+  </section>
+  <section style="margin-top:16px">
+    <h2>Для съёмки</h2>
+    <div class="row" id="feats"></div>
+    <div class="row">
+      <button data-c="meet">знакомство</button><button data-c="feed">покормить</button><button data-c="play">поиграть</button>
+      <button data-c="sleep">уснуть</button><button data-c="wake">разбудить</button>
+      <button data-c="rare">редкая карточка</button><button data-c="game 0">выиграл</button><button data-c="game 1">проиграл</button>
+      <button data-c="game 2">рекорд</button>
+      <button data-c="btn 0">верхняя</button><button data-c="btn 1">нижняя</button><button data-c="home">к Пипу</button>
+      <select id="app"><option value="">открыть…</option></select>
+    </div>
+  </section>
+  <section style="margin-top:16px">
+    <h2>Нужды и день</h2>
+    <div id="needs"></div>
+  </section>
+  <section style="margin-top:16px">
+    <h2>Настройка правил</h2>
+    <div id="tune"></div>
+    <div class="small">Живёт до перезагрузки. Подобранные числа скажи — впишу в прошивку.</div>
+  </section>
+</div>
+</main>
+<div id="tip"></div>
+<script>
+const NEED = ['еда', 'энергия', 'веселье', 'внимание', 'прогулки'];
+const NEEDC = ['#ff9f0a', '#5aa9ff', '#bf5af2', '#ff375f', '#34c759'];
+const POOLS = ['great', 'good', 'meh', 'low'];
+// the palettes as in ui/pet.c pet_mood_why (day, then evening); the number is the weight
+const POOLM = [
+  ['happy 3', 'cheeky 2', 'curious 2', 'amazed 2', 'content 2', 'smug 1'], ['content 3', 'comfy 2', 'curious 2', 'amazed 1', 'neutral 2', 'cheeky 1'],
+  ['neutral 3', 'skeptical 2', 'curious 2', 'suspicious 2', 'bored 1', 'cynical 1'], ['sad 3', 'despondent 2', 'gloomy 2', 'cynical 1', 'dismayed 1', 'hurt 1'],
+  ['happy 2', 'content 3', 'comfy 2', 'cheeky 1', 'smug 1', 'love 1'], ['comfy 3', 'content 3', 'neutral 2', 'sleepy 1', 'curious 1', 'skeptical 1'],
+  ['neutral 3', 'bored 2', 'skeptical 2', 'sleepy 1', 'cynical 1', 'suspicious 1'], ['sad 3', 'gloomy 3', 'despondent 2', 'lonely 1', 'tired 1', 'cynical 1']];
+const BODY = ['батарея почти пуста → sick', 'две нужды на нуле → sick (по очереди с нуждами)', 'батарея садится → tired', 'батарея ниже нормы → nervous'];
+const AFTER = [['выиграл у тебя', 'smug'], ['проиграл', 'indignant'], ['рекорд в игре', 'amazed'], ['испуг: громкий звук или уронили', 'afraid'],
+  ['пачка уведомлений', 'dismayed'], ['обида: долго не заходили', 'hurt'], ['рад, что вернулись', 'happy'], ['надоели тычки', 'annoyed']];
+const SITU = [['только проснулся', 'sleepy'], ['гуляет', 'curious / amazed'], ['на зарядке', 'comfy']];
+const FEAT = ['тряска', 'подуть', 'лицом вниз', 'голос', 'батарея', 'время идёт', 'громкий звук'];
+// the knobs of the tree (ui/pet.c pet_knobs[]): group, label
+const KNOB = {
+  great: ['палитры', 'great, валентность >'], good: ['палитры', 'good >'], meh: ['палитры', 'meh >'], hyst: ['палитры', 'залипание у черты'],
+  evening_h: ['палитры', 'вечер с, ч'], drift: ['палитры', 'настрой гуляет за час'],
+  stale: ['нужды', 'другое лицо через, мин'], sick_line: ['нужды', 'sick: две нужды ниже'],
+  rare_chance: ['редкая карточка', 'шанс в день'], rare_min: ['редкая карточка', 'длится, мин'],
+  bat_low: ['батарея', 'nervous ниже, %'], bat_tired: ['батарея', 'tired ниже, %'], bat_empty: ['батарея', 'sick ниже, %'],
+  waking_min: ['чем занят', 'сонный после пробуждения, мин'], walk_now: ['чем занят', 'прогулка: шагов недавно'],
+  away_h: ['встреча', 'не трогали, ч бодрствования'], sulk_love: ['встреча', 'обида, если внимание <'],
+  after_win: ['послевкусие, с', 'выиграл → smug'], after_lose: ['послевкусие, с', 'проиграл → indignant'],
+  after_record: ['послевкусие, с', 'рекорд → amazed'], after_fright: ['послевкусие, с', 'испуг → afraid'],
+  after_flood: ['послевкусие, с', 'уведомления → dismayed'], after_sulk: ['послевкусие, с', 'обида → hurt'],
+  after_missed: ['послевкусие, с', 'вернулись → happy'], after_fed_up: ['послевкусие, с', 'тычки → annoyed'],
+  loud_db: ['звук', 'хлопок громче, дБ'], loud_jump: ['звук', 'и выше комнаты на, дБ'], shock_db: ['звук', 'shocked громче, дБ'],
+  flood_n: ['уведомления', 'пачка: штук'], flood_s: ['уведомления', 'за, с'],
+  furious: ['тычки', 'furious при раздражении ≥'], rage: ['тычки', 'rage ≥'], swear: ['тычки', 'swearing ≥'],
+  meet_like: ['знакомство', 'шанс понравиться, %'], meet_shy: ['знакомство', 'доля shy среди «нравится»'],
+  meet_wary: ['знакомство', 'доля suspicious среди «не нравится»'], meet_rude: ['знакомство', 'belligerent при раздражении ≥'],
+  full_line: ['еда и игра', 'сыт выше'], disgust_s: ['еда и игра', 'disgusted: снова кормят в течение, с'],
+  play_tired: ['еда и игра', 'no: играть при энергии <'], play_bored: ['еда и игра', 'yes: играть при веселье <'],
+  rewake_min: ['сон', 'indignant: разбудили снова за, мин'],
+};
+let knobs = {};
+const APPS = ['clock', 'care', 'qr', 'noise', 'badge', 'timer', 'stopwatch', 'torch', 'games', 'style', 'notify', 'music', 'camera', 'xo', 'eight', 'coin', 'dice', 'maze', 'remote', 'ball'];
+const $ = id => document.getElementById(id);
+let names = [], tune = null, st = null, hist = [], histBuf = [], picked = new Set(), dragging = false;
+// two ways to the board: the USB bridge (server-sent events), or straight over Bluetooth (Chrome's Web Bluetooth)
+const SVC = '50495044-4247-4b45-5950-455400000001', RX = '50495044-4247-4b45-5950-455400000002', TX = '50495044-4247-4b45-5950-455400000003';
+let bt = null, btq = Promise.resolve(), usb = null;
+const send = c => {
+  if (usb && usb.writable) { const w = usb.writable.getWriter(); return w.write(new TextEncoder().encode(c + '\n')).finally(() => w.releaseLock()); }
+  if (!bt) return fetch('/cmd', {method: 'POST', body: c});
+  const data = new TextEncoder().encode(c + '\n');
+  btq = btq.then(() => bt.writeValueWithoutResponse(data)).catch(() => {});
+  return btq;
+};
+/* the cable straight from the browser (Web Serial): no bridge needed, the page can be a plain file */
+$('usb').onclick = async () => {
+  try {
+    usb = await navigator.serial.requestPort({filters: [{usbVendorId: 0x303a}]});
+    await usb.open({baudRate: 115200});
+    try { await usb.setSignals({dataTerminalReady: false, requestToSend: false}); } catch (e) {}
+    $('via').textContent = 'USB';
+    (async () => {
+      const dec = new TextDecoder(), r = usb.readable.getReader();
+      let acc = '';
+      try {
+        for (;;) {
+          const {value, done} = await r.read();
+          if (done) break;
+          acc += dec.decode(value, {stream: true});
+          let i;
+          while ((i = acc.indexOf('\n')) >= 0) { onLine(acc.slice(0, i).replace(/\r$/, '')); acc = acc.slice(i + 1); }
+        }
+      } catch (e) { $('via').textContent = 'USB отключён'; }
+    })();
+    setTimeout(() => { send('names'); send('tune'); }, 800);
+  } catch (e) { if (e.name !== 'NotFoundError') $('via').textContent = 'USB: ' + e.message; }
+};
+$('bt').onclick = async () => {
+  try {
+    const dev = await navigator.bluetooth.requestDevice({filters: [{name: 'Pip'}], optionalServices: [SVC]});
+    const srv = await dev.gatt.connect(), svc = await srv.getPrimaryService(SVC);
+    const tx = await svc.getCharacteristic(TX);
+    bt = await svc.getCharacteristic(RX);
+    let acc = '';
+    tx.addEventListener('characteristicvaluechanged', e => {
+      acc += new TextDecoder().decode(e.target.value);
+      let i;
+      while ((i = acc.indexOf('\n')) >= 0) { onLine(acc.slice(0, i)); acc = acc.slice(i + 1); }
+    });
+    await tx.startNotifications();
+    dev.addEventListener('gattserverdisconnected', () => { bt = null; $('via').textContent = 'Bluetooth потерян'; });
+    $('via').textContent = 'Bluetooth';
+    send('names'); send('tune');
+  } catch (e) { $('via').textContent = 'Bluetooth: ' + e.message; }
+};
+
+APPS.forEach(a => $('app').add(new Option(a, a)));
+$('app').onchange = e => { if (e.target.value) send('open ' + e.target.value); e.target.value = ''; };
+document.querySelectorAll('[data-c]').forEach(b => b.onclick = () => send(b.dataset.c));
+$('auto').onclick = () => send('auto');
+$('loadh').onclick = () => { histBuf = []; send('hist'); };
+$('dall').onclick = () => send('demo ' + $('dsec').value);
+$('dsel').onclick = () => picked.size && send('demo ' + $('dsec').value + ' ' + [...picked].join(' '));
+$('dstop').onclick = () => send('demo 0');
+
+function slider(parent, label, min, max, step, val, cmd) {
+  const d = document.createElement('div'); d.className = 'sl';
+  d.innerHTML = `<span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${val}"><span>${(+val).toFixed(2)}</span>`;
+  const r = d.children[1], o = d.children[2];
+  r.oninput = () => { o.textContent = (+r.value).toFixed(2); dragging = true; send(cmd(r.value)); };
+  r.onchange = () => dragging = false;
+  parent.appendChild(d);
+  return {set: v => { if (!dragging) r.value = v, o.textContent = (+v).toFixed(2); }};
+}
+const needS = NEED.map((n, i) => slider($('needs'), n, 0, 1, 0.01, 0.5, v => `need ${i} ${v}`));
+const dayS = slider($('needs'), 'настрой дня', -1, 1, 0.01, 0, v => `day ${v}`);
+const annS = slider($('needs'), 'раздражение', 0, 5, 0.1, 0, v => `annoy ${v}`);
+
+FEAT.forEach((f, i) => { const b = document.createElement('button'); b.textContent = f; b.dataset.f = i;
+  b.onclick = () => send(`feat ${i} ${b.classList.contains('on') ? 0 : 1}`); $('feats').appendChild(b); });
+
+function buildMoods() {
+  $('moods').innerHTML = '';
+  names.forEach((n, i) => { const b = document.createElement('button'); b.textContent = n; b.dataset.i = i;
+    b.onclick = e => { if (e.altKey) { picked.has(i) ? picked.delete(i) : picked.add(i); b.classList.toggle('sel'); }
+      else send(e.shiftKey ? `react ${i} 3` : `mood ${i}`); };
+    $('moods').appendChild(b); });
+}
+function buildTune() {
+  $('tune').innerHTML = '<h2>нужды: черта</h2>';
+  tune.urges.forEach((u, i) => slider($('tune'), `${NEED[u[0]]} → ${names[u[2]] || u[2]} / ${names[u[3]] || u[3]}`, 0.02, 0.6, 0.01, u[1], v => `urge ${i} ${v}`));
+  const groups = {};
+  Object.entries(knobs).forEach(([n, k]) => (groups[(KNOB[n] || ['прочее'])[0]] ??= []).push([n, k]));
+  Object.entries(groups).forEach(([g, list]) => {
+    const h = document.createElement('h2'); h.textContent = g; h.style.marginTop = '12px'; $('tune').appendChild(h);
+    list.forEach(([n, k]) => slider($('tune'), (KNOB[n] || [0, n])[1], k.min, k.max, (k.max - k.min) / 200, k.v, v => `set ${n} ${v}`));
+  });
+}
+const kn = n => knobs[n]?.v;
+const mins = s => s < 0 ? '—' : s < 120 ? Math.round(s) + ' с' : s < 7200 ? Math.round(s / 60) + ' мин' : (s / 3600).toFixed(1) + ' ч';
+
+function render() {
+  if (!st) return;
+  $('mood').textContent = st.m; $('react').textContent = st.r || '—';
+  $('mode').textContent = st.demo ? `показ ${st.demo} с` : st.auto ? 'авто' : 'закреплено';
+  $('scr').textContent = st.scr; $('hour').textContent = st.h;
+  $('bat').textContent = st.bat < 0 ? '—' : st.bat + '%' + (st.ch ? ' ⚡' : '');
+  $('db').textContent = st.db < 0 ? '—' : st.db + ' дБ'; $('steps').textContent = st.st;
+  $('fms').textContent = st.fms + ' мс' + (st.fw && st.fw[0] > 0 ? ` · худший за 5 с ${st.fw[0]} мс (${st.fw[1]}${st.fw[2] ? ', ' + st.fw[2] : ''})` : '');
+  document.querySelectorAll('#moods button').forEach(b => b.classList.toggle('on', +b.dataset.i === st.mi));
+  document.querySelectorAll('#feats button').forEach(b => b.classList.toggle('on', !!(st.feat >> b.dataset.f & 1)));
+  $('auto').classList.toggle('on', !!st.auto);
+  st.n.forEach((v, i) => needS[i].set(v)); dayS.set(st.day); annS.set(st.an);
+  // the tree, with the branch taken lit
+  const [kind, which, val] = st.why, nm = i => names[i] || i;
+  for (let k = 0; k < 8; k++) $('n' + k).className = 'node' + (k === kind ? ' hit' : k < kind ? ' pass' : '');
+  const [rm, rat] = st.rare;
+  $('n1r').textContent = kind === 1 ? '→ ' + nm(rm) : '';
+  $('n1d').textContent = rm < 0 ? 'сегодня карточки нет' : rat > 0 ? `сегодня ${nm(rm)}, через ${mins(rat)}` :
+    rat > -(kn('rare_min') ?? 20) * 60 ? `${nm(rm)} идёт ещё ${mins((kn('rare_min') ?? 20) * 60 + rat)}` : `сегодня ${nm(rm)} уже была`;
+  $('n2r').textContent = kind === 2 ? '→ ' + BODY[which].split('→ ')[1] : '';
+  $('n2d').textContent = (kind === 2 ? BODY[which] + '. ' : '') + (st.bat < 0 ? 'батарея неизвестна' : `батарея ${st.bat}%${st.ch ? ', заряжается: не в счёт' : ''}`) +
+    ` · пороги: sick < ${kn('bat_empty')}%, tired < ${kn('bat_tired')}%, nervous < ${kn('bat_low')}%`;
+  const [am, aw, al] = st.af;
+  $('n3r').textContent = kind === 3 ? '→ ' + nm(am) : '';
+  $('n3d').textContent = am >= 0 && al > 0 ? `${AFTER[aw][0]} → ${AFTER[aw][1]}, ещё ${mins(al)}` : 'ничего не случилось';
+  if (tune) {
+    let h = '';
+    tune.urges.forEach((u, i) => {
+      const v = st.n[u[0]], sev = (u[1] - v) / u[1], win = kind === 4 && (which & 7) === i;
+      h += `<div class="urge${win ? ' win' : ''}"><span>${NEED[u[0]]}</span><div class="bar"><i style="width:${v * 100}%;background:${NEEDC[u[0]]}"></i><u style="left:${u[1] * 100}%"></u></div>` +
+        `<span>${v.toFixed(2)} / черта ${u[1].toFixed(2)}</span><span>${sev > 0 ? '−' + (sev * 100).toFixed(0) + '%' : 'ок'} ${nm(u[2])} / ${nm(u[3])}</span></div>`;
+    });
+    $('urges').innerHTML = h;
+    $('n4r').textContent = kind === 4 ? '→ ' + nm(tune.urges[which & 7][which & 8 ? 3 : 2]) + (which & 8 ? ' (другое лицо)' : '') : 'никто не ниже черты';
+    const x = v => ((v + 1) / 2 * 100) + '%', p = [kn('great'), kn('good'), kn('meh')];
+    $('gauge').innerHTML = `<u style="left:${x(p[2])}"><span>meh ${p[2]}</span></u><u style="left:${x(p[1])}"><span>good ${p[1]}</span></u>` +
+      `<u style="left:${x(p[0])}"><span>great ${p[0]}</span></u><b style="left:${x(Math.max(-1, Math.min(1, st.v)))}"></b>`;
+  }
+  const [hk, hs] = st.hold, held = hk < 0 ? '' : (hk >> 4) === 2 ? BODY[hk & 15].split(' →')[0] : `${NEED[tune?.urges[hk & 7]?.[0]] ?? 'нужды'} ниже черты`;
+  $('n4d').textContent = `почти равные нужды показываются по очереди каждые 5 мин. Держится дольше ${kn('stale')} мин — по кругу: ` +
+    `лицо, другое лицо, остальное дерево (батарея — через раз)` + (hk >= 0 ? ` · сейчас держится «${held}» ${mins(hs)}` : '');
+  $('n5d').textContent = `сейчас ${st.h}:00, энергия ${st.n[1].toFixed(2)}`;
+  $('n6r').textContent = kind === 6 ? '→ ' + SITU[which][1] : '';
+  $('n6d').textContent = `проснулся ${st.wake < 0 ? '—' : mins(st.wake) + ' назад'} (сонный ${kn('waking_min')} мин) · шаги недавно ${st.wk.toFixed(0)}` +
+    ` (прогулка от ${kn('walk_now')}) · ${st.ch ? 'на зарядке' : 'не на зарядке'} · не трогали ${st.un.toFixed(1)} ч`;
+  const avg = st.n.reduce((a, b) => a + b) / 5;
+  $('vexp').textContent = `валентность ${st.v.toFixed(2)} = (среднее нужд ${avg.toFixed(2)} − 0.5)·2 + настрой дня ${st.day.toFixed(2)}·0.5 − раздражение ${st.an.toFixed(1)}·0.1`;
+  const pool = kind === 7 ? which : -1;
+  $('pools').innerHTML = POOLM.map((m, k) => `<span style="color:${k === pool ? 'var(--acc)' : 'inherit'}">${k >= 4 ? 'вечер ' : ''}${POOLS[k & 3]}: ${m.join(', ')}</span>`).join('<br>') +
+    `<br>из палитры раз в 5 минут выбирается одна (по весам), не та же, что была; у черты палитра залипает на ${kn('hyst')}.` +
+    ` Вечер — с ${kn('evening_h')}:00.`;
+  $('n7r').textContent = kind === 7 ? '→ ' + (which >= 4 ? 'вечер ' : '') + POOLS[which & 3] : '';
+}
+
+function whyColor(w) {
+  const kind = w >> 4, which = w & 15;
+  return ['#333', '#bf5af2', '#ff9f0a', '#ffd60a', '#ff453a', '#5aa9ff', '#64d2ff'][kind] ?? ['#34c759', '#34c759', '#8e8e93', '#555'][which & 3];
+}
+function whyText(w) {
+  const kind = w >> 4, which = w & 15;
+  return kind === 0 ? 'спит' : kind === 1 ? 'редкая карточка' : kind === 2 ? BODY[which] ?? 'тело' : kind === 3 ? 'послевкусие: ' + (AFTER[which]?.[0] ?? '') :
+    kind === 4 ? `нужда: ${NEED[tune?.urges[which & 7][0]] ?? ''} ниже черты${which & 8 ? ' (другое лицо)' : ''}` : kind === 5 ? 'ночь, мало энергии' :
+    kind === 6 ? 'занят: ' + (SITU[which]?.[0] ?? '') : `палитра ${which >= 4 ? 'вечер ' : ''}${POOLS[which & 3]}`;
+}
+function drawHist() {
+  const c = $('chart'), g = c.getContext('2d'), W = c.width, H = c.height;
+  g.clearRect(0, 0, W, H);
+  if (!hist.length) return;
+  const t0 = hist[0].t, t1 = hist[hist.length - 1].t || t0 + 1, X = t => (t - t0) / Math.max(60, t1 - t0) * (W - 20) + 10;
+  g.strokeStyle = '#222'; g.lineWidth = 1;
+  for (let k = 0; k <= 4; k++) { const y = 10 + k * (H - 20) / 4; g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+  g.fillStyle = '#666'; g.font = '18px monospace';
+  for (let t = Math.ceil(t0 / 3600) * 3600; t <= t1; t += 3600) {
+    const d = new Date(t * 1000), x = X(t);
+    g.fillText(String(d.getHours()).padStart(2, '0'), x + 3, H - 6); g.fillRect(x, 0, 1, H);
+  }
+  const line = (f, col, w) => { g.strokeStyle = col; g.lineWidth = w; g.beginPath();
+    hist.forEach((h, i) => { const y = 10 + (1 - f(h)) * (H - 20); i ? g.lineTo(X(h.t), y) : g.moveTo(X(h.t), y); }); g.stroke(); };
+  NEEDC.forEach((col, i) => line(h => h.n[i], col, 2));
+  line(h => (h.v + 1) / 2, '#e8e6e1', 3);
+  $('strip').innerHTML = hist.map(h => `<div style="flex:1;background:${whyColor(h.why)}"></div>`).join('');
+  $('hinfo').textContent = `${hist.length} мин`;
+}
+$('chart').onmousemove = e => {
+  if (!hist.length) return;
+  const r = e.target.getBoundingClientRect(), f = (e.clientX - r.left) / r.width, h = hist[Math.min(hist.length - 1, Math.max(0, Math.round(f * (hist.length - 1))))];
+  const d = new Date(h.t * 1000), tip = $('tip');
+  tip.innerHTML = `${d.toLocaleTimeString().slice(0, 5)} · <b>${names[h.mood] || h.mood}</b><br>` + whyText(h.why) +
+    `<br>${NEED.map((n, i) => n + ' ' + h.n[i].toFixed(2)).join('<br>')}<br>настрой дня ${h.day.toFixed(2)} · валентность ${h.v.toFixed(2)}`;
+  tip.style.display = 'block'; tip.style.left = e.clientX + 14 + 'px'; tip.style.top = e.clientY + 14 + 'px';
+};
+$('chart').onmouseleave = () => $('tip').style.display = 'none';
+
+let alive = 0;
+function onLine(l) {
+    if (l.startsWith('@S ')) { st = JSON.parse(l.slice(3)); alive = Date.now(); render(); }
+    else if (l.startsWith('@N ')) { names = l.slice(3).split(','); buildMoods(); if (tune) buildTune(); }
+    else if (l.startsWith('@K ')) { const [n, v, min, max] = l.slice(3).split(' '); knobs[n] = {v: +v, min: +min, max: +max}; }
+    else if (l.startsWith('@T ')) { const first = !tune; tune = JSON.parse(l.slice(3)); if (first || !dragging) buildTune(); }
+    else if (l.startsWith('@H ')) {
+      if (l === '@H end') { hist = histBuf; drawHist(); return; }
+      const a = l.slice(3).split(' ').map(Number);
+      histBuf.push({t: a[0], mood: a[1], n: a.slice(2, 7).map(v => v / 255), day: a[7] / 100, v: a[8] / 100, sl: a[9], why: a[10]});
+    }
+}
+function connect() {
+  if (location.protocol === 'file:') return; /* a plain file: no bridge, the USB or Bluetooth button instead */
+  const es = new EventSource('/events');
+  es.onmessage = e => { if (!bt && !usb) { $('via').textContent = 'USB'; onLine(e.data); } };
+  es.onerror = () => { es.close(); setTimeout(connect, 1000); };
+}
+setInterval(() => $('conn').classList.toggle('on', Date.now() - alive < 2500), 500);
+connect();
+</script>
+</body>
+</html>
