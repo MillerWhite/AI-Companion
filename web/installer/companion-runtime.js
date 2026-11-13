@@ -5,7 +5,7 @@
 (function(root){
   'use strict';
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-  const MODES=['neutral','happy','curious','sleep','sad','love','excited','surprised','shy','angry'];
+  const MODES=['neutral','happy','curious','sleep','sad','love','excited','surprised','shy','angry','scared'];
   const DEFAULTS={temper:'balanced',initiative:'medium',quirk:'curious',weather:'clear'};
   function createCompanionRuntime(options={}){
     let profile={...DEFAULTS,...(options.profile||{})};
@@ -41,6 +41,8 @@
       if(profile.temper==='energetic'){weights[5][1]+=12;weights[2][1]+=8;}
       if(profile.quirk==='curious')weights[1][1]+=12;
       if(profile.quirk==='dramatic')weights[7][1]+=8;
+      if(profile.quirk==='bouncy')weights[5][1]+=8;
+      if(profile.quirk==='shy')weights[3][1]+=8;
       if(profile.weather==='rain'||profile.weather==='cloudy')weights[0][1]+=3;
       if(profile.weather==='sunny')weights[2][1]+=3;
       const chosen=weighted(weights);
