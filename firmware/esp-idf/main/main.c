@@ -172,8 +172,8 @@ static void face_animation_timer(lv_timer_t *timer)
     float dt = face_last_frame_us ? (float)(now-face_last_frame_us)/1000000.0f : .05f;
     face_last_frame_us = now;
     if (dt < .005f || dt > .2f) dt = .05f;
-    float tx=0,ty=0;
-    companion_imu_get_tilt(&tx,&ty);
+    float pitch=0,roll=0,yaw=0;
+    companion_imu_get_orientation(&pitch,&roll,&yaw);
     if (now >= face_next_glance_us) {
         face_gaze_target_x = ((int)(esp_random()%101U)-50)/100.0f;
         face_gaze_target_y = ((int)(esp_random()%61U)-30)/100.0f;
@@ -188,11 +188,11 @@ static void face_animation_timer(lv_timer_t *timer)
     face_gaze_y += (face_gaze_target_y-face_gaze_y)*fminf(1.0f,dt*2.0f);
     for(int i=0;i<2;i++) {
         eye_t *e=&face_model.eye[i];
-        e->yaw = tx*.34f + face_gaze_x*.22f;
-        e->pitch = ty*.30f + face_gaze_y*.20f;
-        e->roll += ((tx*.10f + ty*.04f)-e->roll)*fminf(1.0f,dt*2.5f);
-        e->look_x = face_gaze_x + tx*.18f + (i ? .018f : -.018f);
-        e->look_y = face_gaze_y + ty*.16f;
+        e->yaw = yaw*.34f + face_gaze_x*.22f;
+        e->pitch = pitch*.30f + face_gaze_y*.20f;
+        e->roll += ((roll*.30f + yaw*.08f)-e->roll)*fminf(1.0f,dt*3.2f);
+        e->look_x = face_gaze_x + yaw*.12f + roll*.08f + (i ? .018f : -.018f);
+        e->look_y = face_gaze_y + pitch*.12f;
         const int64_t blink_age = now - face_blink_start_us - (i ? 38000LL : 0LL);
         float blink = 0.0f;
         if (face_blink_start_us && blink_age >= 0 && blink_age < 150000LL) {
