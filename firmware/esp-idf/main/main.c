@@ -227,6 +227,7 @@ static void render_emotion(companion_emotion_t emotion)
 {
     if (emotion >= COMPANION_EMOTION_COUNT) emotion = COMPANION_CALM;
     current_emotion = emotion;
+    last_autonomous_event_us = esp_timer_get_time(); /* any real state change postpones unsolicited initiative */
     face_apply_emotion(emotion);
     if (status_label) lv_label_set_text(status_label, emotion_label(emotion));
     companion_usb_emit_emotion(emotion_label(emotion));
