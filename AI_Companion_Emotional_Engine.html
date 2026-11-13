@@ -11,27 +11,6 @@ main{max-width:1120px;margin:auto;padding:26px 18px 48px}.head{display:flex;just
 h1{font-size:clamp(27px,4vw,42px);line-height:1.04;letter-spacing:-.045em;margin:0 0 9px}.intro{color:var(--muted);max-width:720px;margin:0 0 22px}
 .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}.panel{border:1px solid var(--line);border-radius:21px;background:linear-gradient(145deg,#141e2dF2,#0c121dF5);padding:18px;box-shadow:0 18px 50px #0005}
 .stage{min-height:365px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden}.orb{width:min(270px,68vw);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;position:relative;background:#000;border:1px solid #17171b;box-shadow:0 0 0 1px #ffffff05;transition:transform .35s,filter .35s}.orb:before{content:none}
-.face{display:flex;gap:29px;align-items:center;position:relative;transition:.2s}.eye{width:58px;height:78px;border-radius:50%;background:#fff;box-shadow:0 0 7px #ffffff66,0 0 22px #ffffff22;position:relative;transition:all .22s}.eye:after{content:"";position:absolute;top:12px;left:13px;width:15px;height:15px;border-radius:50%;background:#fff;opacity:.0}
-
-.orb.blink .eye{transform:scaleY(.07)}.orb.sleep .eye{height:7px;border-radius:9px}.orb.happy .eye{height:52px;border-radius:50% 50% 44% 44%}.orb.excited .eye{height:94px;width:67px}.orb.sad{box-shadow:inset 0 0 52px #102c43aa,0 0 34px #63b9ed22}.orb.sad .eye{height:55px;width:55px;border-radius:48% 48% 45% 45%;background:#eaf6ff;box-shadow:inset 0 9px 0 #b7cddd,0 0 12px #9bdcff66,0 0 25px #70bde933;filter:none}.orb.sad .eye:first-child{transform:rotate(-7deg) translateY(8px)}.orb.sad .eye:last-child{transform:rotate(7deg) translateY(8px)}.orb.sad .eye:before{content:"";position:absolute;display:block;top:-13px;left:4px;width:47px;height:9px;border-radius:9px 9px 3px 3px;background:#d9eafa;opacity:1;transform:rotate(-17deg);box-shadow:0 2px 5px #0005}.orb.sad .eye:last-child:before{transform:rotate(17deg)}.orb.sad .eye:after{opacity:1;top:38px;left:34px;width:10px;height:18px;border-radius:55% 45% 65% 65%;background:linear-gradient(180deg,#f4fcff 0%,#8bdcff 55%,#54aee9 100%);box-shadow:0 0 10px #75cfffaa}.orb.sad .eye:last-child:after{left:10px;top:39px;width:8px;height:14px;opacity:.88}.orb.sad .orb.surprised .eye{height:101px;width:68px}.orb.shy .eye{height:58px;transform:scaleY(.83)}.orb.curious .eye:first-child{transform:translateY(-8px) scale(.93)}.orb.curious .eye:last-child{transform:translateY(5px) scale(1.05)}.orb.angry .eye{height:45px;transform:rotate(-12deg);filter:hue-rotate(330deg)}.orb.love .eye{filter:hue-rotate(305deg);border-radius:42% 58% 48% 52%}
-
-
-
-
-
-
-
-
-
-
-
-18%{scale:1.28 1.75}42%{scale:.88 .72}68%{scale:1.12 1.28}100%{scale:1 1}}
-@keyframes orb-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.012)}}
-@keyframes face-drift{0%,100%{translate:0 0}50%{translate:0 -2px}}
-.orb:not(.sleep){animation:orb-breathe 6.5s ease-in-out infinite}
-.orb:not(.sleep) .face{animation:face-drift 5.2s ease-in-out infinite}
-.orb.sleep 
-.eye{will-change:transform,translate;transition:height .28s,width .28s,border-radius .28s,filter .28s,translate .18s,scale .12s}.eye.micro-left{translate:var(--mx,0px) var(--my,0px)}.eye.micro-right{translate:var(--mx,0px) var(--my,0px)}.eye.blink-one{scale:1 .06}.eye.blink-two{scale:1 .06}
 .voicebar{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;margin-top:11px}.voicebar button{font-size:12px}.voice-state{font-size:11px;color:#aaa;max-width:100%;text-align:center}.voice-state.active{color:#f4f4f5}.daypart{font-size:10px;color:#85858d;margin-top:5px;text-align:center}
 .status{margin-top:18px;color:#d4e8f8;font-size:13px}.substatus{font-size:11px;color:var(--muted);margin-top:4px}.controls{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:14px}
 button,select,input{font:inherit}button{background:#1b293b;color:#edf7ff;border:1px solid #3a506b;padding:9px 12px;border-radius:11px;cursor:pointer;transition:.15s}button:hover{border-color:var(--cyan);background:#243a50}button:active{transform:scale(.97)}button.main{background:#b6efff;color:#08131d;border-color:#b6efff;font-weight:800}button.sound{border-color:#6d5a9b;background:#29203d}
@@ -39,62 +18,13 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.stat{background:#0a111c;border:1px solid #293a50;border-radius:12px;padding:10px}.stat b{display:block;font-size:19px;color:#c4efff}.stat span{font-size:10px;color:var(--muted)}
 .profile{background:#0a0a0b;border:1px solid #29292d;border-radius:13px;padding:12px;margin-top:12px}.profile strong{font-size:13px}.profile p{font-size:12px;color:#afafb6;margin:6px 0 0}.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.chip{font-size:10px;padding:4px 7px;border-radius:20px;border:1px solid #3b3b42;color:#eee;background:#171719}.meter{height:7px;background:#1a1a1d;border-radius:9px;overflow:hidden}.meter i{display:block;height:100%;background:#f2f2f2;border-radius:9px;transition:width .5s}.field label b{float:right;color:#fff}
 .soundgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.soundgrid button{font-size:12px;padding:10px 6px}.cloud-settings{margin:12px auto 0;width:min(100%,420px);padding:12px;border:1px solid #29292d;border-radius:13px;background:#08090c;text-align:left}.cloud-title{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;font-weight:700}.cloud-toggle{display:flex;align-items:center;gap:8px;color:#d7d7dc;font-size:12px;margin:9px 0}.cloud-toggle input{accent-color:#fff}.cloud-settings input[type=url]{width:100%;padding:10px;border-radius:8px;border:1px solid #333;background:#111;color:#fff;font:12px system-ui}.cloud-help{font-size:10px;color:#8b8b94;margin-top:7px;line-height:1.4}.soundnote{font-size:11px;color:var(--muted);margin:9px 0 0}.log{border-top:1px solid #2a394e;margin-top:14px;padding-top:10px}.logtop{display:flex;justify-content:space-between;font-size:11px;color:#aebed2}.logbody{height:85px;overflow:auto;font-size:11px;color:#8799b1}.logbody div{padding:4px 0;border-bottom:1px solid #ffffff08}
-
-/* Shared eye design: matched to the installer preview, no mouth and no extra face layers. */
-.orb{width:clamp(170px,38vw,224px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;position:relative;overflow:hidden;isolation:isolate;background:radial-gradient(circle at 50% 42%,#1b2934,#090d12 72%);border:1px solid #40505d;box-shadow:0 0 0 7px #ffffff04,0 18px 65px #000a,inset 0 0 32px #b8eaff0a;animation:petBreath 5.5s ease-in-out infinite;transition:filter .3s}
-.face{display:flex;align-items:center;gap:28px;position:relative;z-index:2;transform:translate3d(var(--gaze-x,0px),var(--gaze-y,0px),0) rotateX(var(--head-pitch,0deg)) rotateY(var(--head-yaw,0deg)) rotateZ(var(--head-roll,0deg));transform-style:preserve-3d;animation:petFloat 5.4s ease-in-out infinite;transition:transform 420ms cubic-bezier(.2,.8,.2,1)}
-.eye{width:36px;height:52px;border-radius:54% 54% 48% 48%;background:linear-gradient(145deg,#fff 0%,#f4f8ff 76%,#dce8f5 100%);box-shadow:0 0 9px #e8f7ffb8,0 0 27px #91d9ff52;position:relative;overflow:hidden;transform-origin:center;transform:translate(var(--eye-x,0px),var(--eye-y,0px)) scaleY(var(--lid,1)) rotate(var(--eye-rot,0deg));transition:transform 520ms cubic-bezier(.2,.8,.2,1),height 380ms,border-radius 380ms,width 380ms;will-change:transform}
-.eye:before{content:"";position:absolute;width:17px;height:23px;border-radius:48% 48% 52% 52%;background:radial-gradient(circle at 35% 28%,#39414c 0 7%,#080b10 38%,#000 100%);left:50%;top:var(--pupil-y,15px);transform:translateX(calc(-50% + var(--pupil-x,0px)));transition:transform 420ms cubic-bezier(.2,.8,.2,1),top 420ms}
-.eye:after{content:"";position:absolute;width:7px;height:9px;border-radius:50%;background:#fff;top:12px;left:calc(50% - 7px);opacity:.98;box-shadow:5px 8px 0 -2px #ffffffa8}
-.orb .weather-canvas{position:absolute;z-index:1;inset:0;width:100%;height:100%;pointer-events:none;opacity:.94}
-.orb.happy .eye{height:43px;border-radius:48% 48% 58% 58%;--lid:.9}
-.orb.curious .eye:first-child{height:58px;--eye-rot:-5deg}.orb.curious .eye:last-child{height:48px;--eye-rot:4deg}
-.orb.surprised .eye{height:61px;width:38px}
-.orb.sleep .eye{height:5px;border-radius:8px;--lid:.28;box-shadow:0 0 10px #d9f6ff66;animation:none}
-.orb.sad .eye{height:45px;border-radius:55% 55% 42% 42%;--eye-rot:5deg;--pupil-y:22px}
-.orb.sad .eye:first-child{--eye-rot:9deg}.orb.sad .eye:last-child{--eye-rot:-9deg}
-.orb.love .eye{height:35px;border-radius:50%;--lid:.72}.orb.love .eye:before{background:radial-gradient(ellipse at 35% 25%,#8b324f 0 8%,#351020 25%,#080307 75%)}
-.orb.excited .eye{height:62px;width:38px;animation:eyeSpark 1.1s ease-in-out infinite alternate}
-.orb.shy .eye{height:38px;--lid:.78;--pupil-x:-4px}
-.orb.angry .eye{height:42px;border-radius:50% 50% 42% 42%;--eye-rot:-8deg;--lid:.68}
-.orb.angry .eye:last-child{--eye-rot:8deg}
-.orb.disappointed .eye{height:39px;--eye-rot:7deg;--pupil-y:20px}
-.orb.lonely .eye{height:42px;filter:brightness(.84);--pupil-y:21px}
-.orb.playful .eye:first-child{height:48px;--eye-rot:-7deg}.orb.playful .eye:last-child{height:58px;--eye-rot:4deg}
-.orb.anticipation .eye{height:58px;width:39px}
-.orb.relief .eye,.orb.serene .eye{height:38px;border-radius:48% 48% 58% 58%;--lid:.78}
-.orb.proud .eye{height:43px;--pupil-y:11px}
-.orb.confused .eye:first-child{height:59px;--eye-rot:-6deg}.orb.confused .eye:last-child{height:45px;--eye-rot:7deg}
-.orb.focused .eye{height:43px;width:35px}.orb.fear .eye{height:63px;width:39px}
-.orb.jealous .eye{height:41px;filter:hue-rotate(325deg)}.orb.bored .eye{height:27px;--lid:.6;--pupil-y:19px}
-.orb.trust .eye{height:42px;--lid:.9}
-.eye.blink-one,.eye.blink-two{transform:scaleY(.055)!important}
-@keyframes petBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.018)}}
-@keyframes petFloat{0%,100%{translate:0 -2px}50%{translate:0 -6px}}
-@keyframes eyeSpark{from{filter:brightness(1)}to{filter:brightness(1.2);transform:scaleY(1.05)}}
-@media(prefers-reduced-motion:reduce){.orb,.face,.eye{animation:none;transition:none}}
 .weather-control{width:min(100%,420px);margin:10px auto 0;padding:10px 12px;border:1px solid #29292d;border-radius:12px;background:#08090c;text-align:left}
 .weather-control label{display:block;color:#aaa;font-size:11px;margin-bottom:5px}.weather-control select{width:100%;background:#111;color:#eee;border:1px solid #34343a;border-radius:8px;padding:8px}.weather-control span{display:block;color:#888;font-size:10px;margin-top:6px}
 
 
 @media(max-width:780px){.grid{grid-template-columns:1fr}.panel{padding:15px}.stage{min-height:350px}}
-
-/* Additional nonverbal states: same two eyes, distinct lid/pupil geometry. */
-.orb.disappointed .eye{height:78px}.orb.disappointed .eye:first-child{transform:rotate(8deg) translateY(5px)}.orb.disappointed .eye:last-child{transform:rotate(-5deg) translateY(3px)}.orb.disappointed .eye:before{top:-52%}
-.orb.lonely .eye{height:68px;filter:brightness(.82)}.orb.lonely .pupil{transform:translate(-50%,calc(-50% + 9px))}
-.orb.playful .eye:first-child{height:48px;transform:rotate(-7deg) scaleY(.82)}.orb.playful .eye:last-child{height:82px;transform:rotate(4deg)}
-.orb.anticipation .eye{height:90px;width:70px}.orb.anticipation .pupil{width:29px;height:38px;transform:translate(-50%,-58%)}
-.orb.relief .eye{height:62px;border-radius:48% 48% 58% 58%}.orb.relief .eye:before{top:-78%}
-.orb.proud .eye{height:65px}.orb.proud .eye:before{top:-74%}.orb.proud .pupil{transform:translate(-50%,-68%)}
-.orb.confused .eye:first-child{height:96px;transform:rotate(-7deg) translateY(-5px)}.orb.confused .eye:last-child{height:72px;transform:rotate(8deg) translateY(5px)}
-.orb.focused .eye{height:68px;width:70px}.orb.focused .pupil{width:25px;height:34px}.orb.focused .eye:before{top:-66%}
-.orb.fear .eye{height:105px;width:72px}.orb.fear .pupil{width:25px;height:33px}.orb.fear .eye:before{top:-82%}
-.orb.jealous .eye{height:58px;filter:hue-rotate(325deg)}.orb.jealous .eye:first-child{transform:rotate(15deg)}.orb.jealous .eye:last-child{transform:rotate(-7deg)}
-.orb.bored .eye{height:39px;border-radius:48% 48% 35% 35%}.orb.bored .eye:before{top:-38%}.orb.bored .pupil{transform:translate(-50%,calc(-50% + 7px))}
-.orb.trust .eye{height:72px;border-radius:48% 48% 56% 56%}.orb.trust .pupil{background:radial-gradient(ellipse at 35% 25%,#586b83 0 8%,#182435 25%,#05070a 75%)}
-.orb.serene .eye{height:58px;border-radius:48% 48% 58% 58%}.orb.serene .eye:before{top:-76%}
-
 /* Pip-KeyPet-compatible paired-eye rig. One shared shape per mood; no independent eye drift. */
+.orb .weather-canvas{position:absolute;z-index:1;inset:0;width:100%;height:100%;pointer-events:none;opacity:.94}
 .orb{perspective:720px;transform-style:preserve-3d;animation:pet-breathe 5.8s ease-in-out infinite}
 .orb.sleep{animation:none}
 .orb .face{
