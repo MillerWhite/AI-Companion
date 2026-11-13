@@ -1,6 +1,3 @@
-/* Portions adapted from Pip-KeyPet ui/face.c by David Novikov.
- * Copyright (c) 2026 David Novikov; MIT license, see third_party/Pip-KeyPet-LICENSE.txt.
- */
 #include "companion_face_renderer.h"
 #include <math.h>
 #include <stdbool.h>
