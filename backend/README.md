@@ -10,7 +10,7 @@ FastAPI service for natural-language intent interpretation, SpeechKit transcript
 | `POST /api/interpret` | Browser simulator development route | Disabled in production |
 | `POST /api/devices/claim` | Consume a one-time enrollment grant | Grant bearer in body |
 | `POST /api/device/transcribe` | 16 kHz, mono, 16-bit LPCM → Yandex SpeechKit | Device Bearer token |
-| `POST /api/device/interpret` | Speech text → validated nonverbal intent | Device Bearer token |
+| `POST /api/device/interpret` | Speech text → validated nonverbal intent (including angry/shy/scared/dizzy/flinch) | Device Bearer token |
 | `GET /api/device/memory` | Export bounded memory JSON | Device Bearer token |
 | `DELETE /api/device/memory` | Delete all saved context and facts | Device Bearer token |
 | `PATCH /api/device/profile` | Update companion name/personality | Device Bearer token |
