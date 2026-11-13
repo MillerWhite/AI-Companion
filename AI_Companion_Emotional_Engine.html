@@ -405,12 +405,16 @@ function setSharedPupilGaze(x,y){
 }
 function renderFacePose(now){
  const dt=Math.min(.05,Math.max(.001,(now-lastPoseFrame)/1000));lastPoseFrame=now;
- spring(facePose.yaw,facePose.targetYaw||0,45,.7,dt);
- spring(facePose.pitch,facePose.targetPitch||0,45,.7,dt);
- spring(facePose.roll,facePose.targetRoll||0,30,.6,dt);
- spring(facePose.gazeX,facePose.targetGazeX||0,900,.65,dt);
- spring(facePose.gazeY,facePose.targetGazeY||0,900,.65,dt);
+ const steps=Math.max(1,Math.ceil(dt*120)),stepDt=dt/steps;
+ for(let i=0;i<steps;i++){
+  spring(facePose.yaw,facePose.targetYaw||0,45,.7,stepDt);
+  spring(facePose.pitch,facePose.targetPitch||0,45,.7,stepDt);
+  spring(facePose.roll,facePose.targetRoll||0,30,.6,stepDt);
+  spring(facePose.gazeX,facePose.targetGazeX||0,900,.65,stepDt);
+  spring(facePose.gazeY,facePose.targetGazeY||0,900,.65,stepDt);
+ }
  const face=$('face');
+ setSharedPupilGaze(facePose.gazeX.x,facePose.gazeY.x);
  face.style.setProperty('--gaze-x',(facePose.gazeX.x*2).toFixed(2)+'px');
  face.style.setProperty('--gaze-y',(facePose.gazeY.x*2).toFixed(2)+'px');
  face.style.setProperty('--head-yaw',(facePose.yaw.x*24)+'deg');
@@ -460,7 +464,7 @@ let desc=`${dict.temper[profile.temper]}, ${dict.bond[profile.bond]}; ${dict.ini
 $('profile').innerHTML='<strong></strong><p></p><div class="chips"></div>';$('profile').querySelector('strong').textContent=n+' · личность';$('profile').querySelector('p').textContent=desc;[dict.temper[profile.temper],dict.bond[profile.bond],dict.quirk[profile.quirk]].forEach(v=>{let s=document.createElement('span');s.className='chip';s.textContent=v;$('profile').querySelector('.chips').append(s)});saveMemory();log('Сгенерирован индивидуальный профиль '+n);trigger('happy')}
 $('intensity').addEventListener('input',e=>{intensity=+e.target.value;$('intensityLabel').textContent=intensity+'/10'});
 function blink(){if(current==='sleep')return;const eyes=[...orb.querySelectorAll('.eye')];if(eyes.length!==2)return;eyes.forEach(eye=>{eye.classList.remove('blink-one','blink-two');void eye.offsetWidth;eye.classList.add('blink-one');});setTimeout(()=>eyes.forEach(eye=>eye.classList.remove('blink-one')),118);}
-setInterval(()=>{if(!behavior||current==='sleep')return;const v=behavior.tick(Date.now(),{userActive:Date.now()-lastOwnerInputAt<18000,hour:new Date().getHours()});setSharedPupilGaze(v.gaze.x,v.gaze.y);facePose.targetGazeX=v.gaze.x;facePose.targetGazeY=v.gaze.y;const gazeClass=Math.abs(v.gaze.x)>.25?(v.gaze.x<0?'gaze-left':'gaze-right'):Math.abs(v.gaze.y)>.2?(v.gaze.y<0?'gaze-up':'gaze-down'):'gaze-center';orb.classList.remove('gaze-center','gaze-left','gaze-right','gaze-up','gaze-down');orb.classList.add(gazeClass);if(v.blink)blink();if(v.initiative&&v.initiative!==current)setMood(v.initiative,'самостоятельно выбрал выражение, учитывая характер и контекст',false,v.initiative,2200);},120);
+setInterval(()=>{if(!behavior||current==='sleep')return;const v=behavior.tick(Date.now(),{userActive:Date.now()-lastOwnerInputAt<18000,hour:new Date().getHours()});facePose.targetGazeX=v.gaze.x;facePose.targetGazeY=v.gaze.y;const gazeClass=Math.abs(v.gaze.x)>.25?(v.gaze.x<0?'gaze-left':'gaze-right'):Math.abs(v.gaze.y)>.2?(v.gaze.y<0?'gaze-up':'gaze-down'):'gaze-center';orb.classList.remove('gaze-center','gaze-left','gaze-right','gaze-up','gaze-down');orb.classList.add(gazeClass);if(v.blink)blink();if(v.initiative&&v.initiative!==current)setMood(v.initiative,'самостоятельно выбрал выражение, учитывая характер и контекст',false,v.initiative,2200);},120);
 let lastAutonomousAt=0,lastAutonomousMood='';
 function runAutonomousDecision(){
  if(current==='sleep')return;
