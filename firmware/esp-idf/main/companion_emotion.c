@@ -9,8 +9,6 @@ static float clamp100(float value)
     return value;
 }
 
-static uint32_t bounded_roll(uint32_t value) { return value % 100U; }
-
 void companion_emotion_init(companion_state_t *state)
 {
     if (!state) return;
@@ -119,7 +117,7 @@ static companion_emotion_t choose_weighted(const companion_state_t *s,
     int total = 0;
     for (size_t i = 0; i < 9; ++i) { if (weights[i] < 1) weights[i] = 1; total += weights[i]; }
     int pick = (int)(roll % (uint32_t)total);
-    for (size_t i = 0; i < 8; ++i) {
+    for (size_t i = 0; i < 9; ++i) {
         if (pick < weights[i]) {
             static const companion_emotion_t map[9] = {
                 COMPANION_CALM, COMPANION_CURIOUS, COMPANION_HAPPY, COMPANION_SHY,
@@ -138,7 +136,7 @@ companion_emotion_t companion_emotion_choose(const companion_state_t *s,
                                               companion_emotion_t previous)
 {
     if (!s) return COMPANION_CALM;
-    companion_emotion_t chosen = choose_weighted(s, hour, bounded_roll(random_value));
+    companion_emotion_t chosen = choose_weighted(s, hour, random_value);
     /* Never repeat an autonomous face change; choose a stable neutral pause instead. */
     if (chosen == previous) {
         if (previous != COMPANION_CALM) return COMPANION_CALM;
