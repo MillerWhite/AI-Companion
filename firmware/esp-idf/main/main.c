@@ -41,6 +41,14 @@ static lv_obj_t *status_label, *setup_label, *screen_face, *face_canvas;
 static face_t face_model;
 static uint16_t *face_pixels;
 static float face_gaze_x, face_gaze_y, face_gaze_target_x, face_gaze_target_y, face_base_lid;
+static float face_eye_base_roll[2];
+static float face_pose_yaw, face_pose_pitch, face_pose_roll;
+static float face_pose_yaw_v, face_pose_pitch_v, face_pose_roll_v;
+static void face_spring(float *x,float *v,float target,float stiffness,float zeta,float dt)
+{
+    *v += ((target-*x)*stiffness-*v*2.0f*sqrtf(stiffness)*zeta)*dt;
+    *x += *v*dt;
+}
 static int64_t face_next_glance_us, face_next_blink_us, face_blink_start_us;
 static int64_t face_last_frame_us;
 static bool screen_asleep;
@@ -149,6 +157,7 @@ static void face_apply_emotion(companion_emotion_t emotion)
         e->h = h * (i ? 1.0f : .98f);
         e->depth = 78.0f;
         e->yaw = 0; e->pitch = 0; e->roll = (i ? -1.0f : 1.0f) * (emotion==COMPANION_SAD ? -.12f : (emotion==COMPANION_ANGRY ? .16f : .015f));
+        face_eye_base_roll[i] = e->roll;
         e->taper = emotion==COMPANION_ANGRY ? .30f : (emotion==COMPANION_CONCERNED ? .12f : 0);
         e->lid = lid + (i ? .035f : 0);
         e->tilt = i ? -tilt : tilt;
@@ -184,15 +193,33 @@ static void face_animation_timer(lv_timer_t *timer)
         face_blink_start_us = now;
         face_next_blink_us = now + 2600000LL + (int64_t)(esp_random()%4300000U);
     }
-    face_gaze_x += (face_gaze_target_x-face_gaze_x)*fminf(1.0f,dt*2.2f);
-    face_gaze_y += (face_gaze_target_y-face_gaze_y)*fminf(1.0f,dt*2.0f);
+    /* Pip-KeyPet's face rig: spring-damped head yaw/pitch/roll, curved eye spacing,
+       far-eye foreshortening, and pupils counter-rotated to stay together. */
+    const int substeps = (int)ceilf(dt * 120.0f);
+    const float subdt = dt / (substeps > 0 ? substeps : 1);
+    for (int n=0;n<(substeps>0?substeps:1);n++) {
+        face_spring(&face_pose_yaw,&face_pose_yaw_v,fmaxf(-.70f,fminf(.70f,yaw*.70f)),45.0f,.70f,subdt);
+        face_spring(&face_pose_pitch,&face_pose_pitch_v,fmaxf(-.38f,fminf(.38f,pitch*.30f)),45.0f,.70f,subdt);
+        face_spring(&face_pose_roll,&face_pose_roll_v,fmaxf(-.38f,fminf(.38f,roll*.30f)),30.0f,.60f,subdt);
+        face_spring(&face_gaze_x,&face_gaze_vx,face_gaze_target_x,900.0f,.65f,subdt);
+        face_spring(&face_gaze_y,&face_gaze_vy,face_gaze_target_y,900.0f,.65f,subdt);
+    }
+    const float head_yaw=face_pose_yaw, head_pitch=face_pose_pitch, head_roll=face_pose_roll;
+    const float spread=.55f, head_radius=166.0f/(2.0f*.5226872f);
     for(int i=0;i<2;i++) {
+        const float side=i?1.0f:-1.0f;
+        const float phi=head_yaw+side*spread;
+        const float foreshorten=1.0f+.35f*(cosf(phi)-.8525245f);
         eye_t *e=&face_model.eye[i];
-        e->yaw = yaw*.34f + face_gaze_x*.22f;
-        e->pitch = pitch*.30f + face_gaze_y*.20f;
-        e->roll += ((roll*.30f + yaw*.08f)-e->roll)*fminf(1.0f,dt*3.2f);
-        e->look_x = face_gaze_x + yaw*.12f + roll*.08f + (i ? .018f : -.018f);
-        e->look_y = face_gaze_y + pitch*.12f;
+        e->x=233.0f+head_radius*sinf(phi)*cosf(head_roll);
+        e->y=165.0f+240.0f*sinf(head_pitch)+head_radius*sinf(phi)*sinf(head_roll);
+        e->w=fmaxf(1.0f,e->w)*foreshorten;
+        e->h=fmaxf(1.0f,e->h)*foreshorten;
+        e->yaw=head_yaw+side*spread*.5f;
+        e->pitch=head_pitch;
+        e->roll=head_roll-face_eye_base_roll[i];
+        e->look_x=fmaxf(-.85f,fminf(.85f,face_gaze_x-e->yaw));
+        e->look_y=fmaxf(-.70f,fminf(.70f,face_gaze_y-head_pitch));
         const int64_t blink_age = now - face_blink_start_us - (i ? 38000LL : 0LL);
         float blink = 0.0f;
         if (face_blink_start_us && blink_age >= 0 && blink_age < 150000LL) {
