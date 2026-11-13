@@ -46,6 +46,7 @@ static int64_t face_last_frame_us;
 static bool screen_asleep;
 static int64_t dizzy_until_us;
 static int64_t last_activity_us;
+static int64_t last_autonomous_event_us;
 static uint8_t display_brightness = 85;
 static uint8_t display_theme;
 static uint16_t display_sleep_timeout = 30;
@@ -705,6 +706,20 @@ static void autonomous_timer(lv_timer_t *timer)
     }
     companion_emotion_tick(&state, 8, sleeping);
     if (!sleeping) {
+        /* Initiative is an occasional invitation, not a repeating notification loop.
+           A failed roll also starts the cooldown so the same mood is not retried every 8 seconds. */
+        if (!last_autonomous_event_us) {
+            last_autonomous_event_us = now_us;
+            save_state();
+            return;
+        }
+        const uint32_t cooldown_seconds = state.initiative == 1 ? 90U :
+                                          (state.initiative == 2 ? 300U : 180U);
+        if (now_us - last_autonomous_event_us < (int64_t)cooldown_seconds * 1000000LL) {
+            save_state();
+            return;
+        }
+        last_autonomous_event_us = now_us;
         const uint32_t chance = companion_emotion_initiative_chance(&state);
         if ((esp_random() % 100U) >= chance) { save_state(); return; }
     }
