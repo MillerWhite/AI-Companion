@@ -142,6 +142,14 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 .orb.proud .eye{--eye-open:.86}
 .orb.neutral .eye{--eye-open:1}
 
+
+/* Three-axis head pose follows the Pip-KeyPet damped-spring model; gaze remains shared by both pupils. */
+.orb .face{animation:none !important;translate:0 0 !important;transform-style:preserve-3d;backface-visibility:hidden;}
+.orb .eye,.orb .eye:first-child,.orb .eye:last-child{transform:scaleY(var(--eye-open,1)) rotate(var(--eye-rot,0deg)) !important;translate:0 0 !important;animation:none !important;}
+.orb .eye:before{top:50% !important;transform:translate(calc(-50% + var(--pupil-x,0px)),calc(-50% + var(--pupil-y,0px))) !important;}
+.orb .eye.blink-one,.orb .eye.blink-two{transform:scaleY(.045) !important;}
+.orb .eye:first-child,.orb .eye:last-child{flex:0 0 36px;}
+
 </style>
 </head>
 <body><main>
@@ -383,21 +391,34 @@ function playSound(emotionKey,force=false){
 
 function updateWeatherScene(){const mode=$('weatherMode')?.value||'auto';weatherScene?.setMode(mode);const captions={auto:'Демонстрационный цикл погоды · не связан с настроением.',clear:'Ясное небо · мягкое солнце и атмосферное свечение.',cloudy:'Облака медленно проходят над экраном.',rain:'Дождь с ветром и каплями.',storm:'Гроза · дождь и редкие вспышки молнии.',snow:'Снегопад · хлопья плавно дрейфуют по ветру.'};const c=$('weatherCaption');if(c)c.textContent=captions[mode]||captions.auto;}
 $('weatherMode')?.addEventListener('change',()=>{updateWeatherScene();behavior?.setProfile({weather:$('weatherMode').value});});
-const faceTilt={pitch:0,roll:0,yaw:0};
-let orientationZero=null,lastOrientationAt=0;
+const facePose={yaw:{x:0,v:0},pitch:{x:0,v:0},roll:{x:0,v:0},gazeX:{x:0,v:0},gazeY:{x:0,v:0}};
+let orientationZero=null,lastOrientationAt=0,lastPoseFrame=performance.now(),pointerTilt=null;
+function clampUnit(v){return Math.max(-1,Math.min(1,v));}
+function wrapDegrees(v){return ((v+180)%360+360)%360-180;}
+function spring(state,target,stiff,zeta,dt){
+ state.v+=((target-state.x)*stiff-state.v*2*Math.sqrt(stiff)*zeta)*dt;
+ state.x+=state.v*dt;
+}
 function setSharedPupilGaze(x,y){
  const px=(clampUnit(x)*5.5).toFixed(2)+'px',py=(clampUnit(y)*4.5).toFixed(2)+'px';
  orb.querySelectorAll('.eye').forEach(eye=>{eye.style.setProperty('--pupil-x',px);eye.style.setProperty('--pupil-y',py);});
 }
-function applyTiltToEyes(roll,pitch,yaw=0){
- faceTilt.roll=clampUnit(roll);faceTilt.pitch=clampUnit(pitch);faceTilt.yaw=clampUnit(yaw);
+function renderFacePose(now){
+ const dt=Math.min(.05,Math.max(.001,(now-lastPoseFrame)/1000));lastPoseFrame=now;
+ spring(facePose.yaw,facePose.targetYaw||0,45,.7,dt);
+ spring(facePose.pitch,facePose.targetPitch||0,45,.7,dt);
+ spring(facePose.roll,facePose.targetRoll||0,30,.6,dt);
  const face=$('face');
- face.style.setProperty('--head-roll',(faceTilt.roll*18)+'deg');
- face.style.setProperty('--head-pitch',(faceTilt.pitch*18)+'deg');
- face.style.setProperty('--head-yaw',(faceTilt.yaw*14)+'deg');
+ face.style.setProperty('--head-yaw',(facePose.yaw.x*24)+'deg');
+ face.style.setProperty('--head-pitch',(facePose.pitch.x*20)+'deg');
+ face.style.setProperty('--head-roll',(facePose.roll.x*18)+'deg');
+ requestAnimationFrame(renderFacePose);
 }
-function clampUnit(v){return Math.max(-1,Math.min(1,v));}
-function wrapDegrees(v){return ((v+180)%360+360)%360-180;}
+function setTiltTargets(x,y,z){
+ facePose.targetRoll=clampUnit(x)*.34;
+ facePose.targetPitch=clampUnit(y)*.30;
+ facePose.targetYaw=clampUnit(z)*.70;
+}
 function handleDeviceOrientation(e){
  if(e.beta==null||e.gamma==null)return;
  let pitch=e.beta,roll=e.gamma;
@@ -410,7 +431,7 @@ function handleDeviceOrientation(e){
  const yaw=wrapDegrees(alpha-orientationZero.alpha);
  const relPitch=wrapDegrees(pitch-orientationZero.beta);
  const relRoll=wrapDegrees(roll-orientationZero.gamma);
- applyTiltToEyes(clampUnit(relRoll/42),clampUnit(relPitch/48),clampUnit(yaw/65));
+ setTiltTargets(clampUnit(relRoll/55),clampUnit(relPitch/55),clampUnit(yaw/75));
  lastOrientationAt=Date.now();
 }
 window.addEventListener('deviceorientation',handleDeviceOrientation,{passive:true});
@@ -419,8 +440,10 @@ orb.addEventListener('pointermove',e=>{
  if(Date.now()-lastOrientationAt<1500)return;
  const r=orb.getBoundingClientRect();
  const nx=((e.clientX-r.left)/r.width-.5)*2,ny=((e.clientY-r.top)/r.height-.5)*2;
- applyTiltToEyes(clampUnit(nx*.55),clampUnit(ny*.55),0);
+ setTiltTargets(clampUnit(nx*.75),clampUnit(ny*.75),clampUnit(nx*.55));
 });
+orb.addEventListener('pointerleave',()=>{if(Date.now()-lastOrientationAt>=1500)setTiltTargets(0,0,0);});
+requestAnimationFrame(renderFacePose);
 
 
 function setMood(faceKey,why='реакция компаньона',sound=true,soundEmotionKey='calm',duration=2600){current=faceKey;lastOwnerInputAt=Date.now();const behaviorFace={disappointed:'sad',lonely:'sad',playful:'happy',anticipation:'curious',relief:'happy',proud:'happy',confused:'curious',focused:'curious',fear:'scared',jealous:'angry',bored:'sleep',trust:'love',serene:'neutral'}[faceKey]||faceKey;behavior?.setMood(behaviorFace,Date.now(),duration);currentEmotionKey=soundEmotionKey;const map={happy:'радуется',excited:'в восторге',curious:'с любопытством наблюдает',surprised:'удивлён',shy:'смущается',love:'проявляет нежность',neutral:'спокойно наблюдает',sleep:'засыпает',sad:'грустит: взгляд опущен, веки наклонены, на глазах появляются слёзы',angry:'недоволен'};
@@ -433,7 +456,7 @@ let desc=`${dict.temper[profile.temper]}, ${dict.bond[profile.bond]}; ${dict.ini
 $('profile').innerHTML='<strong></strong><p></p><div class="chips"></div>';$('profile').querySelector('strong').textContent=n+' · личность';$('profile').querySelector('p').textContent=desc;[dict.temper[profile.temper],dict.bond[profile.bond],dict.quirk[profile.quirk]].forEach(v=>{let s=document.createElement('span');s.className='chip';s.textContent=v;$('profile').querySelector('.chips').append(s)});saveMemory();log('Сгенерирован индивидуальный профиль '+n);trigger('happy')}
 $('intensity').addEventListener('input',e=>{intensity=+e.target.value;$('intensityLabel').textContent=intensity+'/10'});
 function blink(){if(current==='sleep')return;const eyes=[...orb.querySelectorAll('.eye')];if(eyes.length!==2)return;eyes.forEach(eye=>{eye.classList.remove('blink-one','blink-two');void eye.offsetWidth;eye.classList.add('blink-one');});setTimeout(()=>eyes.forEach(eye=>eye.classList.remove('blink-one')),118);}
-setInterval(()=>{if(!behavior||current==='sleep')return;const v=behavior.tick(Date.now(),{userActive:Date.now()-lastOwnerInputAt<18000,hour:new Date().getHours()});setSharedPupilGaze(v.gaze.x,v.gaze.y);$('face').style.setProperty('--gaze-x',(v.gaze.x*2).toFixed(2)+'px');$('face').style.setProperty('--gaze-y',(v.gaze.y*2).toFixed(2)+'px');const gazeClass=Math.abs(v.gaze.x)>.25?(v.gaze.x<0?'gaze-left':'gaze-right'):Math.abs(v.gaze.y)>.2?(v.gaze.y<0?'gaze-up':'gaze-down'):'gaze-center';orb.classList.remove('gaze-center','gaze-left','gaze-right','gaze-up','gaze-down');orb.classList.add(gazeClass);if(v.blink)blink();if(v.initiative&&v.initiative!==current)setMood(v.initiative,'самостоятельно выбрал выражение, учитывая характер и контекст',false,v.initiative,2200);},120);
+setInterval(()=>{if(!behavior||current==='sleep')return;const v=behavior.tick(Date.now(),{userActive:Date.now()-lastOwnerInputAt<18000,hour:new Date().getHours()});setSharedPupilGaze(v.gaze.x,v.gaze.y);spring(facePose.gazeX,v.gaze.x,900,.65,.12);spring(facePose.gazeY,v.gaze.y,900,.65,.12);$('face').style.setProperty('--gaze-x',(facePose.gazeX.x*2).toFixed(2)+'px');$('face').style.setProperty('--gaze-y',(facePose.gazeY.x*2).toFixed(2)+'px');const gazeClass=Math.abs(v.gaze.x)>.25?(v.gaze.x<0?'gaze-left':'gaze-right'):Math.abs(v.gaze.y)>.2?(v.gaze.y<0?'gaze-up':'gaze-down'):'gaze-center';orb.classList.remove('gaze-center','gaze-left','gaze-right','gaze-up','gaze-down');orb.classList.add(gazeClass);if(v.blink)blink();if(v.initiative&&v.initiative!==current)setMood(v.initiative,'самостоятельно выбрал выражение, учитывая характер и контекст',false,v.initiative,2200);},120);
 let lastAutonomousAt=0,lastAutonomousMood='';
 function runAutonomousDecision(){
  if(current==='sleep')return;
