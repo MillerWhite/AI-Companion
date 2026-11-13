@@ -41,6 +41,7 @@ static lv_obj_t *status_label, *setup_label, *screen_face, *face_canvas;
 static face_t face_model, face_target;
 typedef struct { float x, v; } face_shape_spring_t;
 static face_shape_spring_t face_shape_spring[2][15];
+static bool face_shapes_initialized;
 static uint16_t *face_pixels;
 static float face_gaze_x, face_gaze_y, face_gaze_target_x, face_gaze_target_y, face_base_lid;
 static float face_eye_base_roll[2], face_eye_base_w[2], face_eye_base_h[2];
@@ -163,7 +164,11 @@ static void face_apply_emotion(companion_emotion_t emotion)
         face_eye_base_roll[i] = e->roll;
         face_eye_base_w[i] = e->w;
         face_eye_base_h[i] = e->h;
-        memset(&face_shape_spring[i],0,sizeof(face_shape_spring[i]));
+        if (!face_shapes_initialized) {
+            face_model.eye[i]=*e;
+            const float initial[15]={e->w,e->h,e->roll,e->taper,e->lid,e->tilt,e->smile,e->pw,e->ph,e->square,e->heart,e->glint,e->spiral,e->veins,e->wet};
+            for(int k=0;k<15;k++) face_shape_spring[i][k].x=initial[k];
+        }
         e->taper = emotion==COMPANION_ANGRY ? .30f : (emotion==COMPANION_CONCERNED ? .12f : 0);
         e->lid = lid + (i ? .035f : 0);
         e->tilt = i ? -tilt : tilt;
@@ -177,6 +182,7 @@ static void face_apply_emotion(companion_emotion_t emotion)
     face_gaze_target_x = gaze_x;
     face_gaze_target_y = gaze_y;
     face_base_lid = lid;
+    face_shapes_initialized=true;
     face_model.color=face_target.color; face_model.pupil_color=face_target.pupil_color;
     face_model.heart_color=face_target.heart_color; face_model.blush_color=face_target.blush_color;
     face_model.vein_color=face_target.vein_color; face_model.water_color=face_target.water_color;
@@ -222,9 +228,13 @@ static void face_animation_timer(lv_timer_t *timer)
         const float foreshorten=1.0f+.35f*(cosf(phi)-.8525245f);
         eye_t *e=&face_model.eye[i];
         const eye_t *target=&face_target.eye[i];
-        float *dst=(float *)&e->depth;
-        const float *src=(const float *)&target->depth;
-        for(int k=0;k<15;k++) face_spring(&dst[k],&face_shape_spring[i][k].v,src[k],220.0f,.5f,dt);
+        float *dst[15]={&e->w,&e->h,&e->roll,&e->taper,&e->lid,&e->tilt,&e->smile,&e->pw,&e->ph,&e->square,&e->heart,&e->glint,&e->spiral,&e->veins,&e->wet};
+        const float src[15]={target->w,target->h,target->roll,target->taper,target->lid,target->tilt,target->smile,target->pw,target->ph,target->square,target->heart,target->glint,target->spiral,target->veins,target->wet};
+        for(int k=0;k<15;k++) {
+            face_spring(&face_shape_spring[i][k].x,&face_shape_spring[i][k].v,src[k],220.0f,.5f,dt);
+            *dst[k]=face_shape_spring[i][k].x;
+        }
+        e->depth=target->depth;
         e->x=233.0f+head_radius*sinf(phi)*cosf(head_roll);
         e->y=165.0f+240.0f*sinf(head_pitch)+head_radius*sinf(phi)*sinf(head_roll);
         e->w=face_shape_spring[i][0].x*foreshorten;
@@ -238,21 +248,14 @@ static void face_animation_timer(lv_timer_t *timer)
         e->smile=face_shape_spring[i][6].x;
         e->look_x=fmaxf(-.85f,fminf(.85f,face_gaze_x-e->yaw));
         e->look_y=fmaxf(-.70f,fminf(.70f,face_gaze_y-head_pitch));
-        e->pw=face_shape_spring[i][7].x;
-        e->ph=face_shape_spring[i][8].x;
-        e->square=face_shape_spring[i][9].x;
-        e->heart=face_shape_spring[i][10].x;
-        e->glint=face_shape_spring[i][11].x;
-        e->spiral=face_shape_spring[i][12].x;
-        e->veins=face_shape_spring[i][13].x;
-        e->wet=face_shape_spring[i][14].x;
+
         const int64_t blink_age = now - face_blink_start_us - (i ? 38000LL : 0LL);
         float blink = 0.0f;
         if (face_blink_start_us && blink_age >= 0 && blink_age < 150000LL) {
             const float phase = (float)blink_age / 150000.0f;
             blink = sinf(phase * 3.14159265f) * .94f;
         }
-        e->lid = face_base_lid + blink * (1.0f-face_base_lid);
+        e->lid = e->lid + blink * (1.0f-e->lid);
         e->wobble=target->wobble; e->wob_t += dt;
     }
     face_draw(&face_model,face_pixels,466,330);
