@@ -81,7 +81,7 @@ jobs:
           import re
           from pathlib import Path
           html = Path("AI_Companion_Emotional_Engine.html").read_text(encoding="utf-8")
-          scripts = re.findall(r"<script(?:\\s[^>]*)?>(.*?)</script>", html, re.I | re.S)
+          scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, re.I | re.S)
           if not scripts:
               raise SystemExit("No inline scripts found in emotional engine")
           for index, script in enumerate(scripts):
