@@ -103,3 +103,12 @@ The firmware exposes a composite BLE HID accessory named `AI Companion` (Consume
 6. New ANCS notifications and AMS track title/artist updates are shown briefly in the status line and also written to the serial log.
 
 If ANCS/AMS are not discovered, check that the iPhone is bonded to `AI Companion`, that system-notification sharing was accepted, and that a media app is actively playing. iOS can withhold AMS when no media session is published. This implementation has not yet been verified against a physical iPhone; CI compilation and device pairing tests remain required before calling the feature release-ready.
+
+
+### Behavior and face notes (13.11.2026)
+
+- The face is rendered as two procedural eyes only; there is no mouth layer.
+- Eye animation uses independent eye state, pupil gaze, asynchronous blink offsets, per-frame outline wobble, tilt response and emotion-specific lid/pupil parameters.
+- Autonomous emotion changes are throttled: 90 s high initiative, 180 s medium, 300 s low. A failed random invitation roll also consumes the cooldown.
+- Irritation is event-driven: explicit frustration can raise it; a calm interaction or rest lowers it. Time away never increases irritation or reduces relationship values.
+- Weather graphics are currently a local visual reaction to mood in firmware and a selectable/demo context in the browser. Real local weather is not connected.
