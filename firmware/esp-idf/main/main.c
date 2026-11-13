@@ -987,7 +987,7 @@ void app_main(void)
         ESP_LOGI(TAG, "Secure Wi-Fi setup code: %s", setup_info);
         if (bsp_display_lock(pdMS_TO_TICKS(1000)) == ESP_OK) {
             char line[64];
-            snprintf(line, sizeof(line), "%s", setup_info);
+            snprintf(line, sizeof(line), "%.*s", (int)sizeof(line) - 1, setup_info);
             lv_label_set_text(setup_label, line);
             bsp_display_unlock();
         }
