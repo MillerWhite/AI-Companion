@@ -40,29 +40,39 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 .profile{background:#0a0a0b;border:1px solid #29292d;border-radius:13px;padding:12px;margin-top:12px}.profile strong{font-size:13px}.profile p{font-size:12px;color:#afafb6;margin:6px 0 0}.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.chip{font-size:10px;padding:4px 7px;border-radius:20px;border:1px solid #3b3b42;color:#eee;background:#171719}.meter{height:7px;background:#1a1a1d;border-radius:9px;overflow:hidden}.meter i{display:block;height:100%;background:#f2f2f2;border-radius:9px;transition:width .5s}.field label b{float:right;color:#fff}
 .soundgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.soundgrid button{font-size:12px;padding:10px 6px}.cloud-settings{margin:12px auto 0;width:min(100%,420px);padding:12px;border:1px solid #29292d;border-radius:13px;background:#08090c;text-align:left}.cloud-title{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;font-weight:700}.cloud-toggle{display:flex;align-items:center;gap:8px;color:#d7d7dc;font-size:12px;margin:9px 0}.cloud-toggle input{accent-color:#fff}.cloud-settings input[type=url]{width:100%;padding:10px;border-radius:8px;border:1px solid #333;background:#111;color:#fff;font:12px system-ui}.cloud-help{font-size:10px;color:#8b8b94;margin-top:7px;line-height:1.4}.soundnote{font-size:11px;color:var(--muted);margin:9px 0 0}.log{border-top:1px solid #2a394e;margin-top:14px;padding-top:10px}.logtop{display:flex;justify-content:space-between;font-size:11px;color:#aebed2}.logbody{height:85px;overflow:auto;font-size:11px;color:#8799b1}.logbody div{padding:4px 0;border-bottom:1px solid #ffffff08}
 
-/* Procedural eye-only companion face — aligned with the firmware renderer. */
-.orb{isolation:isolate;overflow:hidden;background:radial-gradient(circle at 50% 45%,#111 0,#030303 58%,#000 100%)}
-.face{z-index:2;gap:25px;transform:translate(var(--gaze-x,0px),var(--gaze-y,0px)) rotate(var(--head-roll,0deg));transition:transform .24s cubic-bezier(.2,.75,.2,1)}
-.eye{width:76px;height:94px;position:relative;overflow:hidden;border-radius:48% 48% 45% 45%;background:radial-gradient(ellipse at 42% 34%,#fff 0 36%,#e9f0f7 72%,#cbd5df 100%);box-shadow:inset 0 -7px 12px #64718133,0 0 16px #fff3;transform-origin:50% 50%;transition:height .28s,width .28s,border-radius .28s,transform .22s,filter .25s}
-.eye:before{content:"";position:absolute;z-index:3;left:-8%;right:-8%;top:-105%;height:112%;border-radius:0 0 48% 48%;background:linear-gradient(180deg,#050608 0 78%,#11151b 100%);transition:top .24s ease}
-.pupil{position:absolute;left:50%;top:52%;width:38px;height:48px;transform:translate(calc(-50% + var(--pupil-x,0px)),calc(-50% + var(--pupil-y,0px)));border-radius:48% 48% 52% 52%;background:radial-gradient(ellipse at 35% 25%,#48515d 0 8%,#10151d 22%,#020305 72%);box-shadow:0 2px 8px #0008;transition:transform .18s ease,width .22s,height .22s}
-.glint{position:absolute;left:7px;top:7px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:8px 7px 0 -4px #fff9,0 0 9px #fff8}
-.orb.blink .eye,.eye.blink-one,.eye.blink-two{transform:scaleY(.07)}
-.orb.sleep .eye{height:12px;border-radius:8px}.orb.sleep .eye:before{top:-2%}
-.orb.happy .eye{height:67px;border-radius:48% 48% 60% 60%}.orb.happy .eye:before{top:-72%}
-.orb.excited .eye,.orb.surprised .eye{height:108px;width:82px;border-radius:50%}.orb.excited .pupil,.orb.surprised .pupil{width:30px;height:38px}
-.orb.sad .eye{height:80px;border-radius:42% 42% 52% 52%}.orb.sad .eye:first-child{transform:rotate(9deg) translateY(5px)}.orb.sad .eye:last-child{transform:rotate(-9deg) translateY(5px)}.orb.sad .eye:before{top:-62%;transform:rotate(9deg)}.orb.sad .pupil{width:33px;height:38px}
-.orb.angry .eye{height:66px;border-radius:45% 45% 48% 48%}.orb.angry .eye:first-child{transform:rotate(13deg) skewY(-8deg)}.orb.angry .eye:last-child{transform:rotate(-13deg) skewY(8deg)}.orb.angry .eye:before{top:-47%;background:linear-gradient(180deg,#050608 0 70%,#321719 100%)}
-.orb.shy .eye{height:72px;transform:scaleY(.82)}.orb.shy .eye:before{top:-76%}
-.orb.curious .eye:first-child{transform:translateY(-7px) scale(.96)}.orb.curious .eye:last-child{transform:translateY(4px) scale(1.04)}
-.orb.love .pupil{background:radial-gradient(ellipse at 35% 25%,#8b324f 0 8%,#351020 25%,#080307 75%)}
-.orb.gaze-left{--gaze-x:-7px}.orb.gaze-right{--gaze-x:7px}.orb.gaze-up{--gaze-y:-6px}.orb.gaze-down{--gaze-y:6px}.orb.gaze-center{--gaze-x:0px;--gaze-y:0px}
-.weather-scene{display:none;position:absolute;z-index:4;top:20px;left:50%;width:112px;height:70px;transform:translateX(-50%);pointer-events:none;opacity:0;transition:opacity .35s}
-.weather-scene.active{display:block;opacity:1}.weather-cloud{position:absolute;left:25px;top:5px;width:60px;height:27px;border-radius:30px;background:linear-gradient(180deg,#cbd8e2,#718392);box-shadow:0 3px 10px #9bb8cc33}
-.weather-cloud:before,.weather-cloud:after{content:"";position:absolute;bottom:6px;border-radius:50%;background:inherit}.weather-cloud:before{width:31px;height:31px;left:8px}.weather-cloud:after{width:25px;height:25px;right:5px;bottom:3px}
-.rain{position:absolute;top:40px;width:3px;height:12px;border-radius:4px;background:#9bdcff;transform:rotate(18deg);animation:rain-fall .72s linear infinite;box-shadow:0 0 7px #8bd5ff88}
-.rain-a{left:37px}.rain-b{left:57px;animation-delay:-.34s}.rain-c{left:77px;animation-delay:-.16s}.weather-scene .rain{display:none}.weather-scene.rain .rain,.weather-scene.storm .rain,.weather-scene.auto-rain .rain{display:block}.snowflake{display:none;position:absolute;top:40px;color:#e7f7ff;text-shadow:0 0 8px #b9e8ff;animation:snow-fall 2.6s linear infinite}.snow-a{left:40px}.snow-b{left:76px;animation-delay:-1.2s}.weather-scene.snow .snowflake{display:block}@keyframes snow-fall{0%{translate:0 -12px;opacity:0}20%{opacity:1}100%{translate:8px 28px;opacity:0}}.lightning{display:none;position:absolute;left:54px;top:30px;width:12px;height:23px;background:#eff9ff;clip-path:polygon(55% 0,100% 0,65% 42%,100% 42%,15% 100%,37% 54%,0 54%);filter:drop-shadow(0 0 8px #d8f2ff)}.weather-scene.storm .lightning{display:block;animation:flash 2.4s steps(1,end) infinite}@keyframes flash{0%,76%,80%,100%{opacity:0}77%,79%{opacity:1}}
-@keyframes rain-fall{0%{translate:0 -8px;opacity:0}25%{opacity:1}100%{translate:5px 18px;opacity:0}}
+/* Shared eye design: matched to the installer preview, no mouth and no extra face layers. */
+.orb{width:clamp(170px,38vw,224px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;position:relative;overflow:hidden;isolation:isolate;background:radial-gradient(circle at 50% 42%,#1b2934,#090d12 72%);border:1px solid #40505d;box-shadow:0 0 0 7px #ffffff04,0 18px 65px #000a,inset 0 0 32px #b8eaff0a;animation:petBreath 5.5s ease-in-out infinite;transition:filter .3s}
+.face{display:flex;align-items:center;gap:28px;position:relative;z-index:2;transform:translate3d(var(--gaze-x,0px),var(--gaze-y,0px),0) rotateX(var(--head-pitch,0deg)) rotateY(var(--head-yaw,0deg)) rotateZ(var(--head-roll,0deg));transform-style:preserve-3d;animation:petFloat 5.4s ease-in-out infinite;transition:transform 420ms cubic-bezier(.2,.8,.2,1)}
+.eye{width:36px;height:52px;border-radius:54% 54% 48% 48%;background:linear-gradient(145deg,#fff 0%,#f4f8ff 76%,#dce8f5 100%);box-shadow:0 0 9px #e8f7ffb8,0 0 27px #91d9ff52;position:relative;overflow:hidden;transform-origin:center;transform:translate(var(--eye-x,0px),var(--eye-y,0px)) scaleY(var(--lid,1)) rotate(var(--eye-rot,0deg));transition:transform 520ms cubic-bezier(.2,.8,.2,1),height 380ms,border-radius 380ms,width 380ms;will-change:transform}
+.eye:before{content:"";position:absolute;width:17px;height:23px;border-radius:48% 48% 52% 52%;background:radial-gradient(circle at 35% 28%,#39414c 0 7%,#080b10 38%,#000 100%);left:50%;top:var(--pupil-y,15px);transform:translateX(calc(-50% + var(--pupil-x,0px)));transition:transform 420ms cubic-bezier(.2,.8,.2,1),top 420ms}
+.eye:after{content:"";position:absolute;width:7px;height:9px;border-radius:50%;background:#fff;top:12px;left:calc(50% - 7px);opacity:.98;box-shadow:5px 8px 0 -2px #ffffffa8}
+.orb .weather-canvas{position:absolute;z-index:1;inset:0;width:100%;height:100%;pointer-events:none;opacity:.94}
+.orb.happy .eye{height:43px;border-radius:48% 48% 58% 58%;--lid:.9}
+.orb.curious .eye:first-child{height:58px;--eye-rot:-5deg}.orb.curious .eye:last-child{height:48px;--eye-rot:4deg}
+.orb.surprised .eye{height:61px;width:38px}
+.orb.sleep .eye{height:5px;border-radius:8px;--lid:.28;box-shadow:0 0 10px #d9f6ff66;animation:none}
+.orb.sad .eye{height:45px;border-radius:55% 55% 42% 42%;--eye-rot:5deg;--pupil-y:22px}
+.orb.sad .eye:first-child{--eye-rot:9deg}.orb.sad .eye:last-child{--eye-rot:-9deg}
+.orb.love .eye{height:35px;border-radius:50%;--lid:.72}.orb.love .eye:before{background:radial-gradient(ellipse at 35% 25%,#8b324f 0 8%,#351020 25%,#080307 75%)}
+.orb.excited .eye{height:62px;width:38px;animation:eyeSpark 1.1s ease-in-out infinite alternate}
+.orb.shy .eye{height:38px;--lid:.78;--pupil-x:-4px}
+.orb.angry .eye{height:42px;border-radius:50% 50% 42% 42%;--eye-rot:-8deg;--lid:.68}
+.orb.angry .eye:last-child{--eye-rot:8deg}
+.orb.disappointed .eye{height:39px;--eye-rot:7deg;--pupil-y:20px}
+.orb.lonely .eye{height:42px;filter:brightness(.84);--pupil-y:21px}
+.orb.playful .eye:first-child{height:48px;--eye-rot:-7deg}.orb.playful .eye:last-child{height:58px;--eye-rot:4deg}
+.orb.anticipation .eye{height:58px;width:39px}
+.orb.relief .eye,.orb.serene .eye{height:38px;border-radius:48% 48% 58% 58%;--lid:.78}
+.orb.proud .eye{height:43px;--pupil-y:11px}
+.orb.confused .eye:first-child{height:59px;--eye-rot:-6deg}.orb.confused .eye:last-child{height:45px;--eye-rot:7deg}
+.orb.focused .eye{height:43px;width:35px}.orb.fear .eye{height:63px;width:39px}
+.orb.jealous .eye{height:41px;filter:hue-rotate(325deg)}.orb.bored .eye{height:27px;--lid:.6;--pupil-y:19px}
+.orb.trust .eye{height:42px;--lid:.9}
+.eye.blink-one,.eye.blink-two{transform:scaleY(.055)!important}
+@keyframes petBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.018)}}
+@keyframes petFloat{0%,100%{translate:0 -2px}50%{translate:0 -6px}}
+@keyframes eyeSpark{from{filter:brightness(1)}to{filter:brightness(1.2);transform:scaleY(1.05)}}
+@media(prefers-reduced-motion:reduce){.orb,.face,.eye{animation:none;transition:none}}
 .weather-control{width:min(100%,420px);margin:10px auto 0;padding:10px 12px;border:1px solid #29292d;border-radius:12px;background:#08090c;text-align:left}
 .weather-control label{display:block;color:#aaa;font-size:11px;margin-bottom:5px}.weather-control select{width:100%;background:#111;color:#eee;border:1px solid #34343a;border-radius:8px;padding:8px}.weather-control span{display:block;color:#888;font-size:10px;margin-top:6px}
 
@@ -92,7 +102,7 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 <div class="grid">
 <section class="panel">
 <div class="stage">
-<div class="orb" id="orb"><div class="face" id="face"><div class="eye"><span class="pupil"><i class="glint"></i></span></div><div class="eye"><span class="pupil"><i class="glint"></i></span></div></div><div class="weather-scene" id="weatherScene" aria-hidden="true"><span class="weather-cloud"></span><span class="rain rain-a"></span><span class="rain rain-b"></span><span class="rain rain-c"></span><span class="snowflake snow-a">✦</span><span class="snowflake snow-b">✦</span><span class="lightning"></span></div></div>
+<div class="orb" id="orb"><div class="face" id="face"><div class="eye"></div><div class="eye"></div></div><canvas id="weatherCanvas" class="weather-canvas" aria-hidden="true"></canvas></div>
 <div class="status" id="status">спокойно наблюдает</div><div class="substatus" id="substatus">нейтральное состояние · интенсивность 2/10</div>
 <div class="controls">
 <button onclick="trigger('happy')">Погладить</button><button onclick="trigger('curious')">Позвать</button><button onclick="trigger('surprised')">Удивить</button><button onclick="trigger('angry')">Разозлить</button><button onclick="trigger('sleep')">Сон</button><button onclick="trigger('neutral')">Пробудить</button>
@@ -125,8 +135,9 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 <div class="profile" id="bondInfo"><strong>Отношения с владельцем</strong><p>Компаньон только начинает знакомство. Отношения будут меняться от повторяющихся взаимодействий.</p><div class="chips"><span class="chip" id="bondLevel">знакомство</span><span class="chip" id="bondPoints">0 опыта</span></div><p id="habitInsight" style="font-size:11px;color:#aaa;margin:8px 0 0">Привычки формируются из повторяющихся действий владельца.</p></div>
 </section></div></main>
 <script src="./web/installer/companion-runtime.js"></script>
+<script src="./web/installer/companion-weather.js"></script>
 <script>
-const $=id=>document.getElementById(id),orb=$('orb');let soundEnabled=true,events=0,current='neutral',currentEmotionKey='calm',intensity=6,lastSoundAt=0,returnTimer=null,profile={temper:'playful',initiative:'medium',bond:'friendly',quirk:'curious'};
+const $=id=>document.getElementById(id),orb=$('orb'),weatherScene=window.AICompanionWeather?.createWeatherScene($('weatherCanvas'));let soundEnabled=true,events=0,current='neutral',currentEmotionKey='calm',intensity=6,lastSoundAt=0,returnTimer=null,profile={temper:'playful',initiative:'medium',bond:'friendly',quirk:'curious'};
 const behavior=window.AICompanionRuntime?.createCompanionRuntime({profile:{temper:profile.temper,initiative:profile.initiative,quirk:profile.quirk},seed:Date.now()>>>0});
 let lastOwnerInputAt=Date.now();
 const memory={bond:0,petCount:0,callCount:0,playCount:0,lastAction:'',sessions:0,traits:{trust:25,playfulness:35,calmness:35,responsiveness:30}};
@@ -321,11 +332,16 @@ function playSound(emotionKey,force=false){
  const idx=chooseSoundVariant(key);playEmotionSound(key,idx);
 }
 
-function updateWeatherScene(faceKey=current){const mode=$('weatherMode')?.value||'auto';const scene=$('weatherScene');if(!scene)return;const effective=mode==='auto'?(faceKey==='sad'?'rain':'clear'):mode;scene.classList.toggle('active',effective!=='clear');for(const kind of ['rain','storm','snow','cloudy','auto-rain'])scene.classList.toggle(kind,kind===effective||(kind==='auto-rain'&&mode==='auto'&&effective==='rain'));const captions={auto:'Автодемонстрация: грусть вызывает дождливую сцену.',clear:'Ясная погода: спокойная светлая атмосфера.',cloudy:'Облачно: появляется движущееся облако.',rain:'Дождь: облако и капли сопровождают настроение.',storm:'Гроза: дождь и короткие вспышки молнии.',snow:'Снег: медленно падают снежинки.'};const c=$('weatherCaption');if(c)c.textContent=captions[mode]||captions.auto;}
+function updateWeatherScene(){const mode=$('weatherMode')?.value||'auto';weatherScene?.setMode(mode);const captions={auto:'Демонстрационный цикл погоды · не связан с настроением.',clear:'Ясное небо · мягкое солнце и атмосферное свечение.',cloudy:'Облака медленно проходят над экраном.',rain:'Дождь с ветром и каплями.',storm:'Гроза · дождь и редкие вспышки молнии.',snow:'Снегопад · хлопья плавно дрейфуют по ветру.'};const c=$('weatherCaption');if(c)c.textContent=captions[mode]||captions.auto;}
 $('weatherMode')?.addEventListener('change',()=>{updateWeatherScene();behavior?.setProfile({weather:$('weatherMode').value});});
-function applyTiltToEyes(x,y){const pupils=orb.querySelectorAll('.pupil');pupils.forEach((p,i)=>{p.style.setProperty('--pupil-x',(x*8+(i?1:-1))+'px');p.style.setProperty('--pupil-y',(y*7)+'px')});orb.style.setProperty('--head-roll',(x*5)+'deg');}
-window.addEventListener('deviceorientation',e=>{if(e.gamma==null||e.beta==null)return;applyTiltToEyes(Math.max(-1,Math.min(1,e.gamma/35)),Math.max(-1,Math.min(1,(e.beta-45)/45)));},{passive:true});
-orb.addEventListener('pointermove',e=>{const r=orb.getBoundingClientRect();applyTiltToEyes(Math.max(-1,Math.min(1,((e.clientX-r.left)/r.width-.5)*2)),Math.max(-1,Math.min(1,((e.clientY-r.top)/r.height-.5)*2)));});
+function applyTiltToEyes(x,y,z=0){const eyes=orb.querySelectorAll('.eye');eyes.forEach((eye,i)=>{eye.style.setProperty('--pupil-x',(x*8+(i?1:-1))+'px');eye.style.setProperty('--pupil-y',(y*7)+'px');eye.style.setProperty('--eye-x',(z*2)+'px')});const face=$('face');face.style.setProperty('--head-roll',(x*13)+'deg');face.style.setProperty('--head-pitch',(y*13)+'deg');face.style.setProperty('--head-yaw',(z*11)+'deg');face.style.setProperty('--gaze-x',(x*2)+'px');face.style.setProperty('--gaze-y',(y*2)+'px');}
+function clampUnit(v){return Math.max(-1,Math.min(1,v));}
+function wrapDegrees(v){return ((v+180)%360+360)%360-180;}
+function handleDeviceOrientation(e){if(e.beta==null||e.gamma==null)return;let pitch=e.beta,roll=e.gamma;const angle=(screen.orientation?.angle||window.orientation||0);if(angle===90){[pitch,roll]=[roll,-pitch]}else if(angle===-90||angle===270){[pitch,roll]=[-roll,pitch]}else if(Math.abs(angle)===180){pitch=-pitch;roll=-roll;}const yaw=e.alpha==null?0:wrapDegrees(e.alpha);applyTiltToEyes(clampUnit(roll/45),clampUnit(pitch/55),clampUnit(yaw/180));}
+window.addEventListener('deviceorientation',handleDeviceOrientation,{passive:true});
+window.addEventListener('deviceorientationabsolute',handleDeviceOrientation,{passive:true});
+orb.addEventListener('pointermove',e=>{const r=orb.getBoundingClientRect();applyTiltToEyes(clampUnit(((e.clientX-r.left)/r.width-.5)*2),clampUnit(((e.clientY-r.top)/r.height-.5)*2),0);});
+
 
 function setMood(faceKey,why='реакция компаньона',sound=true,soundEmotionKey='calm',duration=2600){current=faceKey;lastOwnerInputAt=Date.now();const behaviorFace={disappointed:'sad',lonely:'sad',playful:'happy',anticipation:'curious',relief:'happy',proud:'happy',confused:'curious',focused:'curious',fear:'scared',jealous:'angry',bored:'sleep',trust:'love',serene:'neutral'}[faceKey]||faceKey;behavior?.setMood(behaviorFace,Date.now(),duration);currentEmotionKey=soundEmotionKey;const map={happy:'радуется',excited:'в восторге',curious:'с любопытством наблюдает',surprised:'удивлён',shy:'смущается',love:'проявляет нежность',neutral:'спокойно наблюдает',sleep:'засыпает',sad:'грустит: взгляд опущен, веки наклонены, на глазах появляются слёзы',angry:'недоволен'};
 orb.className='orb '+(faceKey==='neutral'?'':faceKey);updateWeatherScene(faceKey);$('status').textContent=map[faceKey]||why;const moodLabel=soundCategories.find(m=>m.key===soundEmotionKey)?.label||soundEmotionKey;$('substatus').textContent=why+' · состояние: '+moodLabel+' · сила '+intensity+'/10';if(sound)playSound(soundEmotionKey,true);log(($('name').value||'Компаньон')+': '+(map[faceKey]||faceKey));if(returnTimer)clearTimeout(returnTimer);if(duration>0&&faceKey!=='sleep'&&faceKey!=='neutral'){returnTimer=setTimeout(()=>returnToBaseline(),duration);}} 
@@ -337,7 +353,7 @@ let desc=`${dict.temper[profile.temper]}, ${dict.bond[profile.bond]}; ${dict.ini
 $('profile').innerHTML='<strong></strong><p></p><div class="chips"></div>';$('profile').querySelector('strong').textContent=n+' · личность';$('profile').querySelector('p').textContent=desc;[dict.temper[profile.temper],dict.bond[profile.bond],dict.quirk[profile.quirk]].forEach(v=>{let s=document.createElement('span');s.className='chip';s.textContent=v;$('profile').querySelector('.chips').append(s)});saveMemory();log('Сгенерирован индивидуальный профиль '+n);trigger('happy')}
 $('intensity').addEventListener('input',e=>{intensity=+e.target.value;$('intensityLabel').textContent=intensity+'/10'});
 function blink(){if(current==='sleep')return;const eyes=orb.querySelectorAll('.eye');if(!eyes.length)return;const first=Math.random()<.55?0:1;eyes[first].classList.add('blink-one');setTimeout(()=>eyes[first]?.classList.remove('blink-one'),105);if(Math.random()<.38){const second=1-first;setTimeout(()=>{eyes[second]?.classList.add('blink-two');setTimeout(()=>eyes[second]?.classList.remove('blink-two'),115)},55)}}
-setInterval(()=>{if(!behavior||current==='sleep')return;const v=behavior.tick(Date.now(),{userActive:Date.now()-lastOwnerInputAt<18000,hour:new Date().getHours()});const eyes=orb.querySelectorAll('.eye');eyes.forEach((eye,i)=>{eye.style.setProperty('--mx',(v.gaze.x*4+(i?1:-1)*.4).toFixed(2)+'px');eye.style.setProperty('--my',(v.gaze.y*4).toFixed(2)+'px')});const gazeClass=Math.abs(v.gaze.x)>.25?(v.gaze.x<0?'gaze-left':'gaze-right'):Math.abs(v.gaze.y)>.2?(v.gaze.y<0?'gaze-up':'gaze-down'):'gaze-center';orb.classList.remove('gaze-center','gaze-left','gaze-right','gaze-up','gaze-down');orb.classList.add(gazeClass);if(v.blink)blink();if(v.initiative&&v.initiative!==current)setMood(v.initiative,'самостоятельно выбрал выражение, учитывая характер и контекст',false,v.initiative,2200);},120);
+setInterval(()=>{if(!behavior||current==='sleep')return;const v=behavior.tick(Date.now(),{userActive:Date.now()-lastOwnerInputAt<18000,hour:new Date().getHours()});const eyes=orb.querySelectorAll('.eye');eyes.forEach((eye,i)=>{eye.style.setProperty('--pupil-x',(v.gaze.x*8+(i?1:-1)*.4).toFixed(2)+'px');eye.style.setProperty('--pupil-y',(15+v.gaze.y*7).toFixed(2)+'px')});$('face').style.setProperty('--gaze-x',(v.gaze.x*3).toFixed(2)+'px');$('face').style.setProperty('--gaze-y',(v.gaze.y*3).toFixed(2)+'px');const gazeClass=Math.abs(v.gaze.x)>.25?(v.gaze.x<0?'gaze-left':'gaze-right'):Math.abs(v.gaze.y)>.2?(v.gaze.y<0?'gaze-up':'gaze-down'):'gaze-center';orb.classList.remove('gaze-center','gaze-left','gaze-right','gaze-up','gaze-down');orb.classList.add(gazeClass);if(v.blink)blink();if(v.initiative&&v.initiative!==current)setMood(v.initiative,'самостоятельно выбрал выражение, учитывая характер и контекст',false,v.initiative,2200);},120);
 let lastAutonomousAt=0,lastAutonomousMood='';
 function runAutonomousDecision(){
  if(current==='sleep')return;
