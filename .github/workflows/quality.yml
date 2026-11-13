@@ -92,7 +92,7 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           html = Path("AI_Companion_Emotional_Engine.html").read_text(encoding="utf-8")
-          assert 'id="mouth"' not in html and 'class="mouth' not in html, "Legacy mouth markup remains"
+          assert ".mouth" not in html and 'id="mouth"' not in html, "Legacy mouth markup or styles remain"
           assert 'class="pupil"' in html, "Procedural pupils missing"
           assert 'id="weatherScene"' in html, "Weather scene missing"
           assert "deviceorientation" in html, "Tilt interaction missing"
