@@ -90,14 +90,17 @@ jobs:
           PY
           for file in /tmp/emotional-engine-*.js; do node --check "$file"; done
           node --check web/installer/companion-runtime.js
+          node --check web/installer/companion-weather.js
           node web/installer/tests/companion-runtime.test.cjs
+          node web/installer/tests/companion-weather.test.cjs
           python - <<'PY'
           from pathlib import Path
           html = Path("AI_Companion_Emotional_Engine.html").read_text(encoding="utf-8")
           assert ".mouth" not in html and 'id="mouth"' not in html, "Legacy mouth markup or styles remain"
-          assert 'class="pupil"' in html, "Procedural pupils missing"
-          assert 'id="weatherScene"' in html, "Weather scene missing"
-          assert "deviceorientation" in html, "Tilt interaction missing"
+          assert 'class="eye"' in html and '.eye:before' in html, "Installer-matched procedural eyes missing"
+          assert 'id="weatherCanvas"' in html and 'companion-weather.js' in html, "Atmospheric weather renderer missing"
+          assert "deviceorientation" in html and "e.alpha" in html and "e.beta" in html and "e.gamma" in html, "Full-axis browser orientation missing"
+          assert 'weatherScene' in html and "faceKey==='sad'" not in html, "Weather must not be driven by sadness"
           PY
 
   installer:
