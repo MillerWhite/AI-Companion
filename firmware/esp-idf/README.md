@@ -6,10 +6,10 @@ Firmware target: Waveshare ESP32-S3-Touch-AMOLED-1.75C (ESP32-S3, 32 MB flash, 8
 
 | Module | Responsibility |
 |---|---|
-| `main.c` | LVGL face, touch reactions, autonomous timer, speech and IMU tasks, cloud intent application |
+| `main.c` | Mouthless procedural eye face, LVGL display integration, touch reactions, autonomous timer, speech and IMU tasks, cloud intent application |
 | `companion_ble.c` | Composite BLE HID peripheral for mouse, keyboard, presentation and media controls |
 | `companion_iphone.c` | Apple ANCS notifications and AMS media metadata/remote-command GATT client |
-| `companion_emotion.c` | Needs, trust/playfulness progression, temperament-dependent emotional decisions |
+| `companion_emotion.c` | Trust, curiosity and playfulness progression; temperament-dependent emotional decisions without time-based care decay |
 | `companion_audio.c` | Waveshare BSP ES8311/ES7210 codec handles, low-volume procedural nonverbal playback, VAD and 16 kHz PCM capture |
 | `companion_voice.c` | MIT-derived procedural vocalization engine adapted from Pip-KeyPet; no TTS or spoken words |
 | `companion_imu.c` | QMI8658 sensor adapter; Pip-derived classifier detects shake, face-down/up, upside-down, falls and steps |
@@ -50,7 +50,7 @@ The local portal uses HTTP on the private LAN and requires the PIN displayed on 
 - Mono LPCM is sent to `POST /api/device/transcribe` with the device Bearer token.
 - Returned text is sent to `POST /api/device/interpret`.
 - The firmware rejects unknown actions/emotions, invalid confidence and missing address-detection booleans. Only addressed, understood requests change the pet's behavior.
-- If Wi-Fi/cloud services fail, the local face, needs, touch, autonomous behavior and sensor reactions continue. Cloud speech understanding is unavailable offline.
+- If Wi-Fi/cloud services fail, the local expressive eyes, touch, autonomous behavior and sensor reactions continue. Cloud speech understanding is unavailable offline.
 - No TTS or spoken audio is generated.
 
 The VAD threshold, microphone channel selection, echo handling and audio levels need calibration on the physical board. Playback is deliberately low amplitude and throttled, but it is not a professionally mastered sound library.
@@ -61,7 +61,7 @@ The provisioning manager uses SoftAP + Security 1 proof-of-possession. Wi-Fi cre
 
 ## Audio and sensors
 
-Blowing is detected from sustained low-frequency microphone energy; a nearby clap is classified as a short high-crest impulse. These heuristics are provisional and must be calibrated on the physical board. Shake invokes a dedicated dizzy face and procedural dizzy cue. Face-down blanks the AMOLED content to black (the panel controller itself is not yet put into a verified deep-sleep state); face-up restores the face. AXP2101 VBUS insertion feeds the pet and increases its energy/comfort needs.
+Blowing is detected from sustained low-frequency microphone energy; a nearby clap is classified as a short high-crest impulse. These heuristics are provisional and must be calibrated on the physical board. Shake invokes a dedicated dizzy face and procedural dizzy cue. Face-down blanks the AMOLED content to black (the panel controller itself is not yet put into a verified deep-sleep state); face-up restores the face. AXP2101 VBUS insertion is treated as environmental context and a charging reaction, not as a care or energy-depletion mechanic.
 
 
 Audio uses the Waveshare BSP codec factory handles and the reference close/reopen codec configuration sequence at 16 kHz, stereo, 16-bit. The QMI8658 managed component is configured for ±8 g and 500 Hz; filtered motion and tilt events have cooldowns.
