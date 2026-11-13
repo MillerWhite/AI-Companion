@@ -99,7 +99,7 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 .orb.sleep{animation:none}
 .orb .face{
   display:flex;align-items:center;justify-content:center;gap:var(--eye-gap,28px);
-  transform-style:preserve-3d;transform:translate3d(var(--gaze-x,0px),var(--gaze-y,0px),0)
+  transform-style:preserve-3d;transform:translate3d(0,0,0)
     rotateX(var(--head-pitch,0deg)) rotateY(var(--head-yaw,0deg)) rotateZ(var(--head-roll,0deg));
   transform-origin:50% 55%;animation:pet-float 4.8s ease-in-out infinite;
   transition:gap .35s cubic-bezier(.2,.8,.2,1);
@@ -159,7 +159,7 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 .orb.anticipation .eye{--eye-h:78px;--eye-w:51px}
 .orb.relief .eye,.orb.serene .eye{--eye-h:55px;--eye-radius:48% 48% 58% 58%;--eye-sy:.88}
 .orb.proud .eye{--eye-h:61px;--eye-sy:.92;--pupil-top:43%}
-.orb.fl inch .eye{--eye-h:12px}
+
 @keyframes pet-breathe{0%,100%{scale:1}50%{scale:1.012}}
 @keyframes pet-float{0%,100%{translate:0 0}50%{translate:0 -2.5px}}
 @keyframes eye-alive{0%,100%{translate:0 0}45%{translate:0 -1px}65%{translate:0 0}}
@@ -420,11 +420,16 @@ function setSharedPupilGaze(x,y){
 }
 function renderFacePose(now){
  const dt=Math.min(.05,Math.max(.001,(now-lastPoseFrame)/1000));lastPoseFrame=now;
+ const idle=Date.now()-lastOrientationAt>1500;
+ const t=now/1000;
+ const poseYaw=(facePose.targetYaw||0)+(idle?Math.sin(t*.43)*.025:0);
+ const posePitch=(facePose.targetPitch||0)+(idle?Math.sin(t*.61+.8)*.018:0);
+ const poseRoll=(facePose.targetRoll||0)+(idle?Math.sin(t*.31)*.018:0);
  const steps=Math.max(1,Math.ceil(dt*120)),stepDt=dt/steps;
  for(let i=0;i<steps;i++){
-  spring(facePose.yaw,facePose.targetYaw||0,45,.7,stepDt);
-  spring(facePose.pitch,facePose.targetPitch||0,45,.7,stepDt);
-  spring(facePose.roll,facePose.targetRoll||0,30,.6,stepDt);
+  spring(facePose.yaw,poseYaw,45,.7,stepDt);
+  spring(facePose.pitch,posePitch,45,.7,stepDt);
+  spring(facePose.roll,poseRoll,30,.6,stepDt);
   spring(facePose.gazeX,facePose.targetGazeX||0,900,.65,stepDt);
   spring(facePose.gazeY,facePose.targetGazeY||0,900,.65,stepDt);
  }
