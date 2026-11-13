@@ -19,7 +19,7 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 
 | Task | Code status | Remaining acceptance gate |
 |---|---|---|
-| Full emotional transitions and facial expressions | Implemented in firmware/browser code: thirteen mood states, animated eye/mouth geometry, sadness brows/tears, blink and event-driven transitions | ESP-IDF build; physical display smoothness and emotional clarity test |
+| Full emotional transitions and facial expressions | Implemented in firmware/browser code: thirteen mood states, mouthless procedural eye geometry, gaze, asymmetric blink, tilt response and event-driven transitions | ESP-IDF build; physical display smoothness and emotional clarity test |
 | Unique personality and long-term development | Implemented foundation: temperament, initiative, selectable quirks, trust/curiosity/playfulness, persistent local state and safe durable preference facts | Broader traits/quirks, multi-month progression tuning and owner data export review |
 | Physical speaker sound system | Implemented driver path: ES8311 BSP handle, soft procedural motifs, low gain and cooldown | Board test, audio calibration, echo/feedback and listening-quality review |
 | Microphone speech recognition | Implemented pipeline: ES7210 BSP capture, VAD, mono 16 kHz PCM, backend OpenAI audio transcription route | Board microphone slot mapping, Russian/noise tests, live OpenAI audio transcription credentials and quota test |
@@ -116,3 +116,12 @@ This is a code-level status, not a claim of hardware or production acceptance. A
 - Отдельные workflow сборки ESP-IDF и публикации сайта сохранены.
 - CI после изменений должен завершиться успешно; queued workflow runs не считаются пройденными проверками.
 - В репозитории пока нет опубликованного GitHub Release с прошивкой. Ссылка установщика на `releases/latest/download/AI-Companion-ESP32-S3-Touch-AMOLED-1.75C.bin` заработает только после успешной сборки и публикации релиза с бинарником и SHA256.
+
+
+## Обновление 13.11.2026 — синхронизация эмоционального движка и лица
+
+- AI_Companion_Emotional_Engine.html теперь использует безротовую модель лица: два процедурно оформленных глаза, зрачки, блики, веки, асимметричные выражения и отдельную злость. Элемент рта удалён из разметки, а звуковые реакции больше не пытаются анимировать рот.
+- В браузерном движке добавлены реакции зрачков на pointer/deviceorientation и демонстрационная погодная сцена с облаком и дождём.
+- Погодный селектор в эмоциональном движке является демонстрационным контекстом; реальная погода через API пока не подключена.
+- Аппаратный рендерер остаётся в firmware/esp-idf/main/companion_face_renderer.c и вызывается из firmware/esp-idf/main/main.c. Браузерная модель визуально синхронизирована по принципам, но это не один общий исполняемый модуль.
+- Не заявляется как завершённое: точное портирование всех анимаций Pip-KeyPet, полного набора его настроений или аппаратная проверка IMU/частоты кадров. Требуются JS syntax CI и проверка на плате.
