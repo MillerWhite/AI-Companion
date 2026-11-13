@@ -112,3 +112,10 @@ If ANCS/AMS are not discovered, check that the iPhone is bonded to `AI Companion
 - Autonomous emotion changes are throttled: 90 s high initiative, 180 s medium, 300 s low. A failed random invitation roll also consumes the cooldown.
 - Irritation is event-driven: explicit frustration can raise it; a calm interaction or rest lowers it. Time away never increases irritation or reduces relationship values.
 - Weather graphics are currently a local visual reaction to mood in firmware and a selectable/demo context in the browser. Real local weather is not connected.
+
+
+### Three-axis eye response and browser visual parity
+
+The emotional simulator's eye proportions, glow, pupil and highlight geometry are aligned with the installer's face preview. The simulator uses the same mouthless two-eye construction. Its weather canvas is an independent atmospheric layer behind the eyes; it supports clear/cloudy/rain/storm/snow demo modes and never maps sadness directly to rain.
+
+The QMI8658 accelerometer and gyroscope are fused for pitch, roll and short-lived relative yaw. Absolute yaw cannot be recovered from an accelerometer alone; the gyro-derived yaw is deliberately damped to prevent long-term visual drift. Verify the board's axis mapping and feel on the physical 1.75C before tuning gains.
