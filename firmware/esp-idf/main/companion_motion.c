@@ -110,3 +110,43 @@ uint32_t companion_motion_feed(companion_motion_state_t *m, float ax, float ay, 
     }
     return events;
 }
+
+/* Complementary-filter orientation for expressive 3-axis eye movement.
+ * Accelerometer stabilizes pitch/roll; gyro supplies fast response and relative yaw.
+ * Yaw is intentionally a short-lived visual offset because an accelerometer cannot
+ * observe absolute heading; it eases back instead of accumulating an unbounded drift.
+ */
+void companion_orientation_feed(companion_orientation_t *s,
+    float ax, float ay, float az, float gx, float gy, float gz, float dt)
+{
+    if (!s || dt <= 0.0f || dt > 0.25f) return;
+    const float norm = sqrtf(ax * ax + ay * ay + az * az);
+    const bool gravity_valid = norm > 0.65f && norm < 1.35f;
+    const float acc_pitch = atan2f(-ay, sqrtf(ax * ax + az * az));
+    const float acc_roll = atan2f(ax, az);
+    if (!s->initialized) {
+        if (gravity_valid) {
+            s->pitch = acc_pitch;
+            s->roll = acc_roll;
+        }
+        s->initialized = true;
+    }
+    const float gyro_pitch = s->pitch + gy * dt;
+    const float gyro_roll = s->roll + gx * dt;
+    if (gravity_valid) {
+        const float correction = 1.0f - expf(-dt * 3.5f);
+        s->pitch = gyro_pitch + (acc_pitch - gyro_pitch) * correction;
+        s->roll = gyro_roll + (acc_roll - gyro_roll) * correction;
+    } else {
+        s->pitch = gyro_pitch;
+        s->roll = gyro_roll;
+    }
+    s->yaw += gz * dt;
+    if (fabsf(gz) < 0.025f) s->yaw *= expf(-dt * 0.45f);
+    if (s->pitch > 1.25f) s->pitch = 1.25f;
+    if (s->pitch < -1.25f) s->pitch = -1.25f;
+    if (s->roll > 1.25f) s->roll = 1.25f;
+    if (s->roll < -1.25f) s->roll = -1.25f;
+    if (s->yaw > 1.10f) s->yaw = 1.10f;
+    if (s->yaw < -1.10f) s->yaw = -1.10f;
+}
