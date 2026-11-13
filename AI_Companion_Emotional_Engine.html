@@ -101,6 +101,47 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 .orb .eye.blink-one,.orb .eye.blink-two{transform:scaleY(.055) !important;}
 .orb .eye{will-change:transform;}
 
+
+/* Stable procedural eye rig.
+   The previous prototype mixed per-eye transforms, keyframe transforms and legacy mood selectors.
+   This final layer deliberately gives both eyes one shared gaze and one shared expression pose. */
+.orb .face{animation:none !important;translate:0 0 !important;gap:28px !important;}
+.orb .eye,
+.orb .eye:first-child,
+.orb .eye:last-child{
+  width:36px !important;height:52px !important;min-width:36px !important;
+  border-radius:54% 54% 48% 48% !important;
+  background:linear-gradient(145deg,#fff 0%,#f4f8ff 76%,#dce8f5 100%) !important;
+  filter:none !important;translate:0 0 !important;
+  transform:scaleY(var(--eye-open,1)) !important;
+  transform-origin:50% 50% !important;
+  animation:none !important;
+  transition:transform 180ms cubic-bezier(.2,.75,.25,1),background 180ms,box-shadow 180ms !important;
+}
+.orb .eye:before{
+  content:"" !important;display:block !important;
+  width:17px !important;height:23px !important;
+  left:50% !important;top:50% !important;
+  transform:translate(calc(-50% + var(--pupil-x,0px)),calc(-50% + var(--pupil-y,0px))) !important;
+  transition:transform 180ms cubic-bezier(.2,.75,.25,1) !important;
+}
+.orb .eye:after{top:12px !important;left:calc(50% - 7px) !important;}
+.orb .eye.blink-one,.orb .eye.blink-two{
+  transform:scaleY(.045) !important;
+  transition:transform 82ms ease-in !important;
+}
+.orb.happy .eye{--eye-open:.88}
+.orb.excited .eye,.orb.surprised .eye,.orb.fear .eye{--eye-open:1.12}
+.orb.sleep .eye{--eye-open:.09;box-shadow:0 0 8px #d9f6ff55 !important}
+.orb.sad .eye,.orb.disappointed .eye,.orb.lonely .eye{--eye-open:.78}
+.orb.shy .eye,.orb.love .eye,.orb.relief .eye,.orb.serene .eye,.orb.trust .eye{--eye-open:.82}
+.orb.angry .eye,.orb.jealous .eye,.orb.focused .eye{--eye-open:.72}
+.orb.bored .eye{--eye-open:.58}
+.orb.playful .eye,.orb.mischief .eye,.orb.sly .eye{--eye-open:.76}
+.orb.curious .eye,.orb.confused .eye,.orb.anticipation .eye{--eye-open:1.02}
+.orb.proud .eye{--eye-open:.86}
+.orb.neutral .eye{--eye-open:1}
+
 </style>
 </head>
 <body><main>
@@ -345,7 +386,7 @@ $('weatherMode')?.addEventListener('change',()=>{updateWeatherScene();behavior?.
 const faceTilt={pitch:0,roll:0,yaw:0};
 let orientationZero=null,lastOrientationAt=0;
 function setSharedPupilGaze(x,y){
- const px=(clampUnit(x)*7).toFixed(2)+'px',py=(15+clampUnit(y)*6).toFixed(2)+'px';
+ const px=(clampUnit(x)*5.5).toFixed(2)+'px',py=(clampUnit(y)*4.5).toFixed(2)+'px';
  orb.querySelectorAll('.eye').forEach(eye=>{eye.style.setProperty('--pupil-x',px);eye.style.setProperty('--pupil-y',py);});
 }
 function applyTiltToEyes(roll,pitch,yaw=0){
@@ -391,7 +432,7 @@ function makeProfile(){profile={temper:$('temper').value,initiative:$('initiativ
 let desc=`${dict.temper[profile.temper]}, ${dict.bond[profile.bond]}; ${dict.initiative[profile.initiative]}. Особенность: ${dict.quirk[profile.quirk]}.`;
 $('profile').innerHTML='<strong></strong><p></p><div class="chips"></div>';$('profile').querySelector('strong').textContent=n+' · личность';$('profile').querySelector('p').textContent=desc;[dict.temper[profile.temper],dict.bond[profile.bond],dict.quirk[profile.quirk]].forEach(v=>{let s=document.createElement('span');s.className='chip';s.textContent=v;$('profile').querySelector('.chips').append(s)});saveMemory();log('Сгенерирован индивидуальный профиль '+n);trigger('happy')}
 $('intensity').addEventListener('input',e=>{intensity=+e.target.value;$('intensityLabel').textContent=intensity+'/10'});
-function blink(){if(current==='sleep')return;const eyes=orb.querySelectorAll('.eye');if(!eyes.length)return;const first=Math.random()<.55?0:1;eyes[first].classList.add('blink-one');setTimeout(()=>eyes[first]?.classList.remove('blink-one'),105);if(Math.random()<.38){const second=1-first;setTimeout(()=>{eyes[second]?.classList.add('blink-two');setTimeout(()=>eyes[second]?.classList.remove('blink-two'),115)},55)}}
+function blink(){if(current==='sleep')return;const eyes=[...orb.querySelectorAll('.eye')];if(eyes.length!==2)return;eyes.forEach(eye=>{eye.classList.remove('blink-one','blink-two');void eye.offsetWidth;eye.classList.add('blink-one');});setTimeout(()=>eyes.forEach(eye=>eye.classList.remove('blink-one')),118);}
 setInterval(()=>{if(!behavior||current==='sleep')return;const v=behavior.tick(Date.now(),{userActive:Date.now()-lastOwnerInputAt<18000,hour:new Date().getHours()});setSharedPupilGaze(v.gaze.x,v.gaze.y);$('face').style.setProperty('--gaze-x',(v.gaze.x*2).toFixed(2)+'px');$('face').style.setProperty('--gaze-y',(v.gaze.y*2).toFixed(2)+'px');const gazeClass=Math.abs(v.gaze.x)>.25?(v.gaze.x<0?'gaze-left':'gaze-right'):Math.abs(v.gaze.y)>.2?(v.gaze.y<0?'gaze-up':'gaze-down'):'gaze-center';orb.classList.remove('gaze-center','gaze-left','gaze-right','gaze-up','gaze-down');orb.classList.add(gazeClass);if(v.blink)blink();if(v.initiative&&v.initiative!==current)setMood(v.initiative,'самостоятельно выбрал выражение, учитывая характер и контекст',false,v.initiative,2200);},120);
 let lastAutonomousAt=0,lastAutonomousMood='';
 function runAutonomousDecision(){
