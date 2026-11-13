@@ -93,6 +93,14 @@ h2{font-size:16px;margin:0 0 13px}.field{margin-bottom:12px}.field label{display
 .orb.bored .eye{height:39px;border-radius:48% 48% 35% 35%}.orb.bored .eye:before{top:-38%}.orb.bored .pupil{transform:translate(-50%,calc(-50% + 7px))}
 .orb.trust .eye{height:72px;border-radius:48% 48% 56% 56%}.orb.trust .pupil{background:radial-gradient(ellipse at 35% 25%,#586b83 0 8%,#182435 25%,#05070a 75%)}
 .orb.serene .eye{height:58px;border-radius:48% 48% 58% 58%}.orb.serene .eye:before{top:-76%}
+
+/* Animation transform ownership: face owns 3-axis pose, eyes own local shape, pupils share one gaze vector. */
+.orb .face{transform:translate3d(var(--gaze-x,0px),var(--gaze-y,0px),0) rotateX(var(--head-pitch,0deg)) rotateY(var(--head-yaw,0deg)) rotateZ(var(--head-roll,0deg));}
+.orb .eye{transform:translate3d(var(--eye-x,0px),var(--eye-y,0px),0) scaleY(var(--lid,1)) rotate(var(--eye-rot,0deg)) !important;}
+.orb .eye:before{top:var(--pupil-y,15px) !important;transform:translateX(calc(-50% + var(--pupil-x,0px))) !important;}
+.orb .eye.blink-one,.orb .eye.blink-two{transform:scaleY(.055) !important;}
+.orb .eye{will-change:transform;}
+
 </style>
 </head>
 <body><main>
@@ -334,13 +342,44 @@ function playSound(emotionKey,force=false){
 
 function updateWeatherScene(){const mode=$('weatherMode')?.value||'auto';weatherScene?.setMode(mode);const captions={auto:'Демонстрационный цикл погоды · не связан с настроением.',clear:'Ясное небо · мягкое солнце и атмосферное свечение.',cloudy:'Облака медленно проходят над экраном.',rain:'Дождь с ветром и каплями.',storm:'Гроза · дождь и редкие вспышки молнии.',snow:'Снегопад · хлопья плавно дрейфуют по ветру.'};const c=$('weatherCaption');if(c)c.textContent=captions[mode]||captions.auto;}
 $('weatherMode')?.addEventListener('change',()=>{updateWeatherScene();behavior?.setProfile({weather:$('weatherMode').value});});
-function applyTiltToEyes(x,y,z=0){const eyes=orb.querySelectorAll('.eye');eyes.forEach((eye,i)=>{eye.style.setProperty('--pupil-x',(x*8+(i?1:-1))+'px');eye.style.setProperty('--pupil-y',(y*7)+'px');eye.style.setProperty('--eye-x',(z*2)+'px')});const face=$('face');face.style.setProperty('--head-roll',(x*13)+'deg');face.style.setProperty('--head-pitch',(y*13)+'deg');face.style.setProperty('--head-yaw',(z*11)+'deg');face.style.setProperty('--gaze-x',(x*2)+'px');face.style.setProperty('--gaze-y',(y*2)+'px');}
+const faceTilt={pitch:0,roll:0,yaw:0};
+let orientationZero=null,lastOrientationAt=0;
+function setSharedPupilGaze(x,y){
+ const px=(clampUnit(x)*7).toFixed(2)+'px',py=(15+clampUnit(y)*6).toFixed(2)+'px';
+ orb.querySelectorAll('.eye').forEach(eye=>{eye.style.setProperty('--pupil-x',px);eye.style.setProperty('--pupil-y',py);});
+}
+function applyTiltToEyes(roll,pitch,yaw=0){
+ faceTilt.roll=clampUnit(roll);faceTilt.pitch=clampUnit(pitch);faceTilt.yaw=clampUnit(yaw);
+ const face=$('face');
+ face.style.setProperty('--head-roll',(faceTilt.roll*18)+'deg');
+ face.style.setProperty('--head-pitch',(faceTilt.pitch*18)+'deg');
+ face.style.setProperty('--head-yaw',(faceTilt.yaw*14)+'deg');
+}
 function clampUnit(v){return Math.max(-1,Math.min(1,v));}
 function wrapDegrees(v){return ((v+180)%360+360)%360-180;}
-function handleDeviceOrientation(e){if(e.beta==null||e.gamma==null)return;let pitch=e.beta,roll=e.gamma;const angle=(screen.orientation?.angle||window.orientation||0);if(angle===90){[pitch,roll]=[roll,-pitch]}else if(angle===-90||angle===270){[pitch,roll]=[-roll,pitch]}else if(Math.abs(angle)===180){pitch=-pitch;roll=-roll;}const yaw=e.alpha==null?0:wrapDegrees(e.alpha);applyTiltToEyes(clampUnit(roll/45),clampUnit(pitch/55),clampUnit(yaw/180));}
+function handleDeviceOrientation(e){
+ if(e.beta==null||e.gamma==null)return;
+ let pitch=e.beta,roll=e.gamma;
+ const angle=(screen.orientation?.angle||window.orientation||0);
+ if(angle===90){[pitch,roll]=[roll,-pitch];}
+ else if(angle===-90||angle===270){[pitch,roll]=[-roll,pitch];}
+ else if(Math.abs(angle)===180){pitch=-pitch;roll=-roll;}
+ const alpha=e.alpha==null?0:e.alpha;
+ if(!orientationZero)orientationZero={alpha,beta:pitch,gamma:roll};
+ const yaw=wrapDegrees(alpha-orientationZero.alpha);
+ const relPitch=wrapDegrees(pitch-orientationZero.beta);
+ const relRoll=wrapDegrees(roll-orientationZero.gamma);
+ applyTiltToEyes(clampUnit(relRoll/42),clampUnit(relPitch/48),clampUnit(yaw/65));
+ lastOrientationAt=Date.now();
+}
 window.addEventListener('deviceorientation',handleDeviceOrientation,{passive:true});
 window.addEventListener('deviceorientationabsolute',handleDeviceOrientation,{passive:true});
-orb.addEventListener('pointermove',e=>{const r=orb.getBoundingClientRect();applyTiltToEyes(clampUnit(((e.clientX-r.left)/r.width-.5)*2),clampUnit(((e.clientY-r.top)/r.height-.5)*2),0);});
+orb.addEventListener('pointermove',e=>{
+ if(Date.now()-lastOrientationAt<1500)return;
+ const r=orb.getBoundingClientRect();
+ const nx=((e.clientX-r.left)/r.width-.5)*2,ny=((e.clientY-r.top)/r.height-.5)*2;
+ applyTiltToEyes(clampUnit(nx*.55),clampUnit(ny*.55),0);
+});
 
 
 function setMood(faceKey,why='реакция компаньона',sound=true,soundEmotionKey='calm',duration=2600){current=faceKey;lastOwnerInputAt=Date.now();const behaviorFace={disappointed:'sad',lonely:'sad',playful:'happy',anticipation:'curious',relief:'happy',proud:'happy',confused:'curious',focused:'curious',fear:'scared',jealous:'angry',bored:'sleep',trust:'love',serene:'neutral'}[faceKey]||faceKey;behavior?.setMood(behaviorFace,Date.now(),duration);currentEmotionKey=soundEmotionKey;const map={happy:'радуется',excited:'в восторге',curious:'с любопытством наблюдает',surprised:'удивлён',shy:'смущается',love:'проявляет нежность',neutral:'спокойно наблюдает',sleep:'засыпает',sad:'грустит: взгляд опущен, веки наклонены, на глазах появляются слёзы',angry:'недоволен'};
@@ -353,7 +392,7 @@ let desc=`${dict.temper[profile.temper]}, ${dict.bond[profile.bond]}; ${dict.ini
 $('profile').innerHTML='<strong></strong><p></p><div class="chips"></div>';$('profile').querySelector('strong').textContent=n+' · личность';$('profile').querySelector('p').textContent=desc;[dict.temper[profile.temper],dict.bond[profile.bond],dict.quirk[profile.quirk]].forEach(v=>{let s=document.createElement('span');s.className='chip';s.textContent=v;$('profile').querySelector('.chips').append(s)});saveMemory();log('Сгенерирован индивидуальный профиль '+n);trigger('happy')}
 $('intensity').addEventListener('input',e=>{intensity=+e.target.value;$('intensityLabel').textContent=intensity+'/10'});
 function blink(){if(current==='sleep')return;const eyes=orb.querySelectorAll('.eye');if(!eyes.length)return;const first=Math.random()<.55?0:1;eyes[first].classList.add('blink-one');setTimeout(()=>eyes[first]?.classList.remove('blink-one'),105);if(Math.random()<.38){const second=1-first;setTimeout(()=>{eyes[second]?.classList.add('blink-two');setTimeout(()=>eyes[second]?.classList.remove('blink-two'),115)},55)}}
-setInterval(()=>{if(!behavior||current==='sleep')return;const v=behavior.tick(Date.now(),{userActive:Date.now()-lastOwnerInputAt<18000,hour:new Date().getHours()});const eyes=orb.querySelectorAll('.eye');eyes.forEach((eye,i)=>{eye.style.setProperty('--pupil-x',(v.gaze.x*8+(i?1:-1)*.4).toFixed(2)+'px');eye.style.setProperty('--pupil-y',(15+v.gaze.y*7).toFixed(2)+'px')});$('face').style.setProperty('--gaze-x',(v.gaze.x*3).toFixed(2)+'px');$('face').style.setProperty('--gaze-y',(v.gaze.y*3).toFixed(2)+'px');const gazeClass=Math.abs(v.gaze.x)>.25?(v.gaze.x<0?'gaze-left':'gaze-right'):Math.abs(v.gaze.y)>.2?(v.gaze.y<0?'gaze-up':'gaze-down'):'gaze-center';orb.classList.remove('gaze-center','gaze-left','gaze-right','gaze-up','gaze-down');orb.classList.add(gazeClass);if(v.blink)blink();if(v.initiative&&v.initiative!==current)setMood(v.initiative,'самостоятельно выбрал выражение, учитывая характер и контекст',false,v.initiative,2200);},120);
+setInterval(()=>{if(!behavior||current==='sleep')return;const v=behavior.tick(Date.now(),{userActive:Date.now()-lastOwnerInputAt<18000,hour:new Date().getHours()});setSharedPupilGaze(v.gaze.x,v.gaze.y);$('face').style.setProperty('--gaze-x',(v.gaze.x*2).toFixed(2)+'px');$('face').style.setProperty('--gaze-y',(v.gaze.y*2).toFixed(2)+'px');const gazeClass=Math.abs(v.gaze.x)>.25?(v.gaze.x<0?'gaze-left':'gaze-right'):Math.abs(v.gaze.y)>.2?(v.gaze.y<0?'gaze-up':'gaze-down'):'gaze-center';orb.classList.remove('gaze-center','gaze-left','gaze-right','gaze-up','gaze-down');orb.classList.add(gazeClass);if(v.blink)blink();if(v.initiative&&v.initiative!==current)setMood(v.initiative,'самостоятельно выбрал выражение, учитывая характер и контекст',false,v.initiative,2200);},120);
 let lastAutonomousAt=0,lastAutonomousMood='';
 function runAutonomousDecision(){
  if(current==='sleep')return;
