@@ -32,6 +32,7 @@ typedef struct {
     float playfulness;
     float calmness;
     float responsiveness;
+    float irritation; /* event-driven frustration; never rises with time away */
     uint32_t interactions;
     uint32_t pet_count;
     uint32_t call_count;
