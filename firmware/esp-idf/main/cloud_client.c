@@ -130,7 +130,6 @@ esp_err_t companion_cloud_interpret(const char *utterance,
         (strcmp(action->valuestring, "idle") == 0 ||
          strcmp(action->valuestring, "greet") == 0 ||
          strcmp(action->valuestring, "acknowledge") == 0 ||
-         strcmp(action->valuestring, "play") == 0 ||
          strcmp(action->valuestring, "pet") == 0 ||
          strcmp(action->valuestring, "sleep") == 0 ||
          strcmp(action->valuestring, "wake") == 0 ||
@@ -151,7 +150,12 @@ esp_err_t companion_cloud_interpret(const char *utterance,
          strcmp(emotion->valuestring, "sad") == 0 ||
          strcmp(emotion->valuestring, "calm") == 0 ||
          strcmp(emotion->valuestring, "excited") == 0 ||
-         strcmp(emotion->valuestring, "concerned") == 0);
+         strcmp(emotion->valuestring, "concerned") == 0 ||
+         strcmp(emotion->valuestring, "angry") == 0 ||
+         strcmp(emotion->valuestring, "shy") == 0 ||
+         strcmp(emotion->valuestring, "scared") == 0 ||
+         strcmp(emotion->valuestring, "dizzy") == 0 ||
+         strcmp(emotion->valuestring, "flinch") == 0);
     const bool valid = cJSON_IsBool(addressed) && cJSON_IsBool(understood) &&
         valid_action && valid_emotion && cJSON_IsNumber(confidence) &&
         confidence->valuedouble >= 0.0 && confidence->valuedouble <= 1.0;
