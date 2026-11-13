@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Пип — панель</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* the keychain's own world: AMOLED black, the Приборка orange, mono headers like the device's "МУЗЫКА // КОМПЬЮТЕР".
+   Layout: a sticky rail (Pip, the link, the tabs) beside a wide grid of cards; one column under 900px. */
+:root{
+  --bg:#09090a; --panel:#131315; --raised:#1b1b1e; --line:#29292d; --text:#efede8; --dim:#99968e;
+  --acc:#ff5a1f; --good:#34c759; --bad:#ff453a;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:16px/1.5 var(--sans)}
+a{color:var(--acc)}
+.app{max-width:1280px;margin:0 auto;padding:24px 24px 64px;display:grid;grid-template-columns:300px minmax(0,1fr);gap:24px;align-items:start}
+
+/* ---- the rail ---- */
+.rail{position:sticky;top:24px;display:flex;flex-direction:column;gap:16px}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand h1{font:600 28px/1 var(--mono);margin:0;letter-spacing:-.5px}
+.brand span{font:500 12px var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+.device{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.screen{width:180px;aspect-ratio:1;border-radius:50%;background:#000;border:6px solid #1f1f22;box-shadow:0 0 0 1px var(--line),0 20px 40px -20px #000;display:grid;place-items:center}
+.eyes{display:flex;gap:22px}
+.eyes i{width:30px;height:46px;background:#fff;border-radius:12px;transition:height .4s,transform .4s,opacity .4s;animation:blink 5s infinite}
+body:not(.linked) .eyes i{height:8px;opacity:.55;transform:translateY(10px);animation:none}
+@keyframes blink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.08)}}
+.status{display:flex;gap:8px;align-items:center;font-weight:600}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--bad);flex:none}
+.linked .dot{background:var(--good);box-shadow:0 0 0 4px color-mix(in srgb,var(--good) 20%,transparent)}
+.facts{width:100%;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;margin:0}
+.facts dt{font:500 12px/21px var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+.facts dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.connect{width:100%;display:grid;gap:8px}
+nav{display:flex;flex-direction:column;gap:4px}
+nav button{justify-content:flex-start;background:transparent;border-color:transparent;min-height:44px;color:var(--dim)}
+nav button:hover{background:var(--panel);color:var(--text)}
+nav button.on{background:var(--panel);border-color:var(--line);color:var(--text);box-shadow:inset 3px 0 0 var(--acc)}
+.rail footer{color:var(--dim);font-size:13px}
+
+/* ---- the content ---- */
+main{min-width:0}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:6px 0 20px}
+.head h2{font:600 26px/1.2 var(--sans);margin:0;text-wrap:balance}
+.head p{margin:4px 0 0;color:var(--dim);max-width:60ch}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.wide{grid-column:1/-1}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card h3{font:600 12px/1 var(--mono);margin:0;color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
+.card h3 b{color:var(--acc);font-weight:600}
+.muted{color:var(--dim);font-size:14px;margin:0}
+.notice{border:1px solid #5a3018;background:#22150e;color:#ffb28f;border-radius:12px;padding:12px 14px;margin:0 0 16px}
+
+button{font:600 15px var(--sans);border-radius:12px;padding:10px 16px;border:1px solid var(--line);background:var(--raised);color:var(--text);cursor:pointer;min-height:46px;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+button:hover{border-color:var(--dim)}
+button.main{background:var(--acc);border-color:var(--acc);color:#000}
+button.main:hover{filter:brightness(1.08)}
+button:disabled{opacity:.45;cursor:default}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+label,.lbl{display:block;font-size:13px;color:var(--dim);margin:0 0 4px}
+input[type=text],input[type=url],select{width:100%;font:inherit;font-size:15px;color:var(--text);background:#0d0d0f;border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-height:44px}
+input:focus,select:focus{border-color:var(--acc);outline:none}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.saved{color:var(--good);font-size:14px;opacity:0;transition:opacity .3s}
+.saved.show{opacity:1}
+
+/* badge: fields beside a round preview */
+.badge{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:20px;align-items:center}
+.preview{width:150px;aspect-ratio:1;border-radius:50%;background:#000;border:4px solid #1f1f22;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:16px;overflow:hidden}
+.preview .mark{display:flex;gap:6px;margin-bottom:8px}.preview .mark i{width:8px;height:12px;background:#fff;border-radius:3px}
+.preview b{font:600 17px/1.1 var(--sans);max-width:100%;overflow-wrap:anywhere}
+.preview small{font:500 9px var(--mono);color:var(--acc);letter-spacing:.12em;text-transform:uppercase;margin-top:6px}
+
+/* QR links: a table of four */
+.links{display:grid;gap:8px}
+.link{display:grid;grid-template-columns:28px minmax(0,1fr) minmax(0,1fr) minmax(0,2.2fr);gap:8px;align-items:center}
+.link .n{font:600 13px var(--mono);color:var(--dim);text-align:center}
+.link.head-row span{font-size:12px;color:var(--dim)}
+
+.range{display:flex;align-items:center;gap:12px}
+.range output{font:600 14px var(--mono);min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
+.toggles{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+.toggle{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.toggle small{display:block;color:var(--dim);font-size:13px;line-height:1.35}
+.switch{position:relative;width:48px;height:28px;flex:none}
+.switch input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.switch span{position:absolute;inset:0;background:#3a3a3e;border-radius:14px;transition:.15s;pointer-events:none}
+.switch span:before{content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
+.switch input:checked+span{background:var(--good)}
+.switch input:checked+span:before{transform:translateX(20px)}
+.switch input:focus-visible+span{outline:2px solid var(--acc);outline-offset:2px}
+
+/* flashing: three steps across, then the button and the bar */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;counter-reset:s;margin:0;padding:0;list-style:none}
+.steps li{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;counter-increment:s}
+.steps li:before{content:counter(s);display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--acc);color:#000;font:600 15px var(--mono);margin-bottom:10px}
+.steps b{display:block;margin-bottom:2px}
+.flashbox{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:center}
+.bar{height:10px;background:#222225;border-radius:5px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
+details summary{cursor:pointer;color:var(--text)}
+details p{margin:8px 0 0}
+
+@media (max-width:1100px){.toggles{grid-template-columns:1fr}.link{grid-template-columns:28px 1fr 1fr}.link input[type=url]{grid-column:2/-1}.link.head-row{display:none}}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr;padding:16px}
+  .rail{position:static}
+  .device{flex-direction:row;flex-wrap:wrap;justify-content:space-between}
+  .screen{width:110px;border-width:4px}.eyes{gap:14px}.eyes i{width:18px;height:28px;border-radius:8px}
+  .device .facts{flex:1;min-width:180px;width:auto}
+  nav{flex-direction:row;overflow-x:auto}
+  nav button{flex:none}
+  nav button.on{box-shadow:inset 0 -3px 0 var(--acc)}
+  .cards,.steps{grid-template-columns:1fr}
+}
+@media (max-width:520px){.fields,.flashbox{grid-template-columns:1fr}.badge{grid-template-columns:1fr;justify-items:center}.badge>div{width:100%}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand"><h1>Пип</h1><span>панель брелока</span></div>
+
+    <div class="device">
+      <div class="screen" aria-hidden="true"><div class="eyes"><i></i><i></i></div></div>
+      <div class="status"><span class="dot"></span><span id="state">Не подключён</span></div>
+      <dl class="facts">
+        <dt>Настроение</dt><dd id="mood">—</dd>
+        <dt>Батарея</dt><dd id="bat">—</dd>
+        <dt>Прошивка</dt><dd id="ver">—</dd>
+      </dl>
+      <div class="connect">
+        <button class="main" id="usb">Подключить по кабелю</button>
+        <button id="ble">Без кабеля, по Bluetooth</button>
+      </div>
+    </div>
+
+    <nav id="tabs">
+      <button data-tab="settings" class="on">Настройки</button>
+      <button data-tab="flash">Прошить / обновить</button>
+      <button data-tab="dev">Для разработчиков</button>
+    </nav>
+
+    <footer>Работает в Chrome и Edge. Ничего не устанавливается: страница говорит с брелоком прямо из браузера.
+      <a href="https://github.com/NovikovVisuals/Pip-KeyPet" target="_blank" rel="noopener">Исходный код</a></footer>
+  </aside>
+
+  <main>
+    <div class="notice" id="nobrowser" hidden>
+      Этот браузер не умеет работать с брелоком. Открой эту страницу в <b>Google Chrome</b> или <b>Microsoft Edge</b> на компьютере.
+    </div>
+
+    <section data-tab="settings">
+      <div class="head"><div>
+        <h2>Настройки</h2>
+        <p id="needlink">Подключи Пипа кнопкой «Подключить по кабелю»: его текущие настройки загрузятся сюда. Изменения сохраняются в самом брелоке.</p>
+      </div></div>
+
+      <div class="cards">
+        <div class="card wide">
+          <h3>Бейдж</h3>
+          <div class="badge">
+            <div>
+              <div class="fields">
+                <div><label for="first">Первая строка (имя)</label><input type="text" id="first" maxlength="30" placeholder="Твоё"></div>
+                <div><label for="last">Вторая строка (фамилия)</label><input type="text" id="last" maxlength="30" placeholder="Имя"></div>
+              </div>
+              <div style="margin-top:12px"><label for="org">Подпись внизу (можно оставить пустой)</label><input type="text" id="org" maxlength="22" placeholder="KeyPet"></div>
+              <div class="row" style="margin-top:14px"><button class="main" id="saveName">Сохранить бейдж</button><span class="saved" id="savedName">Сохранено</span></div>
+            </div>
+            <div class="preview" aria-label="Примерно так на брелоке">
+              <div class="mark"><i></i><i></i></div>
+              <b id="pvFirst">Твоё</b><b id="pvLast">Имя</b><small id="pvOrg">KeyPet</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="card wide">
+          <h3>Ссылки для Quick QR <b>· до четырёх</b></h3>
+          <p class="muted">Пип покажет их QR-кодами, листаются свайпом. Ссылки на Telegram и Instagram получат значок в центре кода.</p>
+          <div class="links" id="links">
+            <div class="link head-row"><span></span><span>Название</span><span>Подпись</span><span>Ссылка</span></div>
+          </div>
+          <div class="row"><button class="main" id="saveLinks">Сохранить ссылки</button><span class="saved" id="savedLinks">Сохранено</span></div>
+        </div>
+
+        <div class="card">
+          <h3>Экран и батарея</h3>
+          <div><label for="power">Засыпать, если Пипа не трогать</label>
+            <select id="power">
+              <option value="15">через 15 секунд (дольше всего работает)</option>
+              <option value="30">через 30 секунд</option>
+              <option value="60">через 1 минуту</option>
+              <option value="120">через 2 минуты</option>
+              <option value="300">через 5 минут</option>
+              <option value="0">никогда (батарея сядет быстро)</option>
+            </select></div>
+          <p class="muted">Просыпается от касания, кнопки, если взять в руку, и при уведомлении. Бейдж, QR и фонарик не дают уснуть, пока открыты.</p>
+          <div><label for="bright">Яркость</label>
+            <div class="range"><input type="range" id="bright" min="10" max="100" step="5" value="80"><output id="brightOut">80%</output></div></div>
+          <div><label for="theme">Оформление</label>
+            <select id="theme"><option value="1">Приборка — строгое, с оранжевым</option><option value="3">Диагностика — ретро-терминал</option></select></div>
+        </div>
+
+        <div class="card">
+          <h3>Уведомления с iPhone</h3>
+          <div><label for="privacy">Что видно на экране брелока</label>
+            <select id="privacy">
+              <option value="1">Скрыто: приложение и время, текст — когда откроешь</option>
+              <option value="0">Открыто: всё сразу</option>
+              <option value="2">Выключены: текст не приходит вообще</option>
+            </select></div>
+          <p class="muted">Коды, пароли и банки брелок не сохраняет ни в каком режиме.</p>
+          <p class="muted"><b style="color:var(--text)">Подключить iPhone:</b> Настройки → Bluetooth → Pip, затем подтверди код на брелоке верхней кнопкой.</p>
+        </div>
+
+        <div class="card wide">
+          <h3>Что Пип замечает</h3>
+          <div class="toggles" id="feats"></div>
+        </div>
+      </div>
+    </section>
+
+    <section data-tab="flash" hidden>
+      <div class="head"><div>
+        <h2>Прошить или обновить Пипа</h2>
+        <p id="fwinfo"></p>
+      </div></div>
+      <div class="cards">
+        <ol class="steps wide">
+          <li><b>Подключи кабель</b><span class="muted">USB-C, который передаёт данные, а не «только зарядка».</span></li>
+          <li><b>Нажми «Прошить»</b><span class="muted">и выбери в списке <b>USB JTAG/serial</b>.</span></li>
+          <li><b>Подожди минуту</b><span class="muted">Не отключай кабель, пока полоска не дойдёт до конца.</span></li>
+        </ol>
+        <div class="card wide">
+          <div class="flashbox">
+            <button class="main" id="flash">Прошить</button>
+            <div><div class="bar"><i id="prog"></i></div><p id="flashState" class="muted" style="margin-top:8px">Питомец, настройки и подключённый iPhone при обновлении сохраняются.</p></div>
+          </div>
+          <details class="muted"><summary>Не получается?</summary>
+            <p>Брелок не появляется в списке: попробуй другой кабель или другой USB-порт. На Linux один раз выполни
+              <code>sudo usermod -aG dialout $USER</code> и перезайди.</p>
+            <p>Прошивка не начинается: зажми нижнюю кнопку брелока, коротко нажми верхнюю и отпусти нижнюю. Брелок войдёт
+              в режим прошивки; снова нажми «Прошить».</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section data-tab="dev" hidden>
+      <div class="head"><div>
+        <h2>Для разработчиков</h2>
+        <p>Почему у Пипа такое настроение (дерево эмоций), история за сутки, показ любой эмоции, ручки всех правил.</p>
+      </div></div>
+      <div class="cards">
+        <div class="card">
+          <h3>Отладка</h3>
+          <p class="muted">Откроется в новой вкладке; кабель перейдёт к ней.</p>
+          <div class="row"><button id="openDebug">Открыть отладку</button></div>
+        </div>
+        <div class="card">
+          <h3>Режим разработчика</h3>
+          <p class="muted">Каркас глаз, взгляд, области перерисовки и цифры поверх Пипа, прямо на экране брелока.</p>
+          <div class="row"><button id="devOn">Включить</button><button id="devOff">Выключить</button></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="firmware/firmware.js"></script>
+<script type="module">
+const $ = id => document.getElementById(id);
+const FEATS = [
+  [0, 'Тряска', 'встряхнёшь — закружится голова'],
+  [1, 'Подуть', 'подуешь в микрофон — зажмурится'],
+  [2, 'Сон экраном вниз', 'положишь экраном вниз — уснёт и погасит экран'],
+  [3, 'Звук', 'Пип пищит, мурчит и ворчит'],
+  [4, 'Зарядка = еда', 'на зарядке радуется и наедается'],
+  [6, 'Громкие звуки', 'хлопок рядом его пугает'],
+];
+if (!('serial' in navigator)) $('nobrowser').hidden = false;
+if (!('bluetooth' in navigator)) $('ble').hidden = true;
+const fw = window.PIP_FIRMWARE;
+$('fwinfo').textContent = fw ? `В панели прошивка ${fw.version} от ${fw.built}.` : 'Файл прошивки не найден (docs/firmware/firmware.js).';
+
+/* ---------- the link: a USB serial port (Web Serial) or Bluetooth ---------- */
+let port = null, reader = null, ble = null, bleq = Promise.resolve(), alive = 0, cfg = null;
+const enc = new TextEncoder();
+async function send(c) {
+  if (port && port.writable) { const w = port.writable.getWriter(); await w.write(enc.encode(c + '\n')); w.releaseLock(); }
+  else if (ble) { bleq = bleq.then(() => ble.writeValueWithoutResponse(enc.encode(c + '\n'))).catch(() => {}); return bleq; }
+}
+function onLine(l) {
+  if (l.startsWith('@S ')) {
+    alive = Date.now();
+    const s = JSON.parse(l.slice(3));
+    $('mood').textContent = s.m;
+    $('bat').textContent = s.bat >= 0 ? `${s.bat}%${s.ch ? ' · заряжается' : ''}` : '—';
+  } else if (l.startsWith('@C ')) { cfg = JSON.parse(l.slice(3)); fill(); }
+}
+async function readLoop() {
+  const dec = new TextDecoder();
+  let acc = '';
+  try {
+    while (port && port.readable) {
+      reader = port.readable.getReader();
+      for (;;) {
+        const {value, done} = await reader.read();
+        if (done) break;
+        acc += dec.decode(value, {stream: true});
+        let i;
+        while ((i = acc.indexOf('\n')) >= 0) { onLine(acc.slice(0, i).replace(/\r$/, '')); acc = acc.slice(i + 1); }
+      }
+      reader.releaseLock();
+    }
+  } catch (e) { /* unplugged */ }
+  reader = null;
+}
+async function openPort(p) {
+  port = p;
+  await port.open({baudRate: 115200});
+  try { await port.setSignals({dataTerminalReady: false, requestToSend: false}); } catch (e) {}
+  readLoop();
+  state('По кабелю', true);
+  /* opening the port may reset the keychain: ask until it answers (it boots in ~4 s) */
+  cfg = null;
+  const ask = setInterval(() => { if (cfg || !port) clearInterval(ask); else send('config'); }, 1000);
+}
+async function closePort() {
+  if (!port) return null;
+  const p = port;
+  port = null;
+  try { if (reader) await reader.cancel(); } catch (e) {}
+  await new Promise(r => setTimeout(r, 100));
+  try { await p.close(); } catch (e) {}
+  return p;
+}
+function state(text, on) { $('state').textContent = text; document.body.classList.toggle('linked', on); }
+$('usb').onclick = async () => {
+  try { await openPort(await navigator.serial.requestPort({filters: [{usbVendorId: 0x303a}]})); }
+  catch (e) { if (e.name !== 'NotFoundError') state('Не вышло: ' + e.message, false); }
+};
+$('ble').onclick = async () => {
+  const SVC = '50495044-4247-4b45-5950-455400000001', RX = '50495044-4247-4b45-5950-455400000002', TX = '50495044-4247-4b45-5950-455400000003';
+  try {
+    const dev = await navigator.bluetooth.requestDevice({filters: [{name: 'Pip'}], optionalServices: [SVC]});
+    const svc = await (await dev.gatt.connect()).getPrimaryService(SVC);
+    const tx = await svc.getCharacteristic(TX);
+    ble = await svc.getCharacteristic(RX);
+    let acc = '';
+    tx.addEventListener('characteristicvaluechanged', e => {
+      acc += new TextDecoder().decode(e.target.value);
+      let i;
+      while ((i = acc.indexOf('\n')) >= 0) { onLine(acc.slice(0, i)); acc = acc.slice(i + 1); }
+    });
+    await tx.startNotifications();
+    dev.addEventListener('gattserverdisconnected', () => { ble = null; state('Bluetooth отключился', false); });
+    state('По Bluetooth', true);
+    send('config');
+  } catch (e) { if (e.name !== 'NotFoundError') state('Bluetooth: ' + e.message, false); }
+};
+setInterval(() => { if ((port || ble) && Date.now() - alive > 4000 && alive) state('Пип не отвечает — переподключи', false); }, 1000);
+
+/* ---------- settings ---------- */
+for (let i = 0; i < 4; i++) $('links').insertAdjacentHTML('beforeend',
+  `<div class="link"><span class="n">${i + 1}</span><input type="text" placeholder="Telegram" maxlength="18" id="ls${i}" aria-label="Название ${i + 1}">` +
+  `<input type="text" placeholder="@ник" maxlength="46" id="lh${i}" aria-label="Подпись ${i + 1}">` +
+  `<input type="url" placeholder="https://t.me/ник" maxlength="198" id="lu${i}" aria-label="Ссылка ${i + 1}"></div>`);
+for (const [f, name, note] of FEATS) $('feats').insertAdjacentHTML('beforeend',
+  `<div class="toggle"><div>${name}<small>${note}</small></div><label class="switch"><input type="checkbox" id="f${f}" aria-label="${name}"><span></span></label></div>`);
+const clean = s => s.replace(/[|\n\r]/g, ' ').trim();
+const preview = () => {
+  for (const id of ['first', 'last', 'org']) $('pv' + id[0].toUpperCase() + id.slice(1)).textContent = $(id).value || $(id).placeholder;
+};
+['first', 'last', 'org'].forEach(id => $(id).oninput = preview);
+$('bright').oninput = e => $('brightOut').textContent = e.target.value + '%';
+function fill() {
+  $('first').value = cfg.first; $('last').value = cfg.last; $('org').value = cfg.org; preview();
+  cfg.links.forEach((l, i) => { $('ls' + i).value = l[0]; $('lh' + i).value = l[1]; $('lu' + i).value = l[2]; });
+  $('power').value = [15, 30, 60, 120, 300, 0].includes(cfg.power) ? cfg.power : 30;
+  $('bright').value = cfg.bright; $('brightOut').textContent = cfg.bright + '%';
+  $('theme').value = cfg.theme; $('privacy').value = cfg.privacy;
+  for (const [f] of FEATS) $('f' + f).checked = !!cfg.feat[f];
+  $('ver').textContent = cfg.ver || '—';
+  $('needlink').textContent = 'Изменения сохраняются в самом брелоке сразу.';
+}
+const flashSaved = id => { $(id).classList.add('show'); setTimeout(() => $(id).classList.remove('show'), 1500); };
+$('saveName').onclick = () => { send(`name ${clean($('first').value)}|${clean($('last').value)}|${clean($('org').value)}`); flashSaved('savedName'); };
+$('saveLinks').onclick = async () => {
+  for (let i = 0; i < 4; i++) await send(`link ${i} ${clean($('ls' + i).value)}|${clean($('lh' + i).value)}|${clean($('lu' + i).value)}`);
+  flashSaved('savedLinks');
+};
+$('power').onchange = e => send('power ' + e.target.value);
+$('bright').onchange = e => send('bright ' + e.target.value);
+$('theme').onchange = e => send('theme ' + e.target.value);
+$('privacy').onchange = e => send('privacy ' + e.target.value);
+$('feats').onchange = e => send(`feat ${e.target.id.slice(1)} ${e.target.checked ? 1 : 0}`);
+
+/* ---------- tabs ---------- */
+$('tabs').onclick = e => {
+  const t = e.target.dataset.tab;
+  if (!t) return;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  document.querySelectorAll('section[data-tab]').forEach(s => s.hidden = s.dataset.tab !== t);
+};
+$('openDebug').onclick = async () => { await closePort(); state('Отладка открыта в новой вкладке', false); window.open('debug.html', '_blank'); };
+$('devOn').onclick = () => send('dev 1');
+$('devOff').onclick = () => send('dev 0');
+
+/* ---------- flashing (esptool-js) ---------- */
+$('flash').onclick = async () => {
+  if (!fw) return;
+  const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  $('flash').disabled = true;
+  try {
+    $('flashState').textContent = 'Готовлюсь...';
+    const {ESPLoader, Transport} = await import('https://unpkg.com/esptool-js@0.6.1/bundle.js');
+    /* ask Pip to show "Обновление" first: the screen keeps that frame while the chip is in the flasher.
+       Firmware that is not Pip's (a factory one, an empty chip) never answers: then just go on after a few seconds. */
+    if (!port) await openPort(await navigator.serial.requestPort({filters: [{usbVendorId: 0x303a}]}));
+    $('flashState').textContent = 'Связываюсь с Пипом...';
+    for (let t = 0; !cfg && t < 60; t++) await new Promise(r => setTimeout(r, 100));
+    if (cfg) { await send('update'); await new Promise(r => setTimeout(r, 600)); }
+    const p = await closePort();
+    const transport = new Transport(p, true);
+    const loader = new ESPLoader({transport, baudrate: 921600, terminal: {clean() {}, writeLine() {}, write() {}}});
+    $('flashState').textContent = 'Связываюсь с брелоком...';
+    await loader.main();
+    const total = fw.parts.reduce((n, x) => n + x.data.length * 0.75, 0);
+    let done = 0, last = 0;
+    await loader.writeFlash({
+      fileArray: fw.parts.map(x => ({data: b64(x.data), address: x.address})),
+      flashMode: 'keep', flashFreq: 'keep', flashSize: 'keep', eraseAll: false, compress: true,
+      reportProgress: (i, written, size) => {
+        if (written < last) done += last;
+        last = written;
+        $('prog').style.width = Math.min(100, (done + written) / total * 100) + '%';
+        $('flashState').textContent = 'Прошиваю... не отключай кабель';
+      },
+    });
+    /* esptool-js 0.6.1 'hard_reset' only lets RTS go, it never pulls it: the chip stayed in the flasher with the last
+       frame on screen. Pull EN low with RTS (DTR low keeps GPIO0 high: a normal boot), then let go. */
+    await transport.setDTR(false);
+    await transport.setRTS(true);
+    await new Promise(r => setTimeout(r, 150));
+    await transport.setRTS(false);
+    await transport.disconnect();
+    $('prog').style.width = '100%';
+    $('flashState').textContent = 'Готово! Пип перезагружается. Через несколько секунд нажми «Подключить по кабелю», чтобы настроить его.';
+    state('Не подключён', false);
+  } catch (e) {
+    $('flashState').textContent = 'Не получилось: ' + (e.message || e) + '. Загляни в «Не получается?» ниже.';
+  }
+  $('flash').disabled = false;
+};
+</script>
+</body>
+</html>
